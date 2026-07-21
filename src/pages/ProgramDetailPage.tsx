@@ -1,32 +1,18 @@
-import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { BlockFormDialog } from '@/components/BlockFormDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { SessionTemplateCard } from '@/components/SessionTemplateCard'
+import { SessionTemplateFormDialog } from '@/components/SessionTemplateFormDialog'
+import { useDeleteProgram, useDuplicateProgram, useProgram } from '@/hooks/usePrograms'
 import {
-  useBlocks,
-  useCreateBlock,
-  useDeleteBlock,
-  useDeleteProgram,
-  useDuplicateProgram,
-  useProgram,
-  useSwapBlockOrder,
-  useUpdateBlock,
-} from '@/hooks/usePrograms'
-import {
-  BLOCK_FOCUS_LABELS,
-  BLOCK_TYPE_LABELS,
-  PROGRAM_STATUS_LABELS,
-  getSwapPair,
-} from '@/lib/programs-api'
+  useCreateSessionTemplate,
+  useSessionTemplates,
+  useSwapSessionTemplateOrder,
+} from '@/hooks/useSessionTemplates'
+import { getSwapPair } from '@/lib/ordering'
+import { PROGRAM_FOCUS_LABELS, PROGRAM_STATUS_LABELS } from '@/lib/programs-api'
 
 export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -34,11 +20,9 @@ export function ProgramDetailPage() {
   if (!id) throw new Error('Missing program id in route params')
 
   const { data: program, isLoading, isError } = useProgram(id)
-  const { data: blocks } = useBlocks(id)
-  const createBlock = useCreateBlock(id)
-  const updateBlock = useUpdateBlock(id)
-  const deleteBlock = useDeleteBlock(id)
-  const swapBlockOrder = useSwapBlockOrder(id)
+  const { data: templates } = useSessionTemplates(id)
+  const createTemplate = useCreateSessionTemplate(id)
+  const swapTemplateOrder = useSwapSessionTemplateOrder(id)
   const deleteProgram = useDeleteProgram()
   const duplicateProgram = useDuplicateProgram()
 
@@ -50,14 +34,7 @@ export function ProgramDetailPage() {
       </p>
     )
 
-  const sortedBlocks = blocks ?? []
-
-  async function moveBlock(blockId: string, direction: 'up' | 'down') {
-    const pair = getSwapPair(sortedBlocks, blockId, direction)
-    if (!pair) return
-    const [a, b] = pair
-    await swapBlockOrder.mutateAsync({ a, b })
-  }
+  const sortedTemplates = templates ?? []
 
   return (
     <div className="flex flex-col gap-6">
@@ -68,8 +45,8 @@ export function ProgramDetailPage() {
             <p className="mt-1 text-muted-foreground">{program.description}</p>
           )}
           <div className="mt-2 flex items-center gap-2">
+            <Badge>{PROGRAM_FOCUS_LABELS[program.focus]}</Badge>
             <Badge variant="outline">{PROGRAM_STATUS_LABELS[program.status]}</Badge>
-            <span className="text-sm text-muted-foreground">v{program.version}</span>
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -92,7 +69,7 @@ export function ProgramDetailPage() {
               </Button>
             }
             title="Supprimer ce programme ?"
-            description="Cette action est irréversible et supprimera aussi tous ses blocs."
+            description="Cette action est irréversible et supprimera aussi ses jours et exercices."
             confirmLabel="Supprimer définitivement"
             onConfirm={async () => {
               await deleteProgram.mutateAsync(program.id)
@@ -104,97 +81,39 @@ export function ProgramDetailPage() {
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-medium">Blocs de périodisation</h2>
-          <BlockFormDialog
+          <h2 className="font-heading text-lg font-medium">Structure de la semaine</h2>
+          <SessionTemplateFormDialog
             trigger={
               <Button size="sm">
-                <Plus /> Ajouter un bloc
+                <Plus /> Ajouter un jour
               </Button>
             }
-            submitLabel="Ajouter le bloc"
-            onSubmit={async (input) => {
-              await createBlock.mutateAsync(input)
+            submitLabel="Ajouter le jour"
+            onSubmit={async (name) => {
+              await createTemplate.mutateAsync(name)
             }}
           />
         </div>
 
-        {sortedBlocks.length === 0 && (
+        {sortedTemplates.length === 0 && (
           <p className="text-muted-foreground">
-            Aucun bloc pour l'instant. Ajoute le premier pour structurer ce programme.
+            Aucun jour défini. Ajoute un jour (ex. "Jour A") pour commencer à structurer
+            ce programme.
           </p>
         )}
 
         <ul className="flex flex-col gap-3">
-          {sortedBlocks.map((block, index) => (
-            <li key={block.id}>
-              <Card>
-                <CardHeader>
-                  <CardTitle as="h3">{block.name}</CardTitle>
-                  <CardDescription>
-                    {BLOCK_TYPE_LABELS[block.block_type]} ·{' '}
-                    {BLOCK_FOCUS_LABELS[block.focus]} · {block.duration_weeks} semaine
-                    {block.duration_weeks > 1 ? 's' : ''}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Monter ce bloc"
-                    disabled={index === 0}
-                    onClick={() => void moveBlock(block.id, 'up')}
-                  >
-                    <ArrowUp />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Descendre ce bloc"
-                    disabled={index === sortedBlocks.length - 1}
-                    onClick={() => void moveBlock(block.id, 'down')}
-                  >
-                    <ArrowDown />
-                  </Button>
-                  <BlockFormDialog
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Modifier ce bloc"
-                      >
-                        <Pencil />
-                      </Button>
-                    }
-                    submitLabel="Enregistrer"
-                    initialValue={block}
-                    onSubmit={async (input) => {
-                      await updateBlock.mutateAsync({ id: block.id, patch: input })
-                    }}
-                  />
-                  <ConfirmDialog
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Supprimer ce bloc"
-                      >
-                        <Trash2 />
-                      </Button>
-                    }
-                    title="Supprimer ce bloc ?"
-                    description="Cette action est irréversible."
-                    confirmLabel="Supprimer"
-                    onConfirm={async () => {
-                      await deleteBlock.mutateAsync(block.id)
-                    }}
-                  />
-                  <Link to={`/programs/${id}/blocks/${block.id}`} className="ml-auto">
-                    <Button variant="outline" size="sm">
-                      Structure de la séance
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+          {sortedTemplates.map((template, index) => (
+            <li key={template.id}>
+              <SessionTemplateCard
+                template={template}
+                isFirst={index === 0}
+                isLast={index === sortedTemplates.length - 1}
+                onMove={(direction) => {
+                  const pair = getSwapPair(sortedTemplates, template.id, direction)
+                  if (pair) void swapTemplateOrder.mutateAsync({ a: pair[0], b: pair[1] })
+                }}
+              />
             </li>
           ))}
         </ul>

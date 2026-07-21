@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { usePrograms } from '@/hooks/usePrograms'
-import { PROGRAM_STATUS_LABELS } from '@/lib/programs-api'
+import { PROGRAM_FOCUS_LABELS, PROGRAM_STATUS_LABELS } from '@/lib/programs-api'
 
 export function ProgramsListPage() {
   const { data: programs, isLoading, isError } = usePrograms()
@@ -47,10 +47,8 @@ export function ProgramsListPage() {
                   )}
                 </CardHeader>
                 <CardContent className="flex items-center gap-2">
+                  <Badge>{PROGRAM_FOCUS_LABELS[program.focus]}</Badge>
                   <Badge variant="outline">{PROGRAM_STATUS_LABELS[program.status]}</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    v{program.version}
-                  </span>
                 </CardContent>
               </Card>
             </Link>

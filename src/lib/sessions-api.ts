@@ -3,7 +3,6 @@ import type { Database } from '@/lib/database.types'
 import { nextOrderIndex } from '@/lib/ordering'
 
 export type SessionTemplate = Database['public']['Tables']['session_templates']['Row']
-export type SessionRow = Database['public']['Tables']['sessions']['Row']
 
 type SessionTemplateExerciseRow =
   Database['public']['Tables']['session_template_exercises']['Row']
@@ -29,27 +28,29 @@ async function requireUserId(): Promise<string> {
   return user.id
 }
 
-export async function fetchSessionTemplates(blockId: string): Promise<SessionTemplate[]> {
+export async function fetchSessionTemplates(
+  programId: string,
+): Promise<SessionTemplate[]> {
   const { data, error } = await supabase
     .from('session_templates')
     .select('*')
-    .eq('block_id', blockId)
+    .eq('program_id', programId)
     .order('order_index', { ascending: true })
   if (error) throw error
   return data
 }
 
 export async function createSessionTemplate(
-  blockId: string,
+  programId: string,
   name: string,
 ): Promise<SessionTemplate> {
   const userId = await requireUserId()
-  const existing = await fetchSessionTemplates(blockId)
+  const existing = await fetchSessionTemplates(programId)
 
   const { data, error } = await supabase
     .from('session_templates')
     .insert({
-      block_id: blockId,
+      program_id: programId,
       user_id: userId,
       name,
       order_index: nextOrderIndex(existing),
@@ -166,22 +167,4 @@ export async function swapSessionTemplateExerciseOrder(
     .update({ order_index: a.order_index })
     .eq('id', b.id)
   if (errorB) throw errorB
-}
-
-export async function fetchSessions(blockId: string): Promise<SessionRow[]> {
-  const { data, error } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('block_id', blockId)
-    .order('week_number', { ascending: true })
-  if (error) throw error
-  return data
-}
-
-export async function generateBlockSessions(blockId: string): Promise<number> {
-  const { data, error } = await supabase.rpc('generate_block_sessions', {
-    p_block_id: blockId,
-  })
-  if (error) throw error
-  return data
 }

@@ -5,19 +5,31 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useCreateProgram } from '@/hooks/usePrograms'
+import { PROGRAM_FOCUS_LABELS, type ProgramFocus } from '@/lib/programs-api'
+
+const FOCUS_OPTIONS = Object.entries(PROGRAM_FOCUS_LABELS) as [ProgramFocus, string][]
 
 export function ProgramNewPage() {
   const navigate = useNavigate()
   const createProgram = useCreateProgram()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [focus, setFocus] = useState<ProgramFocus>('hypertrophie')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const program = await createProgram.mutateAsync({
       name,
       description: description.trim() === '' ? null : description,
+      focus,
     })
     void navigate(`/programs/${program.id}`)
   }
@@ -41,8 +53,26 @@ export function ProgramNewPage() {
                 required
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Ex. Bloc hiver — force"
+                placeholder="Ex. Force hiver"
               />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="focus">Focus</Label>
+              <Select
+                value={focus}
+                onValueChange={(value: string) => setFocus(value as ProgramFocus)}
+              >
+                <SelectTrigger id="focus">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FOCUS_OPTIONS.map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="description">Description</Label>

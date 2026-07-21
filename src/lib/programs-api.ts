@@ -1,27 +1,15 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
-import { nextOrderIndex } from '@/lib/ordering'
-
-export { getSwapPair } from '@/lib/ordering'
 
 export type ProgramStatus = 'draft' | 'active' | 'archived'
-export type BlockFocus = 'force' | 'hypertrophie' | 'endurance'
-export type BlockType = 'accumulation' | 'intensification' | 'realisation' | 'deload'
+export type ProgramFocus = 'force' | 'hypertrophie' | 'endurance'
 
 type ProgramRow = Database['public']['Tables']['programs']['Row']
-type BlockRow = Database['public']['Tables']['blocks']['Row']
 
 // Postgres CHECK constraints guarantee these columns only ever hold the
 // literal values below — narrower than the generated `string` column type.
 function toProgram(row: ProgramRow): Program {
-  return { ...row, status: row.status as ProgramStatus }
-}
-function toBlock(row: BlockRow): Block {
-  return {
-    ...row,
-    focus: row.focus as BlockFocus,
-    block_type: row.block_type as BlockType,
-  }
+  return { ...row, status: row.status as ProgramStatus, focus: row.focus as ProgramFocus }
 }
 
 export const PROGRAM_STATUS_LABELS: Record<ProgramStatus, string> = {
@@ -30,38 +18,21 @@ export const PROGRAM_STATUS_LABELS: Record<ProgramStatus, string> = {
   archived: 'Archivé',
 }
 
-export const BLOCK_FOCUS_LABELS: Record<BlockFocus, string> = {
+export const PROGRAM_FOCUS_LABELS: Record<ProgramFocus, string> = {
   force: 'Force',
   hypertrophie: 'Hypertrophie',
   endurance: 'Endurance',
 }
 
-export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
-  accumulation: 'Accumulation',
-  intensification: 'Intensification',
-  realisation: 'Réalisation',
-  deload: 'Deload',
-}
-
-export interface Program extends Omit<ProgramRow, 'status'> {
+export interface Program extends Omit<ProgramRow, 'status' | 'focus'> {
   status: ProgramStatus
-}
-
-export interface Block extends Omit<BlockRow, 'focus' | 'block_type'> {
-  focus: BlockFocus
-  block_type: BlockType
+  focus: ProgramFocus
 }
 
 export interface ProgramInput {
   name: string
   description: string | null
-}
-
-export interface BlockInput {
-  name: string
-  focus: BlockFocus
-  block_type: BlockType
-  duration_weeks: number
+  focus: ProgramFocus
 }
 
 async function requireUserId(): Promise<string> {
@@ -127,98 +98,61 @@ export async function duplicateProgram(program: Program): Promise<Program> {
     .from('programs')
     .insert({
       user_id: userId,
-      name: program.name,
+      name: `${program.name} (copie)`,
       description: program.description,
-      version: program.version + 1,
-      forked_from: program.id,
+      focus: program.focus,
     })
     .select()
     .single()
   if (programError) throw programError
   const createdProgram = toProgram(newProgram)
 
-  const blocks = await fetchBlocks(program.id)
-  if (blocks.length > 0) {
-    const { error: blocksError } = await supabase.from('blocks').insert(
-      blocks.map((block) => ({
+  const { data: templates, error: templatesError } = await supabase
+    .from('session_templates')
+    .select('*')
+    .eq('program_id', program.id)
+    .order('order_index', { ascending: true })
+  if (templatesError) throw templatesError
+
+  for (const template of templates) {
+    const { data: newTemplate, error: newTemplateError } = await supabase
+      .from('session_templates')
+      .insert({
         user_id: userId,
         program_id: createdProgram.id,
-        name: block.name,
-        focus: block.focus,
-        block_type: block.block_type,
-        order_index: block.order_index,
-        duration_weeks: block.duration_weeks,
-      })),
-    )
-    if (blocksError) throw blocksError
+        name: template.name,
+        order_index: template.order_index,
+      })
+      .select()
+      .single()
+    if (newTemplateError) throw newTemplateError
+
+    const { data: slots, error: slotsError } = await supabase
+      .from('session_template_exercises')
+      .select('*')
+      .eq('session_template_id', template.id)
+      .order('order_index', { ascending: true })
+    if (slotsError) throw slotsError
+
+    if (slots.length > 0) {
+      const { error: newSlotsError } = await supabase
+        .from('session_template_exercises')
+        .insert(
+          slots.map((slot) => ({
+            user_id: userId,
+            session_template_id: newTemplate.id,
+            exercise_id: slot.exercise_id,
+            order_index: slot.order_index,
+            target_sets: slot.target_sets,
+            target_reps_min: slot.target_reps_min,
+            target_reps_max: slot.target_reps_max,
+            target_rpe: slot.target_rpe,
+            notes: slot.notes,
+          })),
+        )
+      if (newSlotsError) throw newSlotsError
+    }
   }
 
   return createdProgram
-}
-
-export async function fetchBlock(id: string): Promise<Block> {
-  const { data, error } = await supabase.from('blocks').select('*').eq('id', id).single()
-  if (error) throw error
-  return toBlock(data)
-}
-
-export async function fetchBlocks(programId: string): Promise<Block[]> {
-  const { data, error } = await supabase
-    .from('blocks')
-    .select('*')
-    .eq('program_id', programId)
-    .order('order_index', { ascending: true })
-  if (error) throw error
-  return data.map(toBlock)
-}
-
-export async function createBlock(programId: string, input: BlockInput): Promise<Block> {
-  const userId = await requireUserId()
-  const existing = await fetchBlocks(programId)
-
-  const { data, error } = await supabase
-    .from('blocks')
-    .insert({
-      ...input,
-      user_id: userId,
-      program_id: programId,
-      order_index: nextOrderIndex(existing),
-    })
-    .select()
-    .single()
-  if (error) throw error
-  return toBlock(data)
-}
-
-export async function updateBlock(
-  id: string,
-  patch: Partial<BlockInput>,
-): Promise<Block> {
-  const { data, error } = await supabase
-    .from('blocks')
-    .update(patch)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return toBlock(data)
-}
-
-export async function deleteBlock(id: string): Promise<void> {
-  const { error } = await supabase.from('blocks').delete().eq('id', id)
-  if (error) throw error
-}
-
-export async function swapBlockOrder(a: Block, b: Block): Promise<void> {
-  const { error: errorA } = await supabase
-    .from('blocks')
-    .update({ order_index: b.order_index })
-    .eq('id', a.id)
-  if (errorA) throw errorA
-
-  const { error: errorB } = await supabase
-    .from('blocks')
-    .update({ order_index: a.order_index })
-    .eq('id', b.id)
-  if (errorB) throw errorB
 }

@@ -2,50 +2,49 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/sessions-api'
 import type { SessionTemplate, SessionTemplateExercise } from '@/lib/sessions-api'
 
-const templatesKey = (blockId: string) =>
-  ['blocks', blockId, 'session-templates'] as const
+const templatesKey = (programId: string) =>
+  ['programs', programId, 'session-templates'] as const
 const exercisesKey = (templateId: string) =>
   ['session-templates', templateId, 'exercises'] as const
-const sessionsKey = (blockId: string) => ['blocks', blockId, 'sessions'] as const
 
-export function useSessionTemplates(blockId: string) {
+export function useSessionTemplates(programId: string) {
   return useQuery({
-    queryKey: templatesKey(blockId),
-    queryFn: () => api.fetchSessionTemplates(blockId),
+    queryKey: templatesKey(programId),
+    queryFn: () => api.fetchSessionTemplates(programId),
   })
 }
 
-export function useCreateSessionTemplate(blockId: string) {
+export function useCreateSessionTemplate(programId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (name: string) => api.createSessionTemplate(blockId, name),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(blockId) }),
+    mutationFn: (name: string) => api.createSessionTemplate(programId, name),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
   })
 }
 
-export function useUpdateSessionTemplate(blockId: string) {
+export function useUpdateSessionTemplate(programId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
       api.updateSessionTemplate(id, name),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(blockId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
   })
 }
 
-export function useDeleteSessionTemplate(blockId: string) {
+export function useDeleteSessionTemplate(programId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.deleteSessionTemplate(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(blockId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
   })
 }
 
-export function useSwapSessionTemplateOrder(blockId: string) {
+export function useSwapSessionTemplateOrder(programId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ a, b }: { a: SessionTemplate; b: SessionTemplate }) =>
       api.swapSessionTemplateOrder(a, b),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(blockId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
   })
 }
 
@@ -97,20 +96,5 @@ export function useSwapSessionTemplateExerciseOrder(templateId: string) {
       api.swapSessionTemplateExerciseOrder(a, b),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
-  })
-}
-
-export function useSessions(blockId: string) {
-  return useQuery({
-    queryKey: sessionsKey(blockId),
-    queryFn: () => api.fetchSessions(blockId),
-  })
-}
-
-export function useGenerateBlockSessions(blockId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () => api.generateBlockSessions(blockId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionsKey(blockId) }),
   })
 }

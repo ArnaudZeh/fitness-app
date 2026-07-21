@@ -19,6 +19,14 @@ Tracker unique des TODO en attente, conformément à la règle "aucun TODO non t
 
 ## P2b — Catalogue d'exercices & génération de séances
 
-- [ ] Table `sessions` : pas encore de policy UPDATE (juste select/insert/delete). Normal pour l'instant (rien ne modifie le statut d'une séance), mais il en faudra une (scopée `auth.uid() = user_id`) dès qu'on ajoutera le logging réel (P3/P4) pour passer `status` de `pending` à `completed`/`skipped`.
 - [ ] `session_template_exercises.exercise_id` référence `exercises` par FK sans vérifier que l'exercice est accessible (catalogue système ou exercice perso de l'utilisateur) au moment de l'insert — un utilisateur pourrait créer une référence "orpheline" vers l'exercice privé d'un autre utilisateur (deviné par UUID). Aucune fuite de données possible (RLS bloque toujours la lecture), juste une référence morte théorique. Pas prioritaire, mais à durcir avec une contrainte/trigger si on ouvre l'app à plusieurs utilisateurs réels.
-- [ ] Sélecteur d'exercice actuellement un `<Select>` simple groupé par muscle group — suffisant pour ~20 exercices seedés, mais à remplacer par un combobox recherchable (`command`+`popover` shadcn) si le catalogue grossit significativement (backlog P11 Polish).
+
+## Architecture pivot (2026-07-21, post P2a/P2b) — voir mémoire "P2 architecture pivot"
+
+- Cette phase a supprimé `blocks` (périodisation), `sessions` + `generate_block_sessions()` (pré-génération de séances). `focus` est passé du Bloc au Programme. Le vrai logging de séance (remplaçant `sessions`) est repoussé à P3 — c'est sa place naturelle, pas la peine de le tracker séparément ici.
+- [ ] Sélecteur d'exercice actuellement un `<Select>` simple groupé par muscle group. Le user a explicitement demandé une **search bar + visuels simples**, groupés par muscle (retour du 2026-07-21 après test réel). Prioritaire pour la prochaine passe UI — pas juste un "nice to have" P11 comme noté précédemment. Candidat pour `mcp__magic__21st_magic_component_builder`/`_refiner` (21st.dev) une fois que le user envoie ses exemples de design.
+- [ ] `pnpm audit` : 1 vulnérabilité modérée acceptée en connaissance de cause — `shadcn` (devDependency, requis pour `src/index.css` → `@import 'shadcn/tailwind.css'`) dépend transitivement de `@modelcontextprotocol/sdk` → `@hono/node-server` (CVE path traversal Windows-only dans `serve-static`, sert uniquement le registry MCP local de la CLI shadcn, jamais invoqué par cette app, jamais bundlé côté client). Pas de version corrigée disponible en amont (4.13.1 = dernière version au 2026-07-21). À revérifier périodiquement (`pnpm audit` + `npm view shadcn versions`).
+
+## Phase Profil (à venir, après cette simplification)
+
+- Le Profil (mensurations, objectifs) doit être conçu dès le départ pour permettre, plus tard, des recommandations d'entraînement pilotées par IA en fonction des objectifs déclarés (le user veut que "tout soit lié" — profil → programmes → IA). L'IA elle-même reste P9, ne pas l'anticiper, mais ne pas non plus concevoir le schéma du Profil de façon qui rendrait ce lien difficile plus tard.

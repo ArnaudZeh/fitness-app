@@ -35,8 +35,8 @@ export function SessionTemplateCard({
   const updateSlot = useUpdateSessionTemplateExercise(template.id)
   const deleteSlot = useDeleteSessionTemplateExercise(template.id)
   const swapSlotOrder = useSwapSessionTemplateExerciseOrder(template.id)
-  const updateTemplate = useUpdateSessionTemplate(template.block_id)
-  const deleteTemplate = useDeleteSessionTemplate(template.block_id)
+  const updateTemplate = useUpdateSessionTemplate(template.program_id)
+  const deleteTemplate = useDeleteSessionTemplate(template.program_id)
 
   const sortedSlots = slots ?? []
 
