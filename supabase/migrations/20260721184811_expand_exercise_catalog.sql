@@ -1,0 +1,178 @@
+-- Expand the shared system exercise catalog to full gym coverage across all
+-- muscle groups (compound lifts, isolation work, machine/cable/bodyweight
+-- variants, Olympic lifts, conditioning). English names are fine here —
+-- muscle_group stays in French to stay consistent with the initial seed and
+-- the existing UI grouping.
+
+-- Partial unique index so this (and any future) seed insert is idempotent —
+-- safe to re-run without creating duplicate system-catalog rows. Scoped to
+-- user_id is null so users can still name a custom exercise the same as a
+-- system one.
+create unique index exercises_system_name_unique_idx
+  on public.exercises (name)
+  where user_id is null;
+
+insert into public.exercises (name, muscle_group)
+select v.name, v.muscle_group
+from (
+  values
+    -- Chest (pectoraux)
+    ('Incline Barbell Bench Press', 'pectoraux'),
+    ('Decline Bench Press', 'pectoraux'),
+    ('Close-Grip Bench Press', 'pectoraux'),
+    ('Dumbbell Bench Press', 'pectoraux'),
+    ('Incline Dumbbell Press', 'pectoraux'),
+    ('Dumbbell Fly', 'pectoraux'),
+    ('Incline Dumbbell Fly', 'pectoraux'),
+    ('Cable Fly', 'pectoraux'),
+    ('Low-to-High Cable Fly', 'pectoraux'),
+    ('Pec Deck Machine', 'pectoraux'),
+    ('Push-Up', 'pectoraux'),
+    ('Incline Push-Up', 'pectoraux'),
+    ('Decline Push-Up', 'pectoraux'),
+    ('Weighted Push-Up', 'pectoraux'),
+    ('Landmine Press', 'pectoraux'),
+    ('Svend Press', 'pectoraux'),
+    ('Weighted Chest Dip', 'pectoraux'),
+    ('Smith Machine Bench Press', 'pectoraux'),
+    ('Machine Chest Press', 'pectoraux'),
+
+    -- Back (dos)
+    ('Sumo Deadlift', 'dos'),
+    ('Deficit Deadlift', 'dos'),
+    ('Trap Bar Deadlift', 'dos'),
+    ('Rack Pull', 'dos'),
+    ('Pendlay Row', 'dos'),
+    ('T-Bar Row', 'dos'),
+    ('Seated Cable Row', 'dos'),
+    ('Single-Arm Dumbbell Row', 'dos'),
+    ('Chest-Supported Row', 'dos'),
+    ('Inverted Row', 'dos'),
+    ('Meadows Row', 'dos'),
+    ('Lat Pulldown', 'dos'),
+    ('Wide-Grip Lat Pulldown', 'dos'),
+    ('Close-Grip Lat Pulldown', 'dos'),
+    ('Straight-Arm Pulldown', 'dos'),
+    ('Chin-Up', 'dos'),
+    ('Wide-Grip Pull-Up', 'dos'),
+    ('Weighted Pull-Up', 'dos'),
+    ('Neutral-Grip Pull-Up', 'dos'),
+    ('Good Morning', 'dos'),
+    ('Back Extension', 'dos'),
+    ('Barbell Shrug', 'dos'),
+    ('Dumbbell Shrug', 'dos'),
+    ('Kroc Row', 'dos'),
+
+    -- Shoulders (épaules)
+    ('Arnold Press', 'épaules'),
+    ('Seated Dumbbell Shoulder Press', 'épaules'),
+    ('Standing Barbell Overhead Press', 'épaules'),
+    ('Push Press', 'épaules'),
+    ('Front Raise', 'épaules'),
+    ('Cable Front Raise', 'épaules'),
+    ('Rear Delt Fly', 'épaules'),
+    ('Cable Rear Delt Fly', 'épaules'),
+    ('Reverse Pec Deck', 'épaules'),
+    ('Cable Lateral Raise', 'épaules'),
+    ('Leaning Lateral Raise', 'épaules'),
+    ('Upright Row', 'épaules'),
+    ('Landmine Lateral Raise', 'épaules'),
+    ('Machine Shoulder Press', 'épaules'),
+    ('Cuban Press', 'épaules'),
+
+    -- Legs (jambes)
+    ('Front Squat', 'jambes'),
+    ('Box Squat', 'jambes'),
+    ('Goblet Squat', 'jambes'),
+    ('Bulgarian Split Squat', 'jambes'),
+    ('Hack Squat', 'jambes'),
+    ('Zercher Squat', 'jambes'),
+    ('Overhead Squat', 'jambes'),
+    ('Pistol Squat', 'jambes'),
+    ('Sissy Squat', 'jambes'),
+    ('Leg Extension', 'jambes'),
+    ('Lying Leg Curl', 'jambes'),
+    ('Seated Leg Curl', 'jambes'),
+    ('Nordic Hamstring Curl', 'jambes'),
+    ('Stiff-Leg Deadlift', 'jambes'),
+    ('Single-Leg Romanian Deadlift', 'jambes'),
+    ('Walking Lunge', 'jambes'),
+    ('Reverse Lunge', 'jambes'),
+    ('Lateral Lunge', 'jambes'),
+    ('Curtsy Lunge', 'jambes'),
+    ('Step-Up', 'jambes'),
+    ('Seated Calf Raise', 'jambes'),
+    ('Standing Calf Raise', 'jambes'),
+    ('Leg Press Calf Raise', 'jambes'),
+    ('Donkey Calf Raise', 'jambes'),
+    ('Cable Glute Kickback', 'jambes'),
+    ('Barbell Hip Thrust', 'jambes'),
+    ('Single-Leg Hip Thrust', 'jambes'),
+    ('Glute Bridge', 'jambes'),
+    ('Hip Abduction Machine', 'jambes'),
+    ('Hip Adduction Machine', 'jambes'),
+    ('Sled Leg Press', 'jambes'),
+
+    -- Arms (bras)
+    ('Hammer Curl', 'bras'),
+    ('Preacher Curl', 'bras'),
+    ('Concentration Curl', 'bras'),
+    ('Cable Curl', 'bras'),
+    ('EZ-Bar Curl', 'bras'),
+    ('Spider Curl', 'bras'),
+    ('Incline Dumbbell Curl', 'bras'),
+    ('Zottman Curl', 'bras'),
+    ('Drag Curl', 'bras'),
+    ('Cable Rope Hammer Curl', 'bras'),
+    ('Skull Crusher', 'bras'),
+    ('Overhead Cable Triceps Extension', 'bras'),
+    ('Overhead Dumbbell Triceps Extension', 'bras'),
+    ('Cable Triceps Pushdown', 'bras'),
+    ('Rope Triceps Pushdown', 'bras'),
+    ('Diamond Push-Up', 'bras'),
+    ('Triceps Kickback', 'bras'),
+    ('Bench Dip', 'bras'),
+    ('JM Press', 'bras'),
+    ('Wrist Curl', 'bras'),
+    ('Reverse Wrist Curl', 'bras'),
+    ('Reverse Barbell Curl', 'bras'),
+    ('Farmer''s Carry', 'bras'),
+
+    -- Core
+    ('Hanging Leg Raise', 'core'),
+    ('Hanging Knee Raise', 'core'),
+    ('Cable Crunch', 'core'),
+    ('Ab Wheel Rollout', 'core'),
+    ('Russian Twist', 'core'),
+    ('Side Plank', 'core'),
+    ('Dead Bug', 'core'),
+    ('Mountain Climber', 'core'),
+    ('Sit-Up', 'core'),
+    ('Weighted Sit-Up', 'core'),
+    ('Reverse Crunch', 'core'),
+    ('Bicycle Crunch', 'core'),
+    ('Pallof Press', 'core'),
+    ('Hollow Body Hold', 'core'),
+    ('Cable Woodchopper', 'core'),
+    ('V-Up', 'core'),
+    ('Toes to Bar', 'core'),
+
+    -- Full body / Olympic lifts / conditioning
+    ('Power Clean', 'full_body'),
+    ('Hang Clean', 'full_body'),
+    ('Clean and Jerk', 'full_body'),
+    ('Snatch', 'full_body'),
+    ('Power Snatch', 'full_body'),
+    ('Thruster', 'full_body'),
+    ('Kettlebell Swing', 'full_body'),
+    ('Turkish Get-Up', 'full_body'),
+    ('Burpee', 'full_body'),
+    ('Farmer''s Walk', 'full_body'),
+    ('Sled Push', 'full_body'),
+    ('Sled Pull', 'full_body'),
+    ('Battle Ropes', 'full_body'),
+    ('Box Jump', 'full_body'),
+    ('Wall Ball', 'full_body'),
+    ('Man Maker', 'full_body')
+) as v(name, muscle_group)
+on conflict (name) where user_id is null do nothing;
