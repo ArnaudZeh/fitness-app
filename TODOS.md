@@ -4,7 +4,7 @@ Tracker unique des TODO en attente, conformément à la règle "aucun TODO non t
 
 ## P0 — Infrastructure & squelette
 
-- [ ] Remplacer les icônes PWA placeholder (`public/pwa-192x192.png`, `public/pwa-512x512.png` — carrés unis `#0b0f14`) par de vraies icônes de marque lors de la phase design UI (`ui-ux-pro-max` + `frontend-design`).
+- [ ] Remplacer les icônes/favicon placeholder (`public/pwa-192x192.png`, `public/pwa-512x512.png` — carrés unis `#0b0f14` ; `public/favicon.svg` — cercle teal minimal, remplacé début P1 car c'était encore le logo par défaut du template Vite) par de vraies icônes de marque lors de la phase design UI (`ui-ux-pro-max` + `frontend-design`). Repéré par `graphify` P1 (communauté isolée "Leftover Vite Favicon Branding").
 
 ## P1 — Auth & multi-tenant
 

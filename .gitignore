@@ -23,10 +23,14 @@ playwright-report
 blob-report
 coverage
 
+# graphify knowledge graph — regenerable, contains machine-specific paths
+graphify-out
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
+.claude
 .DS_Store
 *.suo
 *.ntvs*
