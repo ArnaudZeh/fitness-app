@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -15,8 +16,8 @@ export default defineConfig({
         name: 'Fitness',
         short_name: 'Fitness',
         description: 'Suivi de musculation, hypoxie intermittente et bien-être',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#0b0f14',
+        background_color: '#0b0f14',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -30,5 +31,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    exclude: ['**/node_modules/**', './e2e/**'],
   },
 })
