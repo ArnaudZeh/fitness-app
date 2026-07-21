@@ -1,0 +1,7 @@
+dist
+dev-dist
+pnpm-lock.yaml
+supabase/.temp
+supabase/.branches
+docs
+.claude
