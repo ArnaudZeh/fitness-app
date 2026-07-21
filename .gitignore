@@ -22,6 +22,7 @@ test-results
 playwright-report
 blob-report
 coverage
+e2e/.auth
 
 # graphify knowledge graph — regenerable, contains machine-specific paths
 graphify-out
@@ -30,8 +31,11 @@ graphify-out
 .vscode/*
 !.vscode/extensions.json
 .idea
-.claude
 .DS_Store
+
+# Claude Code: keep shared project settings, ignore personal/internal state
+.claude/*
+!.claude/settings.json
 *.suo
 *.ntvs*
 *.njsproj
