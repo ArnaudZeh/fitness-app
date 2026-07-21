@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
+import { nextOrderIndex } from '@/lib/ordering'
+
+export { getSwapPair } from '@/lib/ordering'
 
 export type ProgramStatus = 'draft' | 'active' | 'archived'
 export type BlockFocus = 'force' | 'hypertrophie' | 'endurance'
@@ -153,6 +156,12 @@ export async function duplicateProgram(program: Program): Promise<Program> {
   return createdProgram
 }
 
+export async function fetchBlock(id: string): Promise<Block> {
+  const { data, error } = await supabase.from('blocks').select('*').eq('id', id).single()
+  if (error) throw error
+  return toBlock(data)
+}
+
 export async function fetchBlocks(programId: string): Promise<Block[]> {
   const { data, error } = await supabase
     .from('blocks')
@@ -166,8 +175,6 @@ export async function fetchBlocks(programId: string): Promise<Block[]> {
 export async function createBlock(programId: string, input: BlockInput): Promise<Block> {
   const userId = await requireUserId()
   const existing = await fetchBlocks(programId)
-  const nextOrderIndex =
-    existing.length === 0 ? 0 : Math.max(...existing.map((b) => b.order_index)) + 1
 
   const { data, error } = await supabase
     .from('blocks')
@@ -175,7 +182,7 @@ export async function createBlock(programId: string, input: BlockInput): Promise
       ...input,
       user_id: userId,
       program_id: programId,
-      order_index: nextOrderIndex,
+      order_index: nextOrderIndex(existing),
     })
     .select()
     .single()
@@ -200,22 +207,6 @@ export async function updateBlock(
 export async function deleteBlock(id: string): Promise<void> {
   const { error } = await supabase.from('blocks').delete().eq('id', id)
   if (error) throw error
-}
-
-// Pure so it can be unit-tested without a live Supabase call — boundary
-// conditions (first/last/only block) are easy to get wrong here.
-export function getSwapPair(
-  blocks: Block[],
-  blockId: string,
-  direction: 'up' | 'down',
-): [Block, Block] | null {
-  const index = blocks.findIndex((b) => b.id === blockId)
-  if (index === -1) return null
-  const neighborIndex = direction === 'up' ? index - 1 : index + 1
-  const neighbor = blocks[neighborIndex]
-  const block = blocks[index]
-  if (!neighbor || !block) return null
-  return [block, neighbor]
 }
 
 export async function swapBlockOrder(a: Block, b: Block): Promise<void> {

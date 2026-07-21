@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -188,6 +188,11 @@ export function ProgramDetailPage() {
                       await deleteBlock.mutateAsync(block.id)
                     }}
                   />
+                  <Link to={`/programs/${id}/blocks/${block.id}`} className="ml-auto">
+                    <Button variant="outline" size="sm">
+                      Structure de la séance
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </li>

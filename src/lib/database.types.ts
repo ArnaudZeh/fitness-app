@@ -56,6 +56,30 @@ export type Database = {
           },
         ]
       }
+      exercises: {
+        Row: {
+          created_at: string
+          id: string
+          muscle_group: string | null
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          muscle_group?: string | null
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          muscle_group?: string | null
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -121,12 +145,158 @@ export type Database = {
           },
         ]
       }
+      session_template_exercises: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          notes: string | null
+          order_index: number
+          session_template_id: string
+          target_reps_max: number
+          target_reps_min: number
+          target_rpe: number | null
+          target_sets: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          notes?: string | null
+          order_index: number
+          session_template_id: string
+          target_reps_max: number
+          target_reps_min: number
+          target_rpe?: number | null
+          target_sets: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          notes?: string | null
+          order_index?: number
+          session_template_id?: string
+          target_reps_max?: number
+          target_reps_min?: number
+          target_rpe?: number | null
+          target_sets?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_template_exercises_exercise_id_fkey'
+            columns: ['exercise_id']
+            isOneToOne: false
+            referencedRelation: 'exercises'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_template_exercises_session_template_id_fkey'
+            columns: ['session_template_id']
+            isOneToOne: false
+            referencedRelation: 'session_templates'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      session_templates: {
+        Row: {
+          block_id: string
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          id?: string
+          name: string
+          order_index: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_templates_block_id_fkey'
+            columns: ['block_id']
+            isOneToOne: false
+            referencedRelation: 'blocks'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          block_id: string
+          created_at: string
+          id: string
+          session_template_id: string
+          status: string
+          updated_at: string
+          user_id: string
+          week_number: number
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          id?: string
+          session_template_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          week_number: number
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          id?: string
+          session_template_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'sessions_block_id_fkey'
+            columns: ['block_id']
+            isOneToOne: false
+            referencedRelation: 'blocks'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'sessions_session_template_id_fkey'
+            columns: ['session_template_id']
+            isOneToOne: false
+            referencedRelation: 'session_templates'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_block_sessions: { Args: { p_block_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never

@@ -50,6 +50,13 @@ export function useDuplicateProgram() {
   })
 }
 
+export function useBlock(id: string) {
+  return useQuery({
+    queryKey: ['blocks', id] as const,
+    queryFn: () => api.fetchBlock(id),
+  })
+}
+
 export function useBlocks(programId: string) {
   return useQuery({
     queryKey: blocksKey(programId),
