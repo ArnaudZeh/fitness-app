@@ -11,19 +11,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { ExercisePicker, NEW_EXERCISE_VALUE } from '@/components/ExercisePicker'
 import type { Exercise } from '@/lib/exercises-api'
 import type { SessionTemplateExerciseInput } from '@/lib/sessions-api'
-
-const NEW_EXERCISE_VALUE = '__new__'
 
 interface ExerciseSlotFormDialogProps {
   trigger: React.ReactNode
@@ -55,17 +45,6 @@ export function ExerciseSlotFormDialog({
   const [targetRpe, setTargetRpe] = useState(initialValue?.target_rpe?.toString() ?? '')
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const groupedExercises = new Map<string, Exercise[]>()
-  for (const exercise of exercises) {
-    const group = exercise.muscle_group ?? 'Autre'
-    const existing = groupedExercises.get(group)
-    if (existing) {
-      existing.push(exercise)
-    } else {
-      groupedExercises.set(group, [exercise])
-    }
-  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -107,29 +86,12 @@ export function ExerciseSlotFormDialog({
           className="flex flex-col gap-4"
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="exercise-select">Exercice</Label>
-            <Select value={exerciseId} onValueChange={setExerciseId}>
-              <SelectTrigger id="exercise-select">
-                <SelectValue placeholder="Choisir un exercice" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...groupedExercises.entries()].map(([muscleGroup, group]) => (
-                  <SelectGroup key={muscleGroup}>
-                    <SelectLabel>{muscleGroup}</SelectLabel>
-                    {group.map((exercise) => (
-                      <SelectItem key={exercise.id} value={exercise.id}>
-                        {exercise.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-                <SelectGroup>
-                  <SelectItem value={NEW_EXERCISE_VALUE}>
-                    + Créer un nouvel exercice
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <Label>Exercice</Label>
+            <ExercisePicker
+              exercises={exercises}
+              value={exerciseId}
+              onSelect={setExerciseId}
+            />
           </div>
 
           {exerciseId === NEW_EXERCISE_VALUE && (

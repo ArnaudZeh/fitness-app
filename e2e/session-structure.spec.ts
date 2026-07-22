@@ -24,16 +24,13 @@ test('marks a day as training and adds an exercise, then cleans up', async ({ pa
   ).toBeVisible()
 
   await mondayCard.getByRole('button', { name: 'Ajouter un exercice' }).click()
-  await page.locator('#exercise-select').click()
+  await page.getByPlaceholder('Rechercher un exercice…').fill('Squat')
   await page.getByRole('option', { name: 'Squat', exact: true }).click()
   await page.getByLabel('Séries').fill('4')
   await page.getByLabel('Reps min').fill('6')
   await page.getByLabel('Reps max').fill('10')
   await page.getByRole('button', { name: "Ajouter l'exercice" }).click()
 
-  // Wait for the dialog to actually close before asserting — Radix Select
-  // also renders a visually-hidden native <select> with a "Squat" <option>,
-  // so a bare getByText('Squat') is ambiguous while the dialog is still open.
   await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 })
   await expect(page.getByText('4 x 6-10')).toBeVisible()
 
