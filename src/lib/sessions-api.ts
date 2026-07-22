@@ -23,9 +23,12 @@ export interface SessionTemplateExerciseInput {
   target_reps_min: number
   target_reps_max: number
   target_rpe: number | null
+  target_rest_seconds: number | null
   notes: string | null
   superset_group: string | null
 }
+
+export const DEFAULT_REST_SECONDS = 90
 
 export const DAY_TYPE_LABELS: Record<DayType, string> = {
   training: 'Entraînement',

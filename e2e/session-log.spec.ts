@@ -19,19 +19,30 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
   await mondayCard.getByRole('button', { name: 'Ajouter un exercice' }).click()
   await page.getByPlaceholder('Rechercher un exercice…').fill('Squat')
   await page.getByRole('option', { name: 'Squat', exact: true }).click()
+  await page.getByLabel('Superset').fill('A')
   await page.getByRole('button', { name: "Ajouter l'exercice" }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 })
+  await expect(mondayCard.getByText('Superset A')).toBeVisible()
 
   await mondayCard.getByRole('button', { name: 'Démarrer la séance' }).click()
   await expect(page.getByRole('heading', { name: 'Lundi' })).toBeVisible({
     timeout: 20_000,
   })
   await expect(page.getByText('En cours')).toBeVisible()
+  await expect(page.getByText('Superset A')).toBeVisible()
 
   await page.getByLabel('Charge (kg)').fill('100')
   await page.getByLabel('Reps').fill('5')
   await page.getByRole('button', { name: 'Série 1' }).click()
   await expect(page.getByText('Série 1 — 100 kg x 5')).toBeVisible()
+
+  // Logging a set auto-starts the rest timer.
+  await expect(page.getByText('Repos', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Passer' })).toBeVisible()
+
+  // Duplicate the set instead of retyping the same charge/reps.
+  await page.getByRole('button', { name: 'Dupliquer cette série' }).click()
+  await expect(page.getByText('Série 2 — 100 kg x 5')).toBeVisible()
 
   await page.getByRole('button', { name: 'Terminer la séance' }).click()
   await expect(page.getByText('Terminée')).toBeVisible()

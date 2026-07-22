@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { RestTimer } from '@/components/RestTimer'
 import { useProgram } from '@/hooks/usePrograms'
 import {
   useSessionTemplate,
@@ -20,7 +21,7 @@ import {
   useSessionLog,
   useSessionLogSets,
 } from '@/hooks/useSessionLogs'
-import { WEEKDAY_LABELS } from '@/lib/sessions-api'
+import { DEFAULT_REST_SECONDS, WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { SessionTemplateExercise } from '@/lib/sessions-api'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 
@@ -132,13 +133,21 @@ function SessionLogExerciseCard({
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState(slot.target_reps_min.toString())
   const [rpe, setRpe] = useState('')
+  const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
+    null,
+  )
 
   const sortedSets = [...sets].sort((a, b) => a.set_number - b.set_number)
   const nextSetNumber = sortedSets.length + 1
+  const restSeconds = slot.target_rest_seconds ?? DEFAULT_REST_SECONDS
+
+  function startRest(afterSetId: string) {
+    setActiveRest({ key: afterSetId, seconds: restSeconds })
+  }
 
   async function handleAddSet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    await createSet.mutateAsync({
+    const created = await createSet.mutateAsync({
       session_template_exercise_id: slot.id,
       set_number: nextSetNumber,
       actual_reps: Number(reps),
@@ -147,16 +156,18 @@ function SessionLogExerciseCard({
     })
     setWeight('')
     setRpe('')
+    startRest(created.id)
   }
 
   async function handleDuplicateSet(set: SessionLogSet) {
-    await createSet.mutateAsync({
+    const created = await createSet.mutateAsync({
       session_template_exercise_id: slot.id,
       set_number: nextSetNumber,
       actual_reps: set.actual_reps,
       actual_weight_kg: set.actual_weight_kg,
       actual_rpe: set.actual_rpe,
     })
+    startRest(created.id)
   }
 
   return (
@@ -170,7 +181,8 @@ function SessionLogExerciseCard({
         </div>
         <p className="text-sm text-muted-foreground">
           Cible : {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-          {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
+          {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
+          {restSeconds}s
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -211,6 +223,14 @@ function SessionLogExerciseCard({
           </ul>
         )}
 
+        {!disabled && activeRest && (
+          <RestTimer
+            key={activeRest.key}
+            initialSeconds={activeRest.seconds}
+            onDismiss={() => setActiveRest(null)}
+          />
+        )}
+
         {!disabled && (
           <form
             onSubmit={(event) => void handleAddSet(event)}
@@ -224,6 +244,7 @@ function SessionLogExerciseCard({
                 min={0}
                 step={0.5}
                 required
+                className="h-12 text-lg!"
                 value={weight}
                 onChange={(event) => setWeight(event.target.value)}
               />
@@ -235,6 +256,7 @@ function SessionLogExerciseCard({
                 type="number"
                 min={0}
                 required
+                className="h-12 text-lg!"
                 value={reps}
                 onChange={(event) => setReps(event.target.value)}
               />
@@ -248,6 +270,7 @@ function SessionLogExerciseCard({
                 max={10}
                 step={0.5}
                 placeholder="Optionnel"
+                className="h-12 text-lg!"
                 value={rpe}
                 onChange={(event) => setRpe(event.target.value)}
               />
@@ -255,9 +278,9 @@ function SessionLogExerciseCard({
             <div className="col-span-3">
               <Button
                 type="submit"
-                size="sm"
+                size="lg"
                 disabled={createSet.isPending}
-                className="w-full"
+                className="h-12! w-full"
               >
                 <Plus /> Série {nextSetNumber}
               </Button>

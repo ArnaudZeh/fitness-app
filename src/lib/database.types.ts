@@ -243,6 +243,7 @@ export type Database = {
           superset_group: string | null
           target_reps_max: number
           target_reps_min: number
+          target_rest_seconds: number | null
           target_rpe: number | null
           target_sets: number
           updated_at: string
@@ -258,6 +259,7 @@ export type Database = {
           superset_group?: string | null
           target_reps_max: number
           target_reps_min: number
+          target_rest_seconds?: number | null
           target_rpe?: number | null
           target_sets: number
           updated_at?: string
@@ -273,6 +275,7 @@ export type Database = {
           superset_group?: string | null
           target_reps_max?: number
           target_reps_min?: number
+          target_rest_seconds?: number | null
           target_rpe?: number | null
           target_sets?: number
           updated_at?: string

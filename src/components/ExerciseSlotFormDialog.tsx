@@ -43,6 +43,9 @@ export function ExerciseSlotFormDialog({
   const [targetRepsMin, setTargetRepsMin] = useState(initialValue?.target_reps_min ?? 8)
   const [targetRepsMax, setTargetRepsMax] = useState(initialValue?.target_reps_max ?? 12)
   const [targetRpe, setTargetRpe] = useState(initialValue?.target_rpe?.toString() ?? '')
+  const [targetRestSeconds, setTargetRestSeconds] = useState(
+    initialValue?.target_rest_seconds?.toString() ?? '',
+  )
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [supersetGroup, setSupersetGroup] = useState(initialValue?.superset_group ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -67,6 +70,8 @@ export function ExerciseSlotFormDialog({
         target_reps_min: targetRepsMin,
         target_reps_max: targetRepsMax,
         target_rpe: targetRpe.trim() === '' ? null : Number(targetRpe),
+        target_rest_seconds:
+          targetRestSeconds.trim() === '' ? null : Number(targetRestSeconds),
         notes: notes.trim() === '' ? null : notes,
         superset_group: supersetGroup.trim() === '' ? null : supersetGroup.trim(),
       })
@@ -171,6 +176,18 @@ export function ExerciseSlotFormDialog({
               RPE = difficulté ressentie, de 0 à 10. 10 = effort maximal (impossible de
               faire une répétition de plus), 7-8 = encore 2-3 répétitions en réserve.
             </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="target-rest-seconds">Repos (secondes)</Label>
+            <Input
+              id="target-rest-seconds"
+              type="number"
+              min={1}
+              placeholder="Optionnel — 90s par défaut"
+              value={targetRestSeconds}
+              onChange={(event) => setTargetRestSeconds(event.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-2">
