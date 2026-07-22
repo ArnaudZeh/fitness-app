@@ -12,7 +12,7 @@ const WEEKDAY_LABELS_FR = [
   'Samedi',
 ]
 
-test('dashboard shows and lets you start today\'s scheduled session', async ({ page }) => {
+test("dashboard shows and lets you start today's scheduled session", async ({ page }) => {
   const programName = `E2E Dashboard ${Date.now()}`
   const todayLabel = WEEKDAY_LABELS_FR[new Date().getDay()]
 

@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_provider_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_valid: boolean
+          last_validated_at: string | null
+          provider: string
+          updated_at: string
+          user_id: string
+          vault_secret_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_valid?: boolean
+          last_validated_at?: string | null
+          provider: string
+          updated_at?: string
+          user_id: string
+          vault_secret_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_valid?: boolean
+          last_validated_at?: string | null
+          provider?: string
+          updated_at?: string
+          user_id?: string
+          vault_secret_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
@@ -368,7 +401,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      ai_vault_create_secret: {
+        Args: { p_name: string; p_secret: string }
+        Returns: string
+      }
+      ai_vault_delete_secret: { Args: { p_id: string }; Returns: undefined }
+      ai_vault_read_secret: { Args: { p_id: string }; Returns: string }
+      ai_vault_update_secret: {
+        Args: { p_id: string; p_secret: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

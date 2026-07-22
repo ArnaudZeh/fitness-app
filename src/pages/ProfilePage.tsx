@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { AiSettingsSection } from '@/components/AiSettingsSection'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import {
@@ -51,6 +52,7 @@ export function ProfilePage() {
       <h1 className="text-2xl font-semibold">Mon profil</h1>
       <ProfileForm profile={profile} />
       <WeightSection />
+      <AiSettingsSection />
     </div>
   )
 }

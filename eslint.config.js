@@ -6,7 +6,17 @@ import tseslint from 'typescript-eslint'
 import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'src/lib/database.types.ts'] },
+  {
+    ignores: [
+      'dist',
+      'dev-dist',
+      'src/lib/database.types.ts',
+      // Deno runtime (Supabase Edge Functions) — separate module resolution
+      // and globals (Deno.*, jsr: imports) than the Vite/Node app; not part
+      // of this tsconfig project. Linted by `deno lint` if needed, not ESLint.
+      'supabase/functions/**',
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     files: ['**/*.{ts,tsx}'],
