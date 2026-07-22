@@ -34,6 +34,9 @@ Tracker unique des TODO en attente, conformément à la règle "aucun TODO non t
 - `duplicateProgram()` adapté en conséquence : les 7 jours de la copie existent déjà (trigger), donc on les met à jour (`day_type` + exercices copiés) au lieu de les insérer.
 - RPE : définition ajoutée en texte d'aide sous le champ (pas de tooltip — mobile-first, le hover ne fonctionne pas au toucher).
 
-## Phase Profil (à venir, après cette simplification)
+## Phase Profil (2026-07-21/22)
 
-- Le Profil (mensurations, objectifs) doit être conçu dès le départ pour permettre, plus tard, des recommandations d'entraînement pilotées par IA en fonction des objectifs déclarés (le user veut que "tout soit lié" — profil → programmes → IA). L'IA elle-même reste P9, ne pas l'anticiper, mais ne pas non plus concevoir le schéma du Profil de façon qui rendrait ce lien difficile plus tard.
+- Le Profil (mensurations, objectifs) est conçu pour permettre, plus tard, des recommandations d'entraînement pilotées par IA en fonction des objectifs déclarés (le user veut que "tout soit lié" — profil → programmes → IA). L'IA elle-même reste backlog (P9), ce qui a été fait ici : étendre `profiles` (P0) plutôt que créer une nouvelle table, avec des colonnes explicitement typées (`goal`, `sex` en check constraints) faciles à référencer depuis un futur prompt IA.
+- Table `weight_entries` créée (time-series, une entrée par jour via `unique(user_id, recorded_at)` + upsert) — pas de graphique pour l'instant, c'est le scope de P5 (analytics). RLS complète (select/insert/update/delete, `auth.uid() = user_id`) vérifiée en live avec deux comptes jetables (isolation croisée testée : lecture, update, insert tous bloqués sur le profil/les pesées d'autrui).
+- `src/pages/ProfilePage.tsx` : formulaire profil (`ProfileForm`, state initialisé directement depuis les props — pas de `useEffect` de synchro, pour éviter le anti-pattern "setState dans un effect" détecté par `eslint-plugin-react-hooks`) + section pesée (log du jour + liste + suppression via `ConfirmDialog`). Testé en live à 390px (mobile) : sauvegarde profil persistée après reload, log de pesée, suppression de pesée avec confirmation — tout fonctionne.
+- Aucune nouvelle dépendance ajoutée ; `pnpm audit` toujours à 1 vulnérabilité modérée acceptée (voir note P2a/P2b ci-dessus, inchangée).

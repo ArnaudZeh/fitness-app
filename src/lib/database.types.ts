@@ -36,20 +36,35 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          date_of_birth: string | null
           display_name: string | null
+          goal: string | null
+          height_cm: number | null
           id: string
+          sex: string | null
+          target_weight_kg: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          date_of_birth?: string | null
           display_name?: string | null
+          goal?: string | null
+          height_cm?: number | null
           id: string
+          sex?: string | null
+          target_weight_kg?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          date_of_birth?: string | null
           display_name?: string | null
+          goal?: string | null
+          height_cm?: number | null
           id?: string
+          sex?: string | null
+          target_weight_kg?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -184,6 +199,33 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      weight_entries: {
+        Row: {
+          created_at: string
+          id: string
+          recorded_at: string
+          updated_at: string
+          user_id: string
+          weight_kg: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recorded_at?: string
+          updated_at?: string
+          user_id: string
+          weight_kg: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recorded_at?: string
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number
+        }
+        Relationships: []
       }
     }
     Views: {
