@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ChevronLeft, Copy, Plus, Trash2 } from 'lucide-react'
+import { Calculator, ChevronLeft, Copy, Mic, MicOff, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { RestTimer } from '@/components/RestTimer'
+import { PlateCalculatorDialog } from '@/components/PlateCalculatorDialog'
 import {
   useCompleteSessionLog,
   useCreateSessionLogSet,
@@ -17,6 +18,7 @@ import {
   useSessionLogSets,
   useSessionPlan,
 } from '@/hooks/useSessionLogs'
+import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
 import type { ProgramFocus } from '@/lib/programs-api'
 import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { CachedPlanExercise } from '@/lib/offline-db'
@@ -137,6 +139,11 @@ function SessionLogExerciseCard({
   const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
     null,
   )
+  const voiceInput = useVoiceSetInput((parsed) => {
+    if (parsed.weightKg !== null) setWeight(parsed.weightKg.toString())
+    if (parsed.reps !== null) setReps(parsed.reps.toString())
+    if (parsed.rpe !== null) setRpe(parsed.rpe.toString())
+  })
 
   const sortedSets = [...sets].sort((a, b) => a.set_number - b.set_number)
   const nextSetNumber = sortedSets.length + 1
@@ -230,6 +237,46 @@ function SessionLogExerciseCard({
             initialSeconds={activeRest.seconds}
             onDismiss={() => setActiveRest(null)}
           />
+        )}
+
+        {!disabled && (
+          <div className="flex flex-wrap items-center gap-2">
+            <PlateCalculatorDialog
+              trigger={
+                <Button type="button" variant="outline" size="sm">
+                  <Calculator /> Calculateur de plaques
+                </Button>
+              }
+              initialTargetWeightKg={weight.trim() !== '' ? Number(weight) : undefined}
+            />
+            {voiceInput.isSupported && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  voiceInput.isListening
+                    ? voiceInput.stopListening()
+                    : voiceInput.startListening()
+                }
+              >
+                {voiceInput.isListening ? (
+                  <>
+                    <MicOff /> Arrêter l'écoute
+                  </>
+                ) : (
+                  <>
+                    <Mic /> Dicter la série
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+        {!disabled && voiceInput.error && (
+          <p role="alert" className="text-sm text-destructive">
+            {voiceInput.error}
+          </p>
         )}
 
         {!disabled && (
