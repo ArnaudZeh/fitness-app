@@ -245,6 +245,10 @@ function WeightSection() {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',
+                    // recorded_at is a plain date, not an instant — must
+                    // render in UTC or it silently shifts back a day for
+                    // any viewer west of UTC (e.g. the Americas).
+                    timeZone: 'UTC',
                   })}
                 </p>
               </div>
