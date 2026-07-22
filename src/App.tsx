@@ -8,6 +8,7 @@ import { ProgramsListPage } from '@/pages/ProgramsListPage'
 import { ProgramNewPage } from '@/pages/ProgramNewPage'
 import { ProgramDetailPage } from '@/pages/ProgramDetailPage'
 import { ProfilePage } from '@/pages/ProfilePage'
+import { SessionLogPage } from '@/pages/SessionLogPage'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="/programs/new" element={<ProgramNewPage />} />
           <Route path="/programs/:id" element={<ProgramDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/sessions/:id" element={<SessionLogPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

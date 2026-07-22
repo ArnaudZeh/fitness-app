@@ -67,6 +67,16 @@ export async function fetchSessionTemplates(
   return data.map(toSessionTemplate)
 }
 
+export async function fetchSessionTemplate(id: string): Promise<SessionTemplate> {
+  const { data, error } = await supabase
+    .from('session_templates')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return toSessionTemplate(data)
+}
+
 export async function updateSessionTemplateDayType(
   id: string,
   dayType: DayType,

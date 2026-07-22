@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -12,6 +13,7 @@ import {
   useUpdateSessionTemplateDayType,
   useUpdateSessionTemplateExercise,
 } from '@/hooks/useSessionTemplates'
+import { useStartSessionLog } from '@/hooks/useSessionLogs'
 import { getSwapPair } from '@/lib/ordering'
 import { DAY_TYPE_LABELS, WEEKDAY_LABELS, type DayType } from '@/lib/sessions-api'
 import type { SessionTemplate } from '@/lib/sessions-api'
@@ -19,6 +21,7 @@ import type { SessionTemplate } from '@/lib/sessions-api'
 const DAY_TYPE_OPTIONS: DayType[] = ['rest', 'training']
 
 export function SessionTemplateCard({ template }: { template: SessionTemplate }) {
+  const navigate = useNavigate()
   const { data: exercises } = useExercises()
   const { data: slots } = useSessionTemplateExercises(template.id)
   const createExercise = useCreateExercise()
@@ -27,6 +30,7 @@ export function SessionTemplateCard({ template }: { template: SessionTemplate })
   const deleteSlot = useDeleteSessionTemplateExercise(template.id)
   const swapSlotOrder = useSwapSessionTemplateExerciseOrder(template.id)
   const updateDayType = useUpdateSessionTemplateDayType(template.program_id)
+  const startSessionLog = useStartSessionLog(template.program_id)
 
   const sortedSlots = slots ?? []
   const isTrainingDay = template.day_type === 'training'
@@ -138,19 +142,35 @@ export function SessionTemplateCard({ template }: { template: SessionTemplate })
               </li>
             ))}
           </ul>
-          <ExerciseSlotFormDialog
-            trigger={
-              <Button variant="outline" size="sm" className="mt-2 self-start">
-                <Plus /> Ajouter un exercice
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <ExerciseSlotFormDialog
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Plus /> Ajouter un exercice
+                </Button>
+              }
+              exercises={exercises ?? []}
+              submitLabel="Ajouter l'exercice"
+              onCreateExercise={(input) => createExercise.mutateAsync(input)}
+              onSubmit={async (input) => {
+                await createSlot.mutateAsync(input)
+              }}
+            />
+            {sortedSlots.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={startSessionLog.isPending}
+                onClick={() =>
+                  startSessionLog.mutate(template.id, {
+                    onSuccess: (log) => void navigate(`/sessions/${log.id}`),
+                  })
+                }
+              >
+                <Play /> Démarrer la séance
               </Button>
-            }
-            exercises={exercises ?? []}
-            submitLabel="Ajouter l'exercice"
-            onCreateExercise={(input) => createExercise.mutateAsync(input)}
-            onSubmit={async (input) => {
-              await createSlot.mutateAsync(input)
-            }}
-          />
+            )}
+          </div>
         </CardContent>
       )}
     </Card>

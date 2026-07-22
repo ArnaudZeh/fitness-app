@@ -7,6 +7,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: '14.5'
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       exercises: {
@@ -101,6 +126,111 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      session_log_sets: {
+        Row: {
+          actual_reps: number
+          actual_rpe: number | null
+          actual_weight_kg: number
+          created_at: string
+          id: string
+          session_log_id: string
+          session_template_exercise_id: string
+          set_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_reps: number
+          actual_rpe?: number | null
+          actual_weight_kg: number
+          created_at?: string
+          id?: string
+          session_log_id: string
+          session_template_exercise_id: string
+          set_number: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_reps?: number
+          actual_rpe?: number | null
+          actual_weight_kg?: number
+          created_at?: string
+          id?: string
+          session_log_id?: string
+          session_template_exercise_id?: string
+          set_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_log_sets_session_log_id_fkey'
+            columns: ['session_log_id']
+            isOneToOne: false
+            referencedRelation: 'session_logs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_log_sets_session_template_exercise_id_fkey'
+            columns: ['session_template_exercise_id']
+            isOneToOne: false
+            referencedRelation: 'session_template_exercises'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      session_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          program_id: string
+          session_template_id: string
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          program_id: string
+          session_template_id: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          program_id?: string
+          session_template_id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_logs_program_id_fkey'
+            columns: ['program_id']
+            isOneToOne: false
+            referencedRelation: 'programs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_logs_session_template_id_fkey'
+            columns: ['session_template_id']
+            isOneToOne: false
+            referencedRelation: 'session_templates'
+            referencedColumns: ['id']
+          },
+        ]
       }
       session_template_exercises: {
         Row: {
@@ -357,6 +487,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
