@@ -1,3 +1,4 @@
+import { invokeEdgeFunction } from '@/lib/edge-function'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 
@@ -46,46 +47,21 @@ export async function fetchAiProviderKeyStatuses(): Promise<AiProviderKeyStatus[
   return (data ?? []).map(toStatus)
 }
 
-async function extractFunctionErrorMessage(error: unknown): Promise<string> {
-  if (error && typeof error === 'object' && 'context' in error) {
-    const context = (error as { context?: unknown }).context
-    if (context instanceof Response) {
-      try {
-        const body = (await context.json()) as { error?: string }
-        if (body.error) return body.error
-      } catch {
-        // Response body wasn't JSON — fall through to the generic message.
-      }
-    }
-  }
-  return error instanceof Error ? error.message : 'Une erreur est survenue.'
-}
-
-async function invokeAiKeyFunction<T>(
-  name: string,
-  body: Record<string, unknown>,
-): Promise<T> {
-  const result = await supabase.functions.invoke<T>(name, { body })
-  if (result.error) throw new Error(await extractFunctionErrorMessage(result.error))
-  if (result.data === null) throw new Error('Réponse vide du serveur.')
-  return result.data
-}
-
 export async function saveAiProviderKey(
   provider: AiProvider,
   apiKey: string,
 ): Promise<AiProviderKeyStatus> {
-  return invokeAiKeyFunction<AiProviderKeyStatus>('ai-key-save', { provider, apiKey })
+  return invokeEdgeFunction<AiProviderKeyStatus>('ai-key-save', { provider, apiKey })
 }
 
 export async function testAiProviderKey(
   provider: AiProvider,
 ): Promise<AiProviderKeyStatus> {
-  return invokeAiKeyFunction<AiProviderKeyStatus>('ai-key-test', { provider })
+  return invokeEdgeFunction<AiProviderKeyStatus>('ai-key-test', { provider })
 }
 
 export async function deleteAiProviderKey(provider: AiProvider): Promise<void> {
-  await invokeAiKeyFunction<{ provider: AiProvider; deleted: boolean }>('ai-key-delete', {
+  await invokeEdgeFunction<{ provider: AiProvider; deleted: boolean }>('ai-key-delete', {
     provider,
   })
 }

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { AiSettingsSection } from '@/components/AiSettingsSection'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DataOwnershipSection } from '@/components/DataOwnershipSection'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import {
   useDeleteWeightEntry,
@@ -53,6 +54,7 @@ export function ProfilePage() {
       <ProfileForm profile={profile} />
       <WeightSection />
       <AiSettingsSection />
+      <DataOwnershipSection />
     </div>
   )
 }
