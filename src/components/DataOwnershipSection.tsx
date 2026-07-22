@@ -1,8 +1,18 @@
+import { type ChangeEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { useDeleteAccount, useExportUserData } from '@/hooks/useDataExport'
+import {
+  useDeleteAccount,
+  useExportUserData,
+  useImportUserData,
+} from '@/hooks/useDataExport'
+import {
+  parseUserDataExport,
+  type ImportResult,
+  type UserDataExport,
+} from '@/lib/data-export-api'
 
 export function DataOwnershipSection() {
   const navigate = useNavigate()
@@ -35,6 +45,8 @@ export function DataOwnershipSection() {
           )}
         </div>
 
+        <ImportSection />
+
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <p className="text-sm text-muted-foreground">
             Supprimer ton compte efface définitivement toutes tes données : profil,
@@ -62,5 +74,130 @@ export function DataOwnershipSection() {
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+type ExportArrayKey = Exclude<
+  keyof UserDataExport,
+  'schema_version' | 'exported_at' | 'profile'
+>
+
+const SUMMARY_LABELS: [key: ExportArrayKey, label: string][] = [
+  ['programs', 'programmes'],
+  ['session_templates', 'jours de séance'],
+  ['session_template_exercises', 'exercices planifiés'],
+  ['session_logs', 'séances loguées'],
+  ['session_log_sets', 'séries'],
+  ['weight_entries', 'pesées'],
+  ['exercises', 'exercices personnalisés'],
+]
+
+function ImportSection() {
+  const importData = useImportUserData()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [parsed, setParsed] = useState<UserDataExport | null>(null)
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [result, setResult] = useState<ImportResult | null>(null)
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setResult(null)
+    setParseError(null)
+    setParsed(null)
+    importData.reset()
+    try {
+      setParsed(parseUserDataExport(await file.text()))
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : 'Fichier invalide.')
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-border pt-4">
+      <p className="text-sm text-muted-foreground">
+        Importe un fichier exporté précédemment. Les pesées existantes sont mises à jour
+        par date ; le reste (programmes, séances, exercices) vient s'ajouter à ce qui
+        existe déjà sur ton compte.
+      </p>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        aria-label="Fichier d'import"
+        className="hidden"
+        onChange={(event) => void handleFileChange(event)}
+      />
+      <Button
+        variant="outline"
+        className="self-start"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        Choisir un fichier à importer
+      </Button>
+
+      {parseError && (
+        <p role="alert" className="text-sm text-destructive">
+          {parseError}
+        </p>
+      )}
+
+      {parsed && (
+        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+          <p className="text-sm font-medium">Contenu du fichier :</p>
+          <ul className="text-sm text-muted-foreground">
+            {SUMMARY_LABELS.filter(([key]) => parsed[key].length > 0).map(
+              ([key, label]) => (
+                <li key={key}>
+                  {parsed[key].length} {label}
+                </li>
+              ),
+            )}
+          </ul>
+          <ConfirmDialog
+            trigger={
+              <Button className="self-start" disabled={importData.isPending}>
+                {importData.isPending ? 'Import…' : 'Importer'}
+              </Button>
+            }
+            title="Importer ces données ?"
+            description="Les programmes, séances et exercices importés viendront s'ajouter à ceux déjà présents sur ton compte."
+            confirmLabel="Confirmer l'import"
+            onConfirm={async () => {
+              const importedResult = await importData.mutateAsync(parsed)
+              setResult(importedResult)
+              setParsed(null)
+            }}
+          />
+        </div>
+      )}
+
+      {importData.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          {importData.error.message}
+        </p>
+      )}
+
+      {result && (
+        <div className="flex flex-col gap-1 rounded-md border border-border p-3 text-sm">
+          <p>
+            Import terminé : {result.imported.programs} programme(s),{' '}
+            {result.imported.session_logs} séance(s) loguée(s),{' '}
+            {result.imported.weight_entries} pesée(s).
+          </p>
+          {result.errors.length > 0 && (
+            <>
+              <p className="text-destructive">{result.errors.length} erreur(s) :</p>
+              <ul className="flex flex-col gap-1 text-destructive">
+                {result.errors.map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }

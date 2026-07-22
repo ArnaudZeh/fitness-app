@@ -17,7 +17,7 @@ export function useCreateProgram() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: ProgramInput) => api.createProgram(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: programsKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: programsKey }),
   })
 }
 
@@ -37,7 +37,12 @@ export function useDeleteProgram() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.deleteProgram(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: programsKey }),
+    // void, not returned: mutateAsync() awaits onSuccess's return value, and
+    // an un-voided invalidateQueries() here would make deletion's completion
+    // depend on the background refetch of whatever else is active — including
+    // the just-deleted program's own detail query if it's still mounted,
+    // which errors and retries with backoff, stalling the delete button.
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: programsKey }),
   })
 }
 
@@ -45,6 +50,6 @@ export function useDuplicateProgram() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (program: Program) => api.duplicateProgram(program),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: programsKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: programsKey }),
   })
 }
