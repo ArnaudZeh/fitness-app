@@ -3,7 +3,9 @@ import {
   computeDailyVolume,
   computeOneRepMaxProgression,
   computeWeeklyTonnage,
+  countTrainingDaysThisWeek,
   getLoggedExercises,
+  getMostRecentHighlight,
 } from '@/lib/analytics'
 import type { SetHistoryRecord } from '@/lib/analytics-api'
 
@@ -128,5 +130,59 @@ describe('computeDailyVolume', () => {
     expect(result.get('2026-07-20')).toBe(100 * 8 + 80 * 10)
     expect(result.get('2026-07-21')).toBe(50 * 10)
     expect(result.has('2026-07-22')).toBe(false)
+  })
+})
+
+describe('countTrainingDaysThisWeek', () => {
+  it('counts distinct days within the current ISO week only', () => {
+    const now = new Date('2026-07-22T12:00:00Z') // Wednesday, week of 2026-07-20
+    const records = [
+      makeRecord({ loggedAt: '2026-07-20' }),
+      makeRecord({ loggedAt: '2026-07-20', exerciseId: 'ex-bench' }), // same day, doesn't double-count
+      makeRecord({ loggedAt: '2026-07-22' }),
+      makeRecord({ loggedAt: '2026-07-13' }), // previous week, excluded
+    ]
+    expect(countTrainingDaysThisWeek(records, now)).toBe(2)
+  })
+
+  it('returns 0 when nothing was logged this week', () => {
+    const now = new Date('2026-07-22T12:00:00Z')
+    expect(countTrainingDaysThisWeek([makeRecord({ loggedAt: '2026-07-13' })], now)).toBe(
+      0,
+    )
+  })
+})
+
+describe('getMostRecentHighlight', () => {
+  it('returns the heaviest set from the most recently logged day', () => {
+    const records = [
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 200, reps: 1 }),
+      makeRecord({
+        loggedAt: '2026-07-20',
+        weightKg: 100,
+        reps: 8,
+        exerciseName: 'Squat',
+      }),
+      makeRecord({
+        loggedAt: '2026-07-20',
+        weightKg: 60,
+        reps: 10,
+        exerciseName: 'Leg Press',
+      }),
+    ]
+    const result = getMostRecentHighlight(records)
+    expect(result?.date).toBe('2026-07-20')
+    expect(result?.exerciseName).toBe('Squat')
+    expect(result?.weightKg).toBe(100)
+    expect(result?.estimatedOneRepMaxKg).not.toBeNull()
+  })
+
+  it('returns null for no history', () => {
+    expect(getMostRecentHighlight([])).toBeNull()
+  })
+
+  it('leaves estimatedOneRepMaxKg null outside the reliable rep range', () => {
+    const result = getMostRecentHighlight([makeRecord({ weightKg: 40, reps: 20 })])
+    expect(result?.estimatedOneRepMaxKg).toBeNull()
   })
 })

@@ -4,11 +4,22 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SessionTemplateCard } from '@/components/SessionTemplateCard'
-import { useDeleteProgram, useDuplicateProgram, useProgram } from '@/hooks/usePrograms'
+import {
+  useDeleteProgram,
+  useDuplicateProgram,
+  useProgram,
+  useUpdateProgram,
+} from '@/hooks/usePrograms'
 import { useSessionTemplates } from '@/hooks/useSessionTemplates'
 import { useDeleteSessionLog, useSessionLogs } from '@/hooks/useSessionLogs'
-import { PROGRAM_FOCUS_LABELS, PROGRAM_STATUS_LABELS } from '@/lib/programs-api'
+import {
+  PROGRAM_FOCUS_LABELS,
+  PROGRAM_STATUS_LABELS,
+  type ProgramStatus,
+} from '@/lib/programs-api'
 import { WEEKDAY_LABELS } from '@/lib/sessions-api'
+
+const PROGRAM_STATUS_OPTIONS: ProgramStatus[] = ['draft', 'active', 'archived']
 
 export function ProgramDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -21,6 +32,7 @@ export function ProgramDetailPage() {
   const deleteProgram = useDeleteProgram()
   const duplicateProgram = useDuplicateProgram()
   const deleteLog = useDeleteSessionLog()
+  const updateProgram = useUpdateProgram(id)
 
   if (isLoading) return <p className="text-muted-foreground">Chargement…</p>
   if (isError || !program)
@@ -42,9 +54,25 @@ export function ProgramDetailPage() {
           {program.description && (
             <p className="mt-1 text-muted-foreground">{program.description}</p>
           )}
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge>{PROGRAM_FOCUS_LABELS[program.focus]}</Badge>
-            <Badge variant="outline">{PROGRAM_STATUS_LABELS[program.status]}</Badge>
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+              {PROGRAM_STATUS_OPTIONS.map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  size="sm"
+                  variant={program.status === option ? 'default' : 'ghost'}
+                  disabled={updateProgram.isPending}
+                  onClick={() => {
+                    if (program.status !== option)
+                      updateProgram.mutate({ status: option })
+                  }}
+                >
+                  {PROGRAM_STATUS_LABELS[option]}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 gap-2">

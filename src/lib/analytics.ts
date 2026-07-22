@@ -62,7 +62,7 @@ export interface WeeklyTonnage {
   tonnageKg: number
 }
 
-function getIsoWeekStart(dateStr: string): string {
+export function getIsoWeekStart(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00Z`)
   const isoDayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay()
   date.setUTCDate(date.getUTCDate() - (isoDayOfWeek - 1))
@@ -92,4 +92,54 @@ export function computeDailyVolume(records: SetHistoryRecord[]): Map<string, num
     byDate.set(record.loggedAt, (byDate.get(record.loggedAt) ?? 0) + tonnage)
   }
   return byDate
+}
+
+// Distinct training days within the current ISO week — reuses the same
+// week-bucketing as computeWeeklyTonnage so this stays consistent with what
+// the same data would show on the full Analytics chart.
+export function countTrainingDaysThisWeek(
+  records: SetHistoryRecord[],
+  now: Date = new Date(),
+): number {
+  const currentWeekStart = getIsoWeekStart(now.toISOString().slice(0, 10))
+  const uniqueDates = new Set(
+    records
+      .filter((record) => getIsoWeekStart(record.loggedAt) === currentWeekStart)
+      .map((record) => record.loggedAt),
+  )
+  return uniqueDates.size
+}
+
+export interface RecentHighlight {
+  date: string
+  exerciseName: string
+  weightKg: number
+  reps: number
+  estimatedOneRepMaxKg: number | null
+}
+
+// A recap of the heaviest set from the most recently logged day — "here's
+// what you just did", not a full progression view (that's what /analytics
+// is for).
+export function getMostRecentHighlight(
+  records: SetHistoryRecord[],
+): RecentHighlight | null {
+  if (records.length === 0) return null
+  const latestDate = records.reduce(
+    (max, record) => (record.loggedAt > max ? record.loggedAt : max),
+    records[0]!.loggedAt,
+  )
+  const sameDay = records.filter((record) => record.loggedAt === latestDate)
+  const heaviest = sameDay.reduce(
+    (best, record) => (record.weightKg > best.weightKg ? record : best),
+    sameDay[0]!,
+  )
+  return {
+    date: latestDate,
+    exerciseName: heaviest.exerciseName,
+    weightKg: heaviest.weightKg,
+    reps: heaviest.reps,
+    estimatedOneRepMaxKg:
+      estimateOneRepMax(heaviest.weightKg, heaviest.reps)?.averageKg ?? null,
+  }
 }
