@@ -147,3 +147,12 @@ Ferme le "Log de séance" complet du brief (P3a boucle de base, P3b timer/mode g
 - `countTrainingDaysThisWeek`/`getMostRecentHighlight` ajoutés à `analytics.ts` (purs, testés — 5 cas), réutilisent `getIsoWeekStart` (maintenant exporté) pour rester cohérents avec le graphe de tonnage hebdo.
 - Nouveau test e2e `e2e/dashboard.spec.ts` : calcule le jour de la semaine réel au moment du test (pas de jour codé en dur), crée un programme, ajoute un exercice sur le jour du jour, l'active via le nouveau contrôle, vérifie que le dashboard propose de démarrer, démarre, revient sur le dashboard et vérifie "Continuer la séance".
 - En creusant un échec de ce test (une race condition sur le cache TanStack Query après avoir changé le statut), vérification directe en base via REST a révélé 3 programmes de test orphelins (comptes e2e-fixture uniquement, jamais la donnée réelle) laissés par d'anciennes itérations de debug qui avaient échoué avant d'atteindre leur étape de nettoyage — pas un bug de l'app (le `deleteProgram` fonctionne correctement, vérifié directement), juste de la debris de session nettoyée au passage.
+
+## Backlog — idées futures (2026-07-21)
+
+Notées par le user après le gate Dashboard, explicitement "à réfléchir par la suite" — pas scopées, pas planifiées.
+
+- [ ] **Assistant IA sur le dashboard** : chat pour lancer un entraînement, créer un programme, etc. de façon conversationnelle. Probablement la matérialisation naturelle de la "couche IA" du brief (section 4) une fois construite — voir aussi la note P2 sur le lien profil → recommandations IA.
+- [ ] **Curseurs de progression sur le dashboard** : indicateurs visuels pour l'atteinte d'objectif, l'obtention d'un nouveau PR, etc. — distinct des graphiques Analytics existants, plus dans l'esprit "coup d'œil" du dashboard.
+- [ ] **Aspect social** : partage d'évolution entre utilisateurs, feed avec PR et photos d'évolution. Le user a été explicite : **à construire en tout dernier**, après tout le reste (implique déjà un modèle multi-tenant, mais des considérations produit/privacy supplémentaires vu que ça expose des données à d'autres utilisateurs — à cadrer sérieusement le moment venu, pas juste "ajouter du partage").
+- [ ] Sélecteur d'exercice avec visuels réels (photos) — toujours en attente des exemples 21st.dev du user (rappel, déjà noté depuis P2).
