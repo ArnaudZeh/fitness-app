@@ -44,6 +44,7 @@ export function ExerciseSlotFormDialog({
   const [targetRepsMax, setTargetRepsMax] = useState(initialValue?.target_reps_max ?? 12)
   const [targetRpe, setTargetRpe] = useState(initialValue?.target_rpe?.toString() ?? '')
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
+  const [supersetGroup, setSupersetGroup] = useState(initialValue?.superset_group ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -67,6 +68,7 @@ export function ExerciseSlotFormDialog({
         target_reps_max: targetRepsMax,
         target_rpe: targetRpe.trim() === '' ? null : Number(targetRpe),
         notes: notes.trim() === '' ? null : notes,
+        superset_group: supersetGroup.trim() === '' ? null : supersetGroup.trim(),
       })
       setOpen(false)
     } finally {
@@ -179,6 +181,20 @@ export function ExerciseSlotFormDialog({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="superset-group">Superset</Label>
+            <Input
+              id="superset-group"
+              placeholder="Optionnel — ex: A"
+              value={supersetGroup}
+              onChange={(event) => setSupersetGroup(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Donne le même repère (ex : "A") à plusieurs exercices du même jour pour les
+              enchaîner en superset.
+            </p>
           </div>
 
           <DialogFooter>

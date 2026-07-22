@@ -240,6 +240,7 @@ export type Database = {
           notes: string | null
           order_index: number
           session_template_id: string
+          superset_group: string | null
           target_reps_max: number
           target_reps_min: number
           target_rpe: number | null
@@ -254,6 +255,7 @@ export type Database = {
           notes?: string | null
           order_index: number
           session_template_id: string
+          superset_group?: string | null
           target_reps_max: number
           target_reps_min: number
           target_rpe?: number | null
@@ -268,6 +270,7 @@ export type Database = {
           notes?: string | null
           order_index?: number
           session_template_id?: string
+          superset_group?: string | null
           target_reps_max?: number
           target_reps_min?: number
           target_rpe?: number | null

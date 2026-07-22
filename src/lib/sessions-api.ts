@@ -24,6 +24,7 @@ export interface SessionTemplateExerciseInput {
   target_reps_max: number
   target_rpe: number | null
   notes: string | null
+  superset_group: string | null
 }
 
 export const DAY_TYPE_LABELS: Record<DayType, string> = {

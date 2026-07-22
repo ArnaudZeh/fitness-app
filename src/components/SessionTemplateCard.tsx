@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseSlotFormDialog } from '@/components/ExerciseSlotFormDialog'
@@ -72,7 +73,12 @@ export function SessionTemplateCard({ template }: { template: SessionTemplate })
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
                 <div>
-                  <p className="font-medium">{slot.exercise.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{slot.exercise.name}</p>
+                    {slot.superset_group && (
+                      <Badge variant="outline">Superset {slot.superset_group}</Badge>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
                     {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}

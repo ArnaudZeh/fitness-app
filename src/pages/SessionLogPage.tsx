@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, Copy, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -149,10 +149,25 @@ function SessionLogExerciseCard({
     setRpe('')
   }
 
+  async function handleDuplicateSet(set: SessionLogSet) {
+    await createSet.mutateAsync({
+      session_template_exercise_id: slot.id,
+      set_number: nextSetNumber,
+      actual_reps: set.actual_reps,
+      actual_weight_kg: set.actual_weight_kg,
+      actual_rpe: set.actual_rpe,
+    })
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3">{slot.exercise.name}</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle as="h3">{slot.exercise.name}</CardTitle>
+          {slot.superset_group && (
+            <Badge variant="outline">Superset {slot.superset_group}</Badge>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">
           Cible : {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
           {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
@@ -171,14 +186,25 @@ function SessionLogExerciseCard({
                   {set.actual_rpe !== null ? ` @ RPE ${set.actual_rpe}` : ''}
                 </p>
                 {!disabled && (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Supprimer cette série"
-                    onClick={() => deleteSet.mutate(set.id)}
-                  >
-                    <Trash2 />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Dupliquer cette série"
+                      disabled={createSet.isPending}
+                      onClick={() => void handleDuplicateSet(set)}
+                    >
+                      <Copy />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Supprimer cette série"
+                      onClick={() => deleteSet.mutate(set.id)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
                 )}
               </li>
             ))}
