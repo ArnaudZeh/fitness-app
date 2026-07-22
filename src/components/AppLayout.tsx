@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router'
-import { ChartLine, UserRound } from 'lucide-react'
+import { ChartLine, Sparkles, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/auth-store'
@@ -20,6 +20,11 @@ export function AppLayout() {
           <Link to="/analytics">
             <Button variant="outline" size="icon-sm" aria-label="Analytics">
               <ChartLine />
+            </Button>
+          </Link>
+          <Link to="/bien-etre">
+            <Button variant="outline" size="icon-sm" aria-label="Bien-être">
+              <Sparkles />
             </Button>
           </Link>
           <Link to="/profile">
