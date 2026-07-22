@@ -108,14 +108,22 @@ export function AnalyticsPage() {
               />
               <YAxis className="fill-muted-foreground text-xs" tickLine={false} />
               <Tooltip
+                cursor={{ fill: 'var(--primary)', fillOpacity: 0.08 }}
                 formatter={(value) => [`${Math.round(Number(value))} kg`, 'Tonnage']}
                 contentStyle={{
                   background: 'var(--popover)',
                   border: '1px solid var(--border)',
                   borderRadius: 8,
                 }}
+                labelStyle={{ color: 'var(--popover-foreground)', fontWeight: 600 }}
+                itemStyle={{ color: 'var(--popover-foreground)' }}
               />
-              <Bar dataKey="tonnageKg" className="fill-primary" radius={4} />
+              <Bar
+                dataKey="tonnageKg"
+                className="fill-primary"
+                radius={4}
+                activeBar={{ className: 'fill-primary', stroke: 'none' }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -153,12 +161,15 @@ export function AnalyticsPage() {
                 />
                 <YAxis className="fill-muted-foreground text-xs" tickLine={false} />
                 <Tooltip
+                  cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
                   formatter={(value, name) => [`${Math.round(Number(value))} kg`, name]}
                   contentStyle={{
                     background: 'var(--popover)',
                     border: '1px solid var(--border)',
                     borderRadius: 8,
                   }}
+                  labelStyle={{ color: 'var(--popover-foreground)', fontWeight: 600 }}
+                  itemStyle={{ color: 'var(--popover-foreground)' }}
                 />
                 <Line
                   type="monotone"
@@ -168,12 +179,14 @@ export function AnalyticsPage() {
                   strokeWidth={2}
                   connectNulls
                   dot={false}
+                  activeDot={{ className: 'fill-primary', stroke: 'var(--background)' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="maxWeightKg"
                   name="Charge max"
                   className="stroke-secondary"
+                  activeDot={{ className: 'fill-secondary', stroke: 'var(--background)' }}
                   strokeWidth={2}
                   dot={false}
                 />

@@ -131,3 +131,9 @@ Ferme le "Log de séance" complet du brief (P3a boucle de base, P3b timer/mode g
 - `recharts` ajouté (suggéré dans le brief section 3, actif/maintenu). Chargement paresseux (`React.lazy` + `Suspense`) pour la route `/analytics` — la lib pèse à elle seule ~110kB gzippés, ne vaut pas la peine d'alourdir le bundle initial de chaque autre page. Sans ce découpage, le chunk principal serait passé de ~273kB à ~382kB gzippés.
 - Testé en live sur les vraies données du user (programme réel avec des séries "Hack Squat" loggées) : heatmap, tonnage hebdo et progression 1RM s'affichent correctement après la correction du fuseau horaire.
 - Historique "par séance" déjà couvert par `ProgramDetailPage` (P3a) ; "par semaine" couvert par le graphe de tonnage hebdo. Pas de vue "historique global toutes séances confondues" séparée construite pour cette phase — backlog si le besoin se précise.
+
+## Retour post-gate Analytics : contraste des graphiques (2026-07-22)
+
+- Retour du user (au survol/tap sur "Tonnage hebdomadaire") : le rectangle de survol Recharts par défaut est un gris clair pensé pour un thème clair — jarrant sur le thème sombre de l'app, avec en plus un contour noir disgracieux sur la barre active.
+- Corrigé sur les deux graphiques (`Tonnage hebdomadaire` et `Progression par exercice`) : `Tooltip.cursor` remplacé par une teinte primary/border très subtile au lieu du gris clair par défaut ; `labelStyle`/`itemStyle` du tooltip fixés explicitement en `--popover-foreground` (ne plus dépendre des couleurs par défaut de Recharts, pensées pour un fond clair) ; `activeBar`/`activeDot` stylés pour rester dans la palette du thème plutôt que d'hériter du contour noir par défaut.
+- Vérifié en live (survol + zoom sur la tooltip) : plus de rectangle gris, contraste correct, cohérent avec la philosophie d'élévation du design system ("un ton de surface plus clair plutôt que des ombres lourdes").
