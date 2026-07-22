@@ -17,10 +17,10 @@ export function ProgramDetailPage() {
 
   const { data: program, isLoading, isError } = useProgram(id)
   const { data: templates } = useSessionTemplates(id)
-  const { data: logs } = useSessionLogs(id)
+  const logs = useSessionLogs(id)
   const deleteProgram = useDeleteProgram()
   const duplicateProgram = useDuplicateProgram()
-  const deleteLog = useDeleteSessionLog(id)
+  const deleteLog = useDeleteSessionLog()
 
   if (isLoading) return <p className="text-muted-foreground">Chargement…</p>
   if (isError || !program)

@@ -8,11 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { RestTimer } from '@/components/RestTimer'
-import { useProgram } from '@/hooks/usePrograms'
-import {
-  useSessionTemplate,
-  useSessionTemplateExercises,
-} from '@/hooks/useSessionTemplates'
 import {
   useCompleteSessionLog,
   useCreateSessionLogSet,
@@ -20,20 +15,21 @@ import {
   useDeleteSessionLogSet,
   useSessionLog,
   useSessionLogSets,
+  useSessionPlan,
 } from '@/hooks/useSessionLogs'
 import type { ProgramFocus } from '@/lib/programs-api'
 import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS } from '@/lib/sessions-api'
-import type { SessionTemplateExercise } from '@/lib/sessions-api'
+import type { CachedPlanExercise } from '@/lib/offline-db'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 
 export function SessionLogPage() {
   const { id } = useParams<{ id: string }>()
   if (!id) throw new Error('Missing session log id in route params')
 
-  const { data: log, isLoading, isError } = useSessionLog(id)
+  const { data: log, isRefreshing } = useSessionLog(id)
 
-  if (isLoading) return <p className="text-muted-foreground">Chargement…</p>
-  if (isError || !log)
+  if (!log && isRefreshing) return <p className="text-muted-foreground">Chargement…</p>
+  if (!log)
     return (
       <p role="alert" className="text-destructive">
         Séance introuvable.
@@ -45,19 +41,17 @@ export function SessionLogPage() {
 
 function SessionLogDetail({ log }: { log: SessionLog }) {
   const navigate = useNavigate()
-  const { data: program } = useProgram(log.program_id)
-  const { data: template } = useSessionTemplate(log.session_template_id)
-  const { data: slots } = useSessionTemplateExercises(log.session_template_id)
-  const { data: sets } = useSessionLogSets(log.id)
+  const plan = useSessionPlan(log.program_id, log.session_template_id)
+  const sets = useSessionLogSets(log.id)
   const completeLog = useCompleteSessionLog(log.id)
-  const deleteLog = useDeleteSessionLog(log.program_id)
+  const deleteLog = useDeleteSessionLog()
 
-  const sortedSlots = slots ?? []
+  const sortedSlots = plan?.exercises ?? []
   const allSets = sets ?? []
   const isInProgress = log.status === 'in_progress'
-  // Falls back to the hypertrophie default while the program is still
-  // loading (separate query from the session log itself).
-  const focus: ProgramFocus = program?.focus ?? 'hypertrophie'
+  // Falls back to the hypertrophie default if the plan hasn't been cached
+  // on this device yet and there's no network to fetch it right now.
+  const focus: ProgramFocus = plan?.focus ?? 'hypertrophie'
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,9 +65,9 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            {template ? WEEKDAY_LABELS[template.day_of_week] : 'Séance'}
+            {plan ? WEEKDAY_LABELS[plan.day_of_week] : 'Séance'}
           </h1>
-          {program && <p className="mt-1 text-muted-foreground">{program.name}</p>}
+          {plan && <p className="mt-1 text-muted-foreground">{plan.program_name}</p>}
           <Badge variant={isInProgress ? 'outline' : 'default'} className="mt-2">
             {isInProgress ? 'En cours' : 'Terminée'}
           </Badge>
@@ -129,14 +123,14 @@ function SessionLogExerciseCard({
   focus,
   disabled,
 }: {
-  slot: SessionTemplateExercise
+  slot: CachedPlanExercise
   sets: SessionLogSet[]
   sessionLogId: string
   focus: ProgramFocus
   disabled: boolean
 }) {
   const createSet = useCreateSessionLogSet(sessionLogId)
-  const deleteSet = useDeleteSessionLogSet(sessionLogId)
+  const deleteSet = useDeleteSessionLogSet()
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState(slot.target_reps_min.toString())
   const [rpe, setRpe] = useState('')
@@ -181,7 +175,7 @@ function SessionLogExerciseCard({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CardTitle as="h3">{slot.exercise.name}</CardTitle>
+          <CardTitle as="h3">{slot.exercise_name}</CardTitle>
           {slot.superset_group && (
             <Badge variant="outline">Superset {slot.superset_group}</Badge>
           )}

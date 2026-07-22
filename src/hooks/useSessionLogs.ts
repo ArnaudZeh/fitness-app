@@ -1,69 +1,131 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { offlineDb } from '@/lib/offline-db'
 import * as api from '@/lib/session-logs-api'
+import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
+import {
+  refreshSessionLogCache,
+  refreshSessionLogSetsCache,
+  refreshSessionLogsCache,
+  syncPendingChanges,
+} from '@/lib/offline-sync'
 
-const logsKey = (programId: string) => ['programs', programId, 'session-logs'] as const
-const logKey = (id: string) => ['session-logs', id] as const
-const setsKey = (sessionLogId: string) => ['session-logs', sessionLogId, 'sets'] as const
-
-export function useSessionLogs(programId: string) {
-  return useQuery({
-    queryKey: logsKey(programId),
-    queryFn: () => api.fetchSessionLogs(programId),
-  })
+function stripDirty<T extends { dirty: unknown }>(row: T): Omit<T, 'dirty'> {
+  const { dirty: _dirty, ...rest } = row
+  return rest
 }
 
-export function useSessionLog(id: string) {
-  return useQuery({
-    queryKey: logKey(id),
-    queryFn: () => api.fetchSessionLog(id),
-  })
+export function useSessionLogs(programId: string): SessionLog[] | undefined {
+  useEffect(() => {
+    void refreshSessionLogsCache(programId)
+    void syncPendingChanges()
+  }, [programId])
+
+  const logs = useLiveQuery(
+    () => offlineDb.sessionLogs.where('program_id').equals(programId).toArray(),
+    [programId],
+  )
+
+  return logs
+    ?.filter((log) => log.dirty !== 'delete')
+    .map(stripDirty)
+    .sort((a, b) => b.started_at.localeCompare(a.started_at))
 }
+
+// isRefreshing distinguishes "still checking the network" from "genuinely
+// not found" — useLiveQuery alone can't tell those apart, and a session log
+// just created offline won't exist server-side yet to refresh against.
+export function useSessionLog(id: string): {
+  data: SessionLog | undefined
+  isRefreshing: boolean
+} {
+  // Tracks which ids have completed a refresh attempt, rather than a plain
+  // boolean reset in the effect body — a fresh id is "not yet refreshed" by
+  // simply not being in the set yet, no explicit setState-on-mount needed.
+  const [refreshedIds, setRefreshedIds] = useState<ReadonlySet<string>>(() => new Set())
+
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all([refreshSessionLogCache(id), syncPendingChanges()]).finally(() => {
+      if (!cancelled) setRefreshedIds((prev) => new Set(prev).add(id))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  const log = useLiveQuery(() => offlineDb.sessionLogs.get(id), [id])
+  return {
+    data: log && log.dirty !== 'delete' ? stripDirty(log) : undefined,
+    isRefreshing: !refreshedIds.has(id),
+  }
+}
+
+// networkMode: 'always' on every mutation below — these write to Dexie
+// first (never touch the network directly), so they must run regardless of
+// navigator.onLine. TanStack Query's default networkMode: 'online' would
+// otherwise pause the mutation indefinitely while offline, which defeats
+// the entire point of an offline-first write path.
 
 export function useStartSessionLog(programId: string) {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (sessionTemplateId: string) =>
       api.startSessionLog(programId, sessionTemplateId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: logsKey(programId) }),
+    networkMode: 'always',
   })
 }
 
 export function useCompleteSessionLog(id: string) {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => api.completeSessionLog(id),
-    onSuccess: (updated) => queryClient.setQueryData(logKey(id), updated),
+    networkMode: 'always',
   })
 }
 
-export function useDeleteSessionLog(programId: string) {
-  const queryClient = useQueryClient()
+export function useDeleteSessionLog() {
   return useMutation({
     mutationFn: (id: string) => api.deleteSessionLog(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: logsKey(programId) }),
+    networkMode: 'always',
   })
 }
 
-export function useSessionLogSets(sessionLogId: string) {
-  return useQuery({
-    queryKey: setsKey(sessionLogId),
-    queryFn: () => api.fetchSessionLogSets(sessionLogId),
-  })
+export function useSessionLogSets(sessionLogId: string): SessionLogSet[] | undefined {
+  useEffect(() => {
+    void refreshSessionLogSetsCache(sessionLogId)
+    void syncPendingChanges()
+  }, [sessionLogId])
+
+  const sets = useLiveQuery(
+    () => offlineDb.sessionLogSets.where('session_log_id').equals(sessionLogId).toArray(),
+    [sessionLogId],
+  )
+
+  return sets?.filter((set) => set.dirty !== 'delete').map(stripDirty)
 }
 
 export function useCreateSessionLogSet(sessionLogId: string) {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: api.SessionLogSetInput) =>
       api.createSessionLogSet(sessionLogId, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: setsKey(sessionLogId) }),
+    networkMode: 'always',
   })
 }
 
-export function useDeleteSessionLogSet(sessionLogId: string) {
-  const queryClient = useQueryClient()
+export function useDeleteSessionLogSet() {
   return useMutation({
     mutationFn: (id: string) => api.deleteSessionLogSet(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: setsKey(sessionLogId) }),
+    networkMode: 'always',
   })
+}
+
+export function useSessionPlan(programId: string, sessionTemplateId: string) {
+  useEffect(() => {
+    void api.cacheSessionPlan(programId, sessionTemplateId)
+  }, [programId, sessionTemplateId])
+
+  return useLiveQuery(
+    () => offlineDb.sessionPlanCache.get(sessionTemplateId),
+    [sessionTemplateId],
+  )
 }
