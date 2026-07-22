@@ -194,6 +194,15 @@ export async function refreshSessionLogCache(id: string): Promise<void> {
   }
 }
 
+// navigator.onLine only reflects whether the radio is on, not whether
+// requests actually succeed — on weak/dropping 4G (the realistic day-to-day
+// case, vs. true airplane-mode) it can read "online" while every request
+// times out. The 'online' event alone would miss that: a failed write during
+// a signal dip could sit dirty until the user happens to trigger another
+// write. This periodic retry catches it regardless of which page is open.
+const RETRY_INTERVAL_MS = 20_000
+
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => void syncPendingChanges())
+  setInterval(() => void syncPendingChanges(), RETRY_INTERVAL_MS)
 }
