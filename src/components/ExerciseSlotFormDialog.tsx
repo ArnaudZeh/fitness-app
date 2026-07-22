@@ -13,11 +13,14 @@ import {
 } from '@/components/ui/dialog'
 import { ExercisePicker, NEW_EXERCISE_VALUE } from '@/components/ExercisePicker'
 import type { Exercise } from '@/lib/exercises-api'
+import type { ProgramFocus } from '@/lib/programs-api'
+import { DEFAULT_REST_SECONDS_BY_FOCUS } from '@/lib/sessions-api'
 import type { SessionTemplateExerciseInput } from '@/lib/sessions-api'
 
 interface ExerciseSlotFormDialogProps {
   trigger: React.ReactNode
   exercises: Exercise[]
+  focus: ProgramFocus
   initialValue?: SessionTemplateExerciseInput
   submitLabel: string
   onCreateExercise: (input: {
@@ -30,11 +33,13 @@ interface ExerciseSlotFormDialogProps {
 export function ExerciseSlotFormDialog({
   trigger,
   exercises,
+  focus,
   initialValue,
   submitLabel,
   onCreateExercise,
   onSubmit,
 }: ExerciseSlotFormDialogProps) {
+  const defaultRestSeconds = DEFAULT_REST_SECONDS_BY_FOCUS[focus]
   const [open, setOpen] = useState(false)
   const [exerciseId, setExerciseId] = useState(initialValue?.exercise_id ?? '')
   const [newExerciseName, setNewExerciseName] = useState('')
@@ -184,10 +189,14 @@ export function ExerciseSlotFormDialog({
               id="target-rest-seconds"
               type="number"
               min={1}
-              placeholder="Optionnel — 90s par défaut"
+              placeholder={`Optionnel — ${defaultRestSeconds}s par défaut`}
               value={targetRestSeconds}
               onChange={(event) => setTargetRestSeconds(event.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Le repos de base dépend du focus du programme : plus long en force (charges
+              proches du max), plus court en endurance (stress métabolique).
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

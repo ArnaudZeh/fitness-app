@@ -82,7 +82,7 @@ export function ProgramDetailPage() {
         <ul className="flex flex-col gap-3">
           {sortedTemplates.map((template) => (
             <li key={template.id}>
-              <SessionTemplateCard template={template} />
+              <SessionTemplateCard template={template} focus={program.focus} />
             </li>
           ))}
         </ul>

@@ -16,12 +16,24 @@ import {
 } from '@/hooks/useSessionTemplates'
 import { useStartSessionLog } from '@/hooks/useSessionLogs'
 import { getSwapPair } from '@/lib/ordering'
-import { DAY_TYPE_LABELS, WEEKDAY_LABELS, type DayType } from '@/lib/sessions-api'
+import type { ProgramFocus } from '@/lib/programs-api'
+import {
+  DAY_TYPE_LABELS,
+  DEFAULT_REST_SECONDS_BY_FOCUS,
+  WEEKDAY_LABELS,
+  type DayType,
+} from '@/lib/sessions-api'
 import type { SessionTemplate } from '@/lib/sessions-api'
 
 const DAY_TYPE_OPTIONS: DayType[] = ['rest', 'training']
 
-export function SessionTemplateCard({ template }: { template: SessionTemplate }) {
+export function SessionTemplateCard({
+  template,
+  focus,
+}: {
+  template: SessionTemplate
+  focus: ProgramFocus
+}) {
   const navigate = useNavigate()
   const { data: exercises } = useExercises()
   const { data: slots } = useSessionTemplateExercises(template.id)
@@ -81,7 +93,8 @@ export function SessionTemplateCard({ template }: { template: SessionTemplate })
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-                    {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
+                    {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
+                    {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]}s
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
@@ -120,6 +133,7 @@ export function SessionTemplateCard({ template }: { template: SessionTemplate })
                       </Button>
                     }
                     exercises={exercises ?? []}
+                    focus={focus}
                     initialValue={slot}
                     submitLabel="Enregistrer"
                     onCreateExercise={(input) => createExercise.mutateAsync(input)}
@@ -156,6 +170,7 @@ export function SessionTemplateCard({ template }: { template: SessionTemplate })
                 </Button>
               }
               exercises={exercises ?? []}
+              focus={focus}
               submitLabel="Ajouter l'exercice"
               onCreateExercise={(input) => createExercise.mutateAsync(input)}
               onSubmit={async (input) => {

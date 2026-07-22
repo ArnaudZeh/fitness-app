@@ -21,7 +21,8 @@ import {
   useSessionLog,
   useSessionLogSets,
 } from '@/hooks/useSessionLogs'
-import { DEFAULT_REST_SECONDS, WEEKDAY_LABELS } from '@/lib/sessions-api'
+import type { ProgramFocus } from '@/lib/programs-api'
+import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { SessionTemplateExercise } from '@/lib/sessions-api'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 
@@ -54,6 +55,9 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   const sortedSlots = slots ?? []
   const allSets = sets ?? []
   const isInProgress = log.status === 'in_progress'
+  // Falls back to the hypertrophie default while the program is still
+  // loading (separate query from the session log itself).
+  const focus: ProgramFocus = program?.focus ?? 'hypertrophie'
 
   return (
     <div className="flex flex-col gap-6">
@@ -108,6 +112,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
               slot={slot}
               sets={allSets.filter((set) => set.session_template_exercise_id === slot.id)}
               sessionLogId={log.id}
+              focus={focus}
               disabled={!isInProgress}
             />
           </li>
@@ -121,11 +126,13 @@ function SessionLogExerciseCard({
   slot,
   sets,
   sessionLogId,
+  focus,
   disabled,
 }: {
   slot: SessionTemplateExercise
   sets: SessionLogSet[]
   sessionLogId: string
+  focus: ProgramFocus
   disabled: boolean
 }) {
   const createSet = useCreateSessionLogSet(sessionLogId)
@@ -139,7 +146,7 @@ function SessionLogExerciseCard({
 
   const sortedSets = [...sets].sort((a, b) => a.set_number - b.set_number)
   const nextSetNumber = sortedSets.length + 1
-  const restSeconds = slot.target_rest_seconds ?? DEFAULT_REST_SECONDS
+  const restSeconds = slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]
 
   function startRest(afterSetId: string) {
     setActiveRest({ key: afterSetId, seconds: restSeconds })

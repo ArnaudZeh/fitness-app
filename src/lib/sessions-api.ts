@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { nextOrderIndex } from '@/lib/ordering'
+import type { ProgramFocus } from '@/lib/programs-api'
 
 export type DayType = 'training' | 'rest'
 
@@ -28,7 +29,24 @@ export interface SessionTemplateExerciseInput {
   superset_group: string | null
 }
 
-export const DEFAULT_REST_SECONDS = 90
+// Rest interval defaults by training focus, since the same duration doesn't
+// serve every goal:
+// - Force (near-maximal loads, ~1-5RM): longer rest for fuller ATP-PCr
+//   recovery between sets — NSCA guidance and de Salles et al. (2009,
+//   Sports Medicine) recommend ~3-5 min for strength/power work.
+// - Hypertrophie: Schoenfeld, Pope et al. (2016, J Strength Cond Res) found
+//   3-min rest produced equal-or-greater strength AND hypertrophy than 1-min
+//   rest, likely via better maintenance of load/volume across sets — the
+//   traditional "60s for the pump" is no longer well supported. ~90s is a
+//   reasonable middle ground for typical working sets.
+// - Endurance (higher reps, metabolic/muscular-endurance focus): shorter
+//   rest keeps metabolic stress elevated, consistent with the classic
+//   NSCA muscular-endurance guidance of well under a minute.
+export const DEFAULT_REST_SECONDS_BY_FOCUS: Record<ProgramFocus, number> = {
+  force: 180,
+  hypertrophie: 90,
+  endurance: 45,
+}
 
 export const DAY_TYPE_LABELS: Record<DayType, string> = {
   training: 'Entraînement',
