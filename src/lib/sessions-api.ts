@@ -2,7 +2,13 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { nextOrderIndex } from '@/lib/ordering'
 
-export type SessionTemplate = Database['public']['Tables']['session_templates']['Row']
+export type DayType = 'training' | 'rest'
+
+type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row']
+
+export interface SessionTemplate extends Omit<SessionTemplateRow, 'day_type'> {
+  day_type: DayType
+}
 
 type SessionTemplateExerciseRow =
   Database['public']['Tables']['session_template_exercises']['Row']
@@ -20,6 +26,25 @@ export interface SessionTemplateExerciseInput {
   notes: string | null
 }
 
+export const DAY_TYPE_LABELS: Record<DayType, string> = {
+  training: 'Entraînement',
+  rest: 'Repos',
+}
+
+export const WEEKDAY_LABELS: Record<number, string> = {
+  1: 'Lundi',
+  2: 'Mardi',
+  3: 'Mercredi',
+  4: 'Jeudi',
+  5: 'Vendredi',
+  6: 'Samedi',
+  7: 'Dimanche',
+}
+
+function toSessionTemplate(row: SessionTemplateRow): SessionTemplate {
+  return { ...row, day_type: row.day_type as DayType }
+}
+
 async function requireUserId(): Promise<string> {
   const {
     data: { user },
@@ -28,6 +53,8 @@ async function requireUserId(): Promise<string> {
   return user.id
 }
 
+// Every program always has exactly 7 rows (one per ISO weekday, 1=Monday),
+// auto-created by the on_program_created Postgres trigger.
 export async function fetchSessionTemplates(
   programId: string,
 ): Promise<SessionTemplate[]> {
@@ -35,66 +62,23 @@ export async function fetchSessionTemplates(
     .from('session_templates')
     .select('*')
     .eq('program_id', programId)
-    .order('order_index', { ascending: true })
+    .order('day_of_week', { ascending: true })
   if (error) throw error
-  return data
+  return data.map(toSessionTemplate)
 }
 
-export async function createSessionTemplate(
-  programId: string,
-  name: string,
-): Promise<SessionTemplate> {
-  const userId = await requireUserId()
-  const existing = await fetchSessionTemplates(programId)
-
-  const { data, error } = await supabase
-    .from('session_templates')
-    .insert({
-      program_id: programId,
-      user_id: userId,
-      name,
-      order_index: nextOrderIndex(existing),
-    })
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-export async function updateSessionTemplate(
+export async function updateSessionTemplateDayType(
   id: string,
-  name: string,
+  dayType: DayType,
 ): Promise<SessionTemplate> {
   const { data, error } = await supabase
     .from('session_templates')
-    .update({ name })
+    .update({ day_type: dayType })
     .eq('id', id)
     .select()
     .single()
   if (error) throw error
-  return data
-}
-
-export async function deleteSessionTemplate(id: string): Promise<void> {
-  const { error } = await supabase.from('session_templates').delete().eq('id', id)
-  if (error) throw error
-}
-
-export async function swapSessionTemplateOrder(
-  a: SessionTemplate,
-  b: SessionTemplate,
-): Promise<void> {
-  const { error: errorA } = await supabase
-    .from('session_templates')
-    .update({ order_index: b.order_index })
-    .eq('id', a.id)
-  if (errorA) throw errorA
-
-  const { error: errorB } = await supabase
-    .from('session_templates')
-    .update({ order_index: a.order_index })
-    .eq('id', b.id)
-  if (errorB) throw errorB
+  return toSessionTemplate(data)
 }
 
 export async function fetchSessionTemplateExercises(

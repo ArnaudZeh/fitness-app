@@ -2,9 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.use({ storageState: 'e2e/.auth/user.json' })
 
-test('structures a program with a day and an exercise, then cleans up', async ({
-  page,
-}) => {
+test('marks a day as training and adds an exercise, then cleans up', async ({ page }) => {
   const programName = `E2E Structure ${Date.now()}`
 
   await page.goto('/programs')
@@ -13,12 +11,19 @@ test('structures a program with a day and an exercise, then cleans up', async ({
   await page.getByRole('button', { name: 'Créer le programme' }).click()
   await expect(page.getByRole('heading', { name: programName })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Ajouter un jour' }).click()
-  await page.getByLabel('Nom du jour').fill('Jour A')
-  await page.getByRole('button', { name: 'Ajouter le jour' }).click()
-  await expect(page.getByRole('heading', { name: 'Jour A' })).toBeVisible()
+  // All 7 weekdays exist by default, marked "Repos" — no "add a day" step needed.
+  await expect(page.getByRole('heading', { name: 'Lundi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dimanche' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Ajouter un exercice' }).click()
+  const mondayCard = page
+    .locator('li')
+    .filter({ has: page.getByRole('heading', { name: 'Lundi' }) })
+  await mondayCard.getByRole('button', { name: 'Entraînement' }).click()
+  await expect(
+    mondayCard.getByRole('button', { name: 'Ajouter un exercice' }),
+  ).toBeVisible()
+
+  await mondayCard.getByRole('button', { name: 'Ajouter un exercice' }).click()
   await page.locator('#exercise-select').click()
   await page.getByRole('option', { name: 'Squat', exact: true }).click()
   await page.getByLabel('Séries').fill('4')
@@ -32,7 +37,7 @@ test('structures a program with a day and an exercise, then cleans up', async ({
   await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 })
   await expect(page.getByText('4 x 6-10')).toBeVisible()
 
-  // Cleanup: deleting the program cascades its day/exercise (RLS + FK on delete cascade).
+  // Cleanup: deleting the program cascades its days/exercise (RLS + FK on delete cascade).
   await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
   await page.getByRole('button', { name: 'Supprimer définitivement' }).click()
   await expect(page).toHaveURL('/programs', { timeout: 20_000 })

@@ -1,17 +1,10 @@
 import { useNavigate, useParams } from 'react-router'
-import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SessionTemplateCard } from '@/components/SessionTemplateCard'
-import { SessionTemplateFormDialog } from '@/components/SessionTemplateFormDialog'
 import { useDeleteProgram, useDuplicateProgram, useProgram } from '@/hooks/usePrograms'
-import {
-  useCreateSessionTemplate,
-  useSessionTemplates,
-  useSwapSessionTemplateOrder,
-} from '@/hooks/useSessionTemplates'
-import { getSwapPair } from '@/lib/ordering'
+import { useSessionTemplates } from '@/hooks/useSessionTemplates'
 import { PROGRAM_FOCUS_LABELS, PROGRAM_STATUS_LABELS } from '@/lib/programs-api'
 
 export function ProgramDetailPage() {
@@ -21,8 +14,6 @@ export function ProgramDetailPage() {
 
   const { data: program, isLoading, isError } = useProgram(id)
   const { data: templates } = useSessionTemplates(id)
-  const createTemplate = useCreateSessionTemplate(id)
-  const swapTemplateOrder = useSwapSessionTemplateOrder(id)
   const deleteProgram = useDeleteProgram()
   const duplicateProgram = useDuplicateProgram()
 
@@ -80,40 +71,11 @@ export function ProgramDetailPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-medium">Structure de la semaine</h2>
-          <SessionTemplateFormDialog
-            trigger={
-              <Button size="sm">
-                <Plus /> Ajouter un jour
-              </Button>
-            }
-            submitLabel="Ajouter le jour"
-            onSubmit={async (name) => {
-              await createTemplate.mutateAsync(name)
-            }}
-          />
-        </div>
-
-        {sortedTemplates.length === 0 && (
-          <p className="text-muted-foreground">
-            Aucun jour défini. Ajoute un jour (ex. "Jour A") pour commencer à structurer
-            ce programme.
-          </p>
-        )}
-
+        <h2 className="font-heading text-lg font-medium">Semaine type</h2>
         <ul className="flex flex-col gap-3">
-          {sortedTemplates.map((template, index) => (
+          {sortedTemplates.map((template) => (
             <li key={template.id}>
-              <SessionTemplateCard
-                template={template}
-                isFirst={index === 0}
-                isLast={index === sortedTemplates.length - 1}
-                onMove={(direction) => {
-                  const pair = getSwapPair(sortedTemplates, template.id, direction)
-                  if (pair) void swapTemplateOrder.mutateAsync({ a: pair[0], b: pair[1] })
-                }}
-              />
+              <SessionTemplateCard template={template} />
             </li>
           ))}
         </ul>

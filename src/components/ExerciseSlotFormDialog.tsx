@@ -203,6 +203,10 @@ export function ExerciseSlotFormDialog({
               value={targetRpe}
               onChange={(event) => setTargetRpe(event.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              RPE = difficulté ressentie, de 0 à 10. 10 = effort maximal (impossible de
+              faire une répétition de plus), 7-8 = encore 2-3 répétitions en réserve.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

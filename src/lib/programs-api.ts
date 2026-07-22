@@ -107,30 +107,37 @@ export async function duplicateProgram(program: Program): Promise<Program> {
   if (programError) throw programError
   const createdProgram = toProgram(newProgram)
 
-  const { data: templates, error: templatesError } = await supabase
-    .from('session_templates')
-    .select('*')
-    .eq('program_id', program.id)
-    .order('order_index', { ascending: true })
-  if (templatesError) throw templatesError
+  // The new program's 7 weekday rows already exist (on_program_created
+  // trigger) — match each one to the source program's day by day_of_week
+  // and update its day_type + copy its exercises, rather than inserting
+  // new rows (blocked by RLS: users can no longer insert session_templates).
+  const [
+    { data: sourceTemplates, error: sourceError },
+    { data: newTemplates, error: newError },
+  ] = await Promise.all([
+    supabase.from('session_templates').select('*').eq('program_id', program.id),
+    supabase.from('session_templates').select('*').eq('program_id', createdProgram.id),
+  ])
+  if (sourceError) throw sourceError
+  if (newError) throw newError
 
-  for (const template of templates) {
-    const { data: newTemplate, error: newTemplateError } = await supabase
+  const newTemplateByDay = new Map(newTemplates.map((t) => [t.day_of_week, t]))
+
+  for (const sourceTemplate of sourceTemplates) {
+    if (sourceTemplate.day_type !== 'training') continue
+    const newTemplate = newTemplateByDay.get(sourceTemplate.day_of_week)
+    if (!newTemplate) continue
+
+    const { error: updateError } = await supabase
       .from('session_templates')
-      .insert({
-        user_id: userId,
-        program_id: createdProgram.id,
-        name: template.name,
-        order_index: template.order_index,
-      })
-      .select()
-      .single()
-    if (newTemplateError) throw newTemplateError
+      .update({ day_type: 'training' })
+      .eq('id', newTemplate.id)
+    if (updateError) throw updateError
 
     const { data: slots, error: slotsError } = await supabase
       .from('session_template_exercises')
       .select('*')
-      .eq('session_template_id', template.id)
+      .eq('session_template_id', sourceTemplate.id)
       .order('order_index', { ascending: true })
     if (slotsError) throw slotsError
 

@@ -150,27 +150,27 @@ export type Database = {
       session_templates: {
         Row: {
           created_at: string
+          day_of_week: number
+          day_type: string
           id: string
-          name: string
-          order_index: number
           program_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          day_of_week: number
+          day_type?: string
           id?: string
-          name: string
-          order_index: number
           program_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          day_of_week?: number
+          day_type?: string
           id?: string
-          name?: string
-          order_index?: number
           program_id?: string
           updated_at?: string
           user_id?: string

@@ -27,6 +27,13 @@ Tracker unique des TODO en attente, conformément à la règle "aucun TODO non t
 - [ ] Sélecteur d'exercice actuellement un `<Select>` simple groupé par muscle group. Le user a explicitement demandé une **search bar + visuels simples**, groupés par muscle (retour du 2026-07-21 après test réel). Prioritaire pour la prochaine passe UI — pas juste un "nice to have" P11 comme noté précédemment. Candidat pour `mcp__magic__21st_magic_component_builder`/`_refiner` (21st.dev) une fois que le user envoie ses exemples de design.
 - [ ] `pnpm audit` : 1 vulnérabilité modérée acceptée en connaissance de cause — `shadcn` (devDependency, requis pour `src/index.css` → `@import 'shadcn/tailwind.css'`) dépend transitivement de `@modelcontextprotocol/sdk` → `@hono/node-server` (CVE path traversal Windows-only dans `serve-static`, sert uniquement le registry MCP local de la CLI shadcn, jamais invoqué par cette app, jamais bundlé côté client). Pas de version corrigée disponible en amont (4.13.1 = dernière version au 2026-07-21). À revérifier périodiquement (`pnpm audit` + `npm view shadcn versions`).
 
+## Jours fixes Lundi-Dimanche (2026-07-21)
+
+- Remplacé la création manuelle de "jours" par une structure fixe : chaque programme a toujours exactement 7 `session_templates` (1=Lundi...7=Dimanche), auto-créées par le trigger `on_program_created` (même pattern que `handle_new_user` en P0). L'utilisateur bascule juste chaque jour entre "Repos" et "Entraînement" au lieu de nommer/ordonner des jours.
+- RLS durcie : policies INSERT/DELETE retirées sur `session_templates` (seuls SELECT/UPDATE restent) — un utilisateur ne peut plus casser l'invariant "toujours 7 jours" en ajoutant/supprimant une ligne. Vérifié en live.
+- `duplicateProgram()` adapté en conséquence : les 7 jours de la copie existent déjà (trigger), donc on les met à jour (`day_type` + exercices copiés) au lieu de les insérer.
+- RPE : définition ajoutée en texte d'aide sous le champ (pas de tooltip — mobile-first, le hover ne fonctionne pas au toucher).
+
 ## Phase Profil (à venir, après cette simplification)
 
 - Le Profil (mensurations, objectifs) doit être conçu dès le départ pour permettre, plus tard, des recommandations d'entraînement pilotées par IA en fonction des objectifs déclarés (le user veut que "tout soit lié" — profil → programmes → IA). L'IA elle-même reste P9, ne pas l'anticiper, mais ne pas non plus concevoir le schéma du Profil de façon qui rendrait ce lien difficile plus tard.
