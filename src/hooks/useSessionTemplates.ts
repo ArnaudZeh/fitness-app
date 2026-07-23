@@ -5,7 +5,7 @@ import type { DayType, SessionTemplateExercise } from '@/lib/sessions-api'
 const templatesKey = (programId: string) =>
   ['programs', programId, 'session-templates'] as const
 const templateKey = (id: string) => ['session-templates', id] as const
-const exercisesKey = (templateId: string) =>
+export const exercisesKey = (templateId: string) =>
   ['session-templates', templateId, 'exercises'] as const
 
 export function useSessionTemplates(programId: string) {

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseSlotFormDialog } from '@/components/ExerciseSlotFormDialog'
+import { SessionAdaptationDialog } from '@/components/SessionAdaptationDialog'
 import { useCreateExercise, useExercises } from '@/hooks/useExercises'
 import {
   useCreateSessionTemplateExercise,
@@ -178,18 +179,25 @@ export function SessionTemplateCard({
               }}
             />
             {sortedSlots.length > 0 && (
-              <Button
-                type="button"
-                size="sm"
-                disabled={startSessionLog.isPending}
-                onClick={() =>
-                  startSessionLog.mutate(template.id, {
-                    onSuccess: (log) => void navigate(`/sessions/${log.id}`),
-                  })
-                }
-              >
-                <Play /> Démarrer la séance
-              </Button>
+              <>
+                <SessionAdaptationDialog
+                  sessionTemplateId={template.id}
+                  focus={focus}
+                  currentSlots={sortedSlots}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={startSessionLog.isPending}
+                  onClick={() =>
+                    startSessionLog.mutate(template.id, {
+                      onSuccess: (log) => void navigate(`/sessions/${log.id}`),
+                    })
+                  }
+                >
+                  <Play /> Démarrer la séance
+                </Button>
+              </>
             )}
           </div>
         </CardContent>

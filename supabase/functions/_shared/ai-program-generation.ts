@@ -35,7 +35,7 @@ export interface GenerateProgramInput {
 // additionalProperties:false and every property listed in "required" are
 // needed for OpenAI's strict structured-output mode — harmless extra
 // strictness for Anthropic's tool input_schema, which doesn't require it.
-const EXERCISE_SCHEMA = {
+export const EXERCISE_SCHEMA = {
   type: 'object',
   properties: {
     exerciseId: { type: 'string' },
