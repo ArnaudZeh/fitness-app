@@ -12,6 +12,19 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // injectManifest (a custom src/sw.ts), not the default generateSW —
+      // generateSW's auto-generated worker has no room for custom push /
+      // notificationclick listeners, needed for P6b's wellness reminders.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
       manifest: {
         name: 'Fitness',
         short_name: 'Fitness',

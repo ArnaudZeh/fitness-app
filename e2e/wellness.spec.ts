@@ -53,3 +53,17 @@ test('rejects submitting the create form without a name or without a day', async
   await page.getByLabel('Nom').fill('Sans jour')
   await expect(addButton).toBeDisabled()
 })
+
+// Headless Chromium supports Notification/serviceWorker/PushManager, so the
+// card renders its "supported" branch — but actually subscribing hits a
+// real push service (FCM) and would leave a live subscription row on the
+// fixture account, so that flow is verified manually rather than here (see
+// TODOS.md P6b).
+test('shows the notifications card with an enable button', async ({ page }) => {
+  await page.goto('/bien-etre')
+
+  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Activer les notifications' }),
+  ).toBeEnabled()
+})

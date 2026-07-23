@@ -69,3 +69,24 @@ export async function updateProfile(patch: Partial<ProfileInput>): Promise<Profi
   if (error) throw error
   return toProfile(data)
 }
+
+// Silent best-effort sync, called once per app load (see AppLayout) — the
+// wellness reminder scheduler needs profiles.timezone to convert a user's
+// local reminder_time to UTC, and re-detecting on every visit keeps it
+// correct across travel without any settings UI for it.
+export async function syncTimezone(): Promise<void> {
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const userId = await requireUserId()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('timezone')
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  if (data.timezone === detected) return
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ timezone: detected })
+    .eq('id', userId)
+  if (updateError) throw updateError
+}

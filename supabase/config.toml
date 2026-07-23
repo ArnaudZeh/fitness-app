@@ -380,6 +380,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Invoked only by pg_cron/pg_net (server-side), never by an end user — there
+# is no Supabase session JWT to present, so platform JWT verification must be
+# off. Authorization instead comes from the function's own CRON_SECRET check.
+[functions.send-wellness-reminders]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

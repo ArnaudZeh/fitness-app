@@ -15,8 +15,11 @@ import {
   useWellnessActivities,
   useWellnessActivityLogs,
 } from '@/hooks/useWellnessActivities'
+import { useNotificationSupport, usePushSubscription } from '@/hooks/useNotifications'
 import { WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { WellnessActivity, WellnessActivityInput } from '@/lib/wellness-api'
+
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
 
@@ -110,9 +113,63 @@ export function WellnessPage() {
         />
       )}
 
+      <NotificationsCard />
       <CreateActivityCard />
       <ActivitiesListCard activities={allActivities} />
     </div>
+  )
+}
+
+function NotificationsCard() {
+  const support = useNotificationSupport()
+  const { isSubscribed, isPending, error, subscribe, unsubscribe } = usePushSubscription()
+
+  if (support === 'unsupported') return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Notifications</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {support === 'ios-not-installed' ? (
+          <p className="text-sm text-muted-foreground">
+            Sur iPhone/iPad, ajoutez d'abord cette app à l'écran d'accueil (Partager →
+            « Sur l'écran d'accueil ») pour pouvoir activer les rappels.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Recevez un rappel au moment prévu pour chaque activité programmée.
+            </p>
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <Button
+              type="button"
+              variant={isSubscribed ? 'outline' : 'default'}
+              className="self-start"
+              disabled={isPending || isSubscribed === null || !VAPID_PUBLIC_KEY}
+              onClick={() => {
+                if (isSubscribed) {
+                  void unsubscribe()
+                } else if (VAPID_PUBLIC_KEY) {
+                  void subscribe(VAPID_PUBLIC_KEY)
+                }
+              }}
+            >
+              {isPending
+                ? 'Chargement…'
+                : isSubscribed
+                  ? 'Désactiver les notifications'
+                  : 'Activer les notifications'}
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
