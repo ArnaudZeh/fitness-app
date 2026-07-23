@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
-import { Send, Sparkles } from 'lucide-react'
+import { Mic, MicOff, Send, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,8 @@ import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
+import { useSpeechToText } from '@/hooks/useSpeechToText'
+import { useTextToSpeech } from '@/hooks/useTextToSpeech'
 import {
   useActiveProgramSnapshot,
   useApplyAssistantProposal,
@@ -117,6 +119,11 @@ export function CoachPage() {
   const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
   const [draft, setDraft] = useState('')
 
+  const voiceInput = useSpeechToText((transcript) => {
+    setDraft((prev) => (prev.trim() === '' ? transcript : `${prev} ${transcript}`))
+  })
+  const textToSpeech = useTextToSpeech()
+
   const configuredProviders = (keyStatuses ?? [])
     .filter((status) => status.is_valid)
     .map((status) => status.provider)
@@ -214,12 +221,27 @@ export function CoachPage() {
                 <div
                   className={
                     message.role === 'user'
-                      ? 'rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground'
-                      : 'rounded-lg bg-muted px-3 py-2 text-sm'
+                      ? 'whitespace-pre-line rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground'
+                      : 'whitespace-pre-line rounded-lg bg-muted px-3 py-2 text-sm'
                   }
                 >
                   {message.content}
                 </div>
+                {message.role === 'assistant' && textToSpeech.isSupported && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      textToSpeech.speakingId === message.id
+                        ? 'Arrêter la lecture'
+                        : 'Écouter la réponse'
+                    }
+                    onClick={() => textToSpeech.speak(message.id, message.content)}
+                  >
+                    {textToSpeech.speakingId === message.id ? <VolumeX /> : <Volume2 />}
+                  </Button>
+                )}
                 {message.role === 'assistant' && message.toolProposal && (
                   <AssistantProposalCard message={message} />
                 )}
@@ -236,6 +258,33 @@ export function CoachPage() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+            {voiceInput.isSupported && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-start"
+                disabled={sendMessage.isPending}
+                onClick={() =>
+                  voiceInput.isListening ? voiceInput.stopListening() : voiceInput.startListening()
+                }
+              >
+                {voiceInput.isListening ? (
+                  <>
+                    <MicOff /> Arrêter l'écoute
+                  </>
+                ) : (
+                  <>
+                    <Mic /> Dicter mon message
+                  </>
+                )}
+              </Button>
+            )}
+            {voiceInput.error && (
+              <p role="alert" className="text-sm text-destructive">
+                {voiceInput.error}
+              </p>
+            )}
             <Textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
