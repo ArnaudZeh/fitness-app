@@ -63,6 +63,14 @@ export const WEEKDAY_LABELS: Record<number, string> = {
   7: 'Dimanche',
 }
 
+// JS's Date.getDay() is 0=Sunday..6=Saturday — remapped to this app's
+// 1=Monday..7=Sunday convention (matching WEEKDAY_LABELS and day_of_week
+// columns) everywhere a "what day is it" question comes up.
+export function getTodayIsoDayOfWeek(now: Date = new Date()): number {
+  const day = now.getDay()
+  return day === 0 ? 7 : day
+}
+
 function toSessionTemplate(row: SessionTemplateRow): SessionTemplate {
   return { ...row, day_type: row.day_type as DayType }
 }

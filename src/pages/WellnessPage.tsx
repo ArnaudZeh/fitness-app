@@ -16,7 +16,7 @@ import {
   useWellnessActivityLogs,
 } from '@/hooks/useWellnessActivities'
 import { useNotificationSupport, usePushSubscription } from '@/hooks/useNotifications'
-import { WEEKDAY_LABELS } from '@/lib/sessions-api'
+import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { WellnessActivity, WellnessActivityInput } from '@/lib/wellness-api'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
@@ -28,11 +28,6 @@ const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
 // actually miss.
 function weekdayLabel(day: number): string {
   return WEEKDAY_LABELS[day]!
-}
-
-function getTodayIsoDayOfWeek(now: Date = new Date()): number {
-  const day = now.getDay()
-  return day === 0 ? 7 : day
 }
 
 function toLocalDateString(date: Date): string {

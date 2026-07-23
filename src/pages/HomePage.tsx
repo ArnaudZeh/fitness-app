@@ -31,14 +31,9 @@ import {
 } from '@/lib/analytics'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
-import { WEEKDAY_LABELS } from '@/lib/sessions-api'
+import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { Program } from '@/lib/programs-api'
 import type { Profile } from '@/lib/profile-api'
-
-function getTodayIsoDayOfWeek(now: Date = new Date()): number {
-  const day = now.getDay()
-  return day === 0 ? 7 : day
-}
 
 function toLocalDateString(instant: string): string {
   const date = new Date(instant)

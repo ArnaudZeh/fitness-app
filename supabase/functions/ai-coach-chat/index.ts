@@ -4,6 +4,7 @@ import {
   runCoachChat,
   type ConversationMessage,
   type ProgramDaySnapshot,
+  type TodayContext,
 } from '../_shared/ai-coach-chat.ts'
 
 // On-demand only, triggered by each message sent from /coach — never on a
@@ -26,6 +27,7 @@ Deno.serve(async (req) => {
     trendSummary?: unknown
     programStructure?: ProgramDaySnapshot[]
     availableExercises?: { id: string; name: string; muscleGroup: string | null }[]
+    today?: TodayContext
   }
   try {
     body = await req.json()
@@ -44,6 +46,14 @@ Deno.serve(async (req) => {
   }
   if (!body.trendSummary) {
     return jsonResponse({ error: 'Résumé de tendance manquant.' }, 400)
+  }
+  if (
+    typeof body.today?.isoDate !== 'string' ||
+    typeof body.today?.dayOfWeek !== 'number' ||
+    body.today.dayOfWeek < 1 ||
+    body.today.dayOfWeek > 7
+  ) {
+    return jsonResponse({ error: 'Contexte de date manquant.' }, 400)
   }
 
   const { data: existing, error: existingError } = await admin
@@ -76,6 +86,7 @@ Deno.serve(async (req) => {
       trendSummary: body.trendSummary,
       programStructure: body.programStructure ?? [],
       availableExercises: body.availableExercises ?? [],
+      today: body.today,
     })
     return jsonResponse(result)
   } catch (err) {

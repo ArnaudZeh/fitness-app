@@ -431,3 +431,11 @@ Retour du user après le test réel de l'étape 5 : plus aucun "—" nulle part 
 - **Trouvé en vérifiant après coup** : la description du "Programme test" (écrite par l'agent lui-même via REST lors de sa création) contenait elle-même un "—" — corrigée. Rappel utile : du contenu que l'agent insère en base pendant une tâche est aussi un "texte de l'app", pas seulement le code source.
 - **"Programme test" repassé en `active`** à la demande du user, pour rester la base de référence des prochains tests d'adaptation IA.
 - **Vérifié** : `tsc --noEmit` et ESLint propres, grep confirmant zéro occurrence non-commentée restante dans `src/`, nouvelle réponse de test en direct sur `/coach` confirmée sans `—` ni markdown et référençant correctement le programme actif (jeudi = dos/biceps).
+
+## Coach IA — le chat ne savait pas quel jour on était (2026-07-23)
+
+Repéré par le user sur une réponse réelle : "demain" ne pouvait pas être résolu par le modèle puisque rien ne lui disait la date/le jour actuels. Pas un besoin de "connexion web" (le navigateur connaît déjà l'heure exacte, aucune API externe n'est nécessaire) — juste une donnée manquante dans le contexte envoyé au modèle.
+
+- **`CoachChatInput.today`** (`{ isoDate, dayOfWeek }`, nouveau) calculé côté client (`CoachPage.tsx`) et injecté dans `buildContextMessage()` (`ai-coach-chat.ts`) avec une phrase explicite : utiliser cette date pour résoudre "aujourd'hui"/"demain"/"après-demain" en jour concret avant d'appeler `adapter_seance`. Règle correspondante ajoutée à `COACH_CHAT_SYSTEM_PROMPT`. Champ requis côté Edge Function (400 si absent/malformé), même rigueur que `profileContext`/`trendSummary`.
+- **`getTodayIsoDayOfWeek()` extrait dans `sessions-api.ts`** (était dupliqué à l'identique dans `HomePage.tsx` et `WellnessPage.tsx`) — troisième consommateur réel qui justifie l'extraction, `toLocalDateString()` reste volontairement dupliqué (pas de troisième besoin identique, signatures légèrement différentes selon les call sites, même logique que la décision déjà prise en P8).
+- **Vérifié en direct** : `tsc --noEmit`/ESLint propres, redéployé `ai-coach-chat`, reposé la même question ("dos et biceps demain ?") — la réponse identifie maintenant correctement le jour réel (jeudi) et corrige elle-même la confusion de la réponse précédente (demain = vendredi = épaules, pas dos/biceps).

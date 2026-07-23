@@ -18,6 +18,11 @@ export interface ProgramDaySnapshot {
   exercises: CurrentExercise[]
 }
 
+export interface TodayContext {
+  isoDate: string
+  dayOfWeek: number
+}
+
 export interface CoachChatInput {
   message: string
   conversationHistory: ConversationMessage[]
@@ -25,6 +30,7 @@ export interface CoachChatInput {
   trendSummary: unknown
   programStructure: ProgramDaySnapshot[]
   availableExercises: { id: string; name: string; muscleGroup: string | null }[]
+  today: TodayContext
 }
 
 export type CoachChatProposal =
@@ -79,6 +85,7 @@ const ADAPT_TOOL_DESCRIPTION =
 
 function buildContextMessage(input: CoachChatInput): string {
   return [
+    `Date et jour actuels : ${input.today.isoDate}, jour ${input.today.dayOfWeek} (1=lundi ... 7=dimanche) — utilise ceci pour résoudre toute référence relative de l'utilisateur ("aujourd'hui", "demain", "après-demain", etc.) en un jour concret.`,
     `Profil de l'utilisateur (JSON) :\n${JSON.stringify(input.profileContext)}`,
     `Données de régularité et de tonnage récentes (JSON) :\n${JSON.stringify(input.trendSummary)}`,
     `Programme actif de l'utilisateur, un objet par jour de la semaine (JSON, vide si aucun programme actif) :\n${JSON.stringify(input.programStructure)}`,

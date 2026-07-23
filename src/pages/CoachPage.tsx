@@ -23,9 +23,17 @@ import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
 import { buildTrendSummary } from '@/lib/analytics'
 import { PROGRAM_FOCUS_LABELS } from '@/lib/programs-api'
-import { WEEKDAY_LABELS } from '@/lib/sessions-api'
+import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { AssistantMessage } from '@/lib/assistant-api'
 import type { AvailableExercise } from '@/lib/program-generation-api'
+
+function todayLocalDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function ExerciseList({
   exercises,
@@ -151,6 +159,7 @@ export function CoachPage() {
         trendSummary: buildTrendSummary(history ?? []),
         programStructure: programStructure ?? [],
         availableExercises,
+        today: { isoDate: todayLocalDateString(), dayOfWeek: getTodayIsoDayOfWeek() },
       },
       { onSuccess: () => setDraft('') },
     )

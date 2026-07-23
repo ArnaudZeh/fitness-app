@@ -155,6 +155,11 @@ export async function fetchActiveProgramSnapshot(): Promise<ProgramDaySnapshot[]
   }))
 }
 
+export interface TodayContext {
+  isoDate: string
+  dayOfWeek: number
+}
+
 export interface SendAssistantMessageParams {
   provider: AiProvider
   message: string
@@ -163,6 +168,7 @@ export interface SendAssistantMessageParams {
   trendSummary: TrendSummary
   programStructure: ProgramDaySnapshot[]
   availableExercises: AvailableExercise[]
+  today: TodayContext
 }
 
 // Orchestrates the full round-trip: persist the user's message, call the
@@ -183,6 +189,7 @@ export async function sendAssistantMessage(
       trendSummary: params.trendSummary,
       programStructure: params.programStructure,
       availableExercises: params.availableExercises,
+      today: params.today,
     },
   )
   const assistantMessage = await insertAssistantMessage(result.message, result.proposal)
