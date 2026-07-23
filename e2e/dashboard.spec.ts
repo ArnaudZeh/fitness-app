@@ -62,3 +62,19 @@ test("dashboard shows and lets you start today's scheduled session", async ({ pa
   await page.getByRole('button', { name: 'Supprimer définitivement' }).click()
   await expect(page).toHaveURL('/programs', { timeout: 20_000 })
 })
+
+// The "analysis succeeds" path needs a real Anthropic/OpenAI key (BYOK —
+// only the user has one), so it isn't exercised here. The Edge Function
+// itself was verified live with a deliberately-invalid key for both
+// providers (see TODOS.md) — real auth errors came back cleanly from each
+// provider, confirming the request shape reaches them correctly.
+test('shows a prompt to configure an AI key when none is set up', async ({ page }) => {
+  await page.goto('/')
+  const card = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByRole('heading', { name: 'Analyse IA' }) })
+  await expect(card.getByText('Configure une clé API')).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Analyser mes progrès' })).toHaveCount(0)
+  await card.getByRole('link', { name: 'Configurer une clé' }).click()
+  await expect(page).toHaveURL('/profile')
+})

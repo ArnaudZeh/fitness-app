@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, Play } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, Play, Sparkles } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,11 +20,15 @@ import {
 import { useSessionLogs, useStartSessionLog } from '@/hooks/useSessionLogs'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
+import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
+import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
 import {
+  buildTrendSummary,
   computeDailyVolume,
   countTrainingDaysThisWeek,
   getMostRecentHighlight,
 } from '@/lib/analytics'
+import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { Program } from '@/lib/programs-api'
 
@@ -66,6 +71,8 @@ export function HomePage() {
         entries={weightEntries ?? []}
         targetWeightKg={profile?.target_weight_kg ?? null}
       />
+
+      <AiTrendAnalysisCard history={history ?? []} />
 
       <Link to="/programs">
         <Card>
@@ -276,6 +283,101 @@ function WeightCard({
             </Link>
           </>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function AiTrendAnalysisCard({
+  history,
+}: {
+  history: NonNullable<ReturnType<typeof useSetHistory>['data']>
+}) {
+  const { data: keyStatuses } = useAiProviderKeys()
+  const analyzeTrends = useAnalyzeTrends()
+  const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
+
+  const configuredProviders = (keyStatuses ?? [])
+    .filter((status) => status.is_valid)
+    .map((status) => status.provider)
+  const activeProvider = selectedProvider ?? configuredProviders[0] ?? null
+
+  if (configuredProviders.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle as="h2">Analyse IA</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            Configure une clé API (Anthropic ou OpenAI) dans ton profil pour analyser tes
+            tendances d'entraînement.
+          </p>
+          <Button asChild size="sm" className="self-start">
+            <Link to="/profile">Configurer une clé</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const hasEnoughHistory = history.length > 0
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Analyse IA</CardTitle>
+        <CardDescription>
+          Tendance de tes 8 dernières semaines — un appel à ta propre clé à chaque analyse.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {configuredProviders.length > 1 && (
+          <div className="flex items-center gap-1 self-start rounded-lg border border-border p-0.5">
+            {configuredProviders.map((provider) => (
+              <Button
+                key={provider}
+                type="button"
+                size="sm"
+                variant={activeProvider === provider ? 'default' : 'ghost'}
+                onClick={() => setSelectedProvider(provider)}
+              >
+                {AI_PROVIDER_LABELS[provider]}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {!hasEnoughHistory && (
+          <p className="text-sm text-muted-foreground">
+            Logue quelques séances d'abord pour avoir de quoi analyser.
+          </p>
+        )}
+
+        {analyzeTrends.isError && (
+          <p role="alert" className="text-sm text-destructive">
+            {analyzeTrends.error instanceof Error
+              ? analyzeTrends.error.message
+              : 'Impossible de générer une analyse.'}
+          </p>
+        )}
+
+        {analyzeTrends.data && (
+          <p className="whitespace-pre-line text-sm">{analyzeTrends.data}</p>
+        )}
+
+        <Button
+          type="button"
+          size="sm"
+          className="self-start"
+          disabled={!activeProvider || !hasEnoughHistory || analyzeTrends.isPending}
+          onClick={() => {
+            if (!activeProvider) return
+            analyzeTrends.mutate({ provider: activeProvider, summary: buildTrendSummary(history) })
+          }}
+        >
+          <Sparkles /> {analyzeTrends.isPending ? 'Analyse en cours…' : 'Analyser mes progrès'}
+        </Button>
       </CardContent>
     </Card>
   )

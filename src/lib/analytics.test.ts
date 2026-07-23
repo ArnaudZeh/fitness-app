@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildTrendSummary,
   computeDailyVolume,
   computeOneRepMaxProgression,
   computeWeeklyTonnage,
@@ -184,5 +185,65 @@ describe('getMostRecentHighlight', () => {
   it('leaves estimatedOneRepMaxKg null outside the reliable rep range', () => {
     const result = getMostRecentHighlight([makeRecord({ weightKg: 40, reps: 20 })])
     expect(result?.estimatedOneRepMaxKg).toBeNull()
+  })
+})
+
+describe('buildTrendSummary', () => {
+  const now = new Date('2026-07-22T12:00:00Z') // Wednesday, week of 2026-07-20
+
+  it('handles no history at all', () => {
+    const summary = buildTrendSummary([], now)
+    expect(summary.weeklyTonnage).toEqual([])
+    expect(summary.trainingDaysThisWeek).toBe(0)
+    expect(summary.totalSetsInWindow).toBe(0)
+    expect(summary.exercises).toEqual([])
+  })
+
+  it('picks the most frequently logged exercises, most-frequent first', () => {
+    const records = [
+      makeRecord({ exerciseId: 'ex-squat', exerciseName: 'Squat', loggedAt: '2026-07-20' }),
+      makeRecord({ exerciseId: 'ex-squat', exerciseName: 'Squat', loggedAt: '2026-07-20' }),
+      makeRecord({ exerciseId: 'ex-squat', exerciseName: 'Squat', loggedAt: '2026-07-21' }),
+      makeRecord({ exerciseId: 'ex-bench', exerciseName: 'Bench Press', loggedAt: '2026-07-21' }),
+    ]
+    const summary = buildTrendSummary(records, now)
+    expect(summary.exercises.map((e) => e.exerciseName)).toEqual(['Squat', 'Bench Press'])
+    expect(summary.totalSetsInWindow).toBe(4)
+  })
+
+  it('excludes sets older than the 8-week tonnage window from the exercise frequency count', () => {
+    const records = [
+      // 10 weeks ago — outside the window.
+      makeRecord({
+        exerciseId: 'ex-old',
+        exerciseName: 'Old Exercise',
+        loggedAt: '2026-05-11',
+      }),
+      makeRecord({ exerciseId: 'ex-squat', exerciseName: 'Squat', loggedAt: '2026-07-20' }),
+    ]
+    const summary = buildTrendSummary(records, now)
+    expect(summary.exercises.map((e) => e.exerciseName)).toEqual(['Squat'])
+  })
+
+  it('caps at 5 exercises and 6 progression points per exercise', () => {
+    const records: SetHistoryRecord[] = []
+    for (let i = 0; i < 8; i++) {
+      records.push(
+        makeRecord({ exerciseId: `ex-${i}`, exerciseName: `Exercise ${i}`, loggedAt: '2026-07-20' }),
+      )
+    }
+    for (let i = 0; i < 10; i++) {
+      records.push(
+        makeRecord({
+          exerciseId: 'ex-frequent',
+          exerciseName: 'Frequent',
+          loggedAt: `2026-07-${String(13 + i).padStart(2, '0')}`,
+        }),
+      )
+    }
+    const summary = buildTrendSummary(records, now)
+    expect(summary.exercises).toHaveLength(5)
+    const frequent = summary.exercises.find((e) => e.exerciseName === 'Frequent')
+    expect(frequent?.recentPoints.length).toBeLessThanOrEqual(6)
   })
 })

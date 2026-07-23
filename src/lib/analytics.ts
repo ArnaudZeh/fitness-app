@@ -110,6 +110,81 @@ export function countTrainingDaysThisWeek(
   return uniqueDates.size
 }
 
+export interface TrendSummaryExercise {
+  exerciseName: string
+  recentPoints: DailyExerciseBest[]
+}
+
+export interface TrendSummary {
+  weeklyTonnage: WeeklyTonnage[]
+  trainingDaysThisWeek: number
+  totalSetsInWindow: number
+  exercises: TrendSummaryExercise[]
+}
+
+const TREND_WEEKS_WINDOW = 8
+const TREND_MAX_EXERCISES = 5
+const TREND_POINTS_PER_EXERCISE = 6
+
+// Condenses raw set history into the compact shape sent to the AI trend
+// analysis — a handful of numbers per exercise/week, not a full data dump.
+// Reuses the same pure functions the Analytics page itself charts from, so
+// what the AI reasons about matches what the user can already see.
+export function buildTrendSummary(
+  records: SetHistoryRecord[],
+  now: Date = new Date(),
+): TrendSummary {
+  // A real calendar cutoff, not "the last 8 populated weeks" —
+  // computeWeeklyTonnage is sparse (only weeks with logged sets appear at
+  // all), so slicing its output would silently reach arbitrarily far back
+  // in time across a training gap instead of stopping 8 weeks ago.
+  const currentWeekStart = getIsoWeekStart(now.toISOString().slice(0, 10))
+  const windowStartDate = new Date(`${currentWeekStart}T00:00:00Z`)
+  windowStartDate.setUTCDate(windowStartDate.getUTCDate() - (TREND_WEEKS_WINDOW - 1) * 7)
+  const windowStart = windowStartDate.toISOString().slice(0, 10)
+
+  const recentRecords = records.filter((record) => record.loggedAt >= windowStart)
+  const weeklyTonnage = computeWeeklyTonnage(recentRecords)
+
+  const frequencyByExercise = new Map<string, number>()
+  for (const record of recentRecords) {
+    frequencyByExercise.set(
+      record.exerciseId,
+      (frequencyByExercise.get(record.exerciseId) ?? 0) + 1,
+    )
+  }
+
+  const topExerciseIds = [...frequencyByExercise.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, TREND_MAX_EXERCISES)
+    .map(([exerciseId]) => exerciseId)
+
+  // getLoggedExercises sorts alphabetically — build the name lookup from it,
+  // but keep the frequency order from topExerciseIds for the final list
+  // (most-trained first reads more naturally than alphabetical here).
+  const nameByExerciseId = new Map(
+    getLoggedExercises(recentRecords).map((exercise) => [
+      exercise.exerciseId,
+      exercise.exerciseName,
+    ]),
+  )
+
+  const exercises = topExerciseIds
+    .map((exerciseId) => ({
+      exerciseName: nameByExerciseId.get(exerciseId) ?? 'Exercice',
+      recentPoints: computeOneRepMaxProgression(records, exerciseId).slice(
+        -TREND_POINTS_PER_EXERCISE,
+      ),
+    }))
+
+  return {
+    weeklyTonnage,
+    trainingDaysThisWeek: countTrainingDaysThisWeek(records, now),
+    totalSetsInWindow: recentRecords.length,
+    exercises,
+  }
+}
+
 export interface RecentHighlight {
   date: string
   exerciseName: string
