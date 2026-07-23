@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -16,11 +17,18 @@ export function ProgramsListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">Mes programmes</h1>
-        <Link to="/programs/new">
-          <Button>Nouveau programme</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/programs/generate" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full">
+              <Sparkles /> Générer avec l'IA
+            </Button>
+          </Link>
+          <Link to="/programs/new" className="flex-1 sm:flex-none">
+            <Button className="w-full">Nouveau programme</Button>
+          </Link>
+        </div>
       </div>
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}

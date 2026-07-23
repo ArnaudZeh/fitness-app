@@ -1,17 +1,6 @@
 import type { AiProvider } from './provider-validation.ts'
 import { TREND_ANALYSIS_SYSTEM_PROMPT } from './coach-persona.ts'
-
-const FETCH_TIMEOUT_MS = 45_000
-
-async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-  try {
-    return await fetch(url, { ...init, signal: controller.signal })
-  } finally {
-    clearTimeout(timeout)
-  }
-}
+import { fetchWithTimeout } from './fetch-with-timeout.ts'
 
 interface AnthropicContentBlock {
   type: string

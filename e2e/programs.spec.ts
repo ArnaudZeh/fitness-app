@@ -25,3 +25,19 @@ test('goes back to the programs list without creating a program', async ({ page 
   await page.goto('/programs')
   await expect(page.getByRole('heading', { name: 'Mes programmes' })).toBeVisible()
 })
+
+// The fixture account has no AI provider key configured (BYOK — only a real
+// key, never available in this suite, would clear this guard), so this is
+// the one state of the AI-generation page reachable without spending a
+// real API call — same limitation already accepted for the trend-analysis
+// card in dashboard.spec.ts.
+test('AI program generation prompts for a key when none is configured', async ({ page }) => {
+  await page.goto('/programs')
+  await page.getByRole('link', { name: "Générer avec l'IA" }).click()
+  await expect(page).toHaveURL('/programs/generate')
+  await expect(
+    page.getByText('Configure une clé API (Anthropic ou OpenAI) dans ton profil'),
+  ).toBeVisible()
+  await page.getByRole('link', { name: 'Configurer une clé' }).click()
+  await expect(page).toHaveURL('/profile')
+})

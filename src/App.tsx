@@ -17,6 +17,9 @@ const ProgramsListPage = lazy(() =>
 const ProgramNewPage = lazy(() =>
   import('@/pages/ProgramNewPage').then((m) => ({ default: m.ProgramNewPage })),
 )
+const ProgramGeneratePage = lazy(() =>
+  import('@/pages/ProgramGeneratePage').then((m) => ({ default: m.ProgramGeneratePage })),
+)
 const ProgramDetailPage = lazy(() =>
   import('@/pages/ProgramDetailPage').then((m) => ({ default: m.ProgramDetailPage })),
 )
@@ -58,6 +61,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/programs" element={<ProgramsListPage />} />
           <Route path="/programs/new" element={<ProgramNewPage />} />
+          <Route path="/programs/generate" element={<ProgramGeneratePage />} />
           <Route path="/programs/:id" element={<ProgramDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/sessions/:id" element={<SessionLogPage />} />
