@@ -1,6 +1,7 @@
 import type { Database } from '@/lib/database.types'
 
 export type Milestone = Database['public']['Tables']['milestones']['Row']
+export type ProgressPhoto = Database['public']['Tables']['progress_photos']['Row']
 
 export const MILESTONE_TYPE_LABELS: Record<Milestone['milestone_type'], string> = {
   one_rep_max: 'Nouveau record — 1RM estimé',
@@ -19,4 +20,37 @@ export function formatMilestoneValue(item: Pick<Milestone, 'milestone_type' | 'v
     return `${Math.round(item.value)} kg cette semaine-là`
   }
   return `${item.value} kg`
+}
+
+interface FeedEntryCommon {
+  id: string
+  userId: string
+  displayName: string
+  occurredAt: string
+}
+
+export interface MilestoneFeedEntry extends FeedEntryCommon {
+  kind: 'milestone'
+  milestone: Milestone
+}
+
+export interface PhotoFeedEntry extends FeedEntryCommon {
+  kind: 'photo'
+  photo: ProgressPhoto
+  signedUrl: string
+}
+
+export type FeedEntry = MilestoneFeedEntry | PhotoFeedEntry
+
+// Milestones and photos come from two different tables/queries — merged
+// and sorted here rather than in SQL, since a photo's "date" (photo_date)
+// and a milestone's "date" (achieved_at, a timestamp) aren't the same kind
+// of value to begin with.
+export function mergeFeedEntries(
+  milestoneEntries: MilestoneFeedEntry[],
+  photoEntries: PhotoFeedEntry[],
+): FeedEntry[] {
+  return [...milestoneEntries, ...photoEntries].sort((a, b) =>
+    b.occurredAt.localeCompare(a.occurredAt),
+  )
 }

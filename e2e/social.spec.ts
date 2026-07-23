@@ -1,6 +1,9 @@
+import path from 'node:path'
 import { expect, test } from '@playwright/test'
 
 test.use({ storageState: 'e2e/.auth/user.json' })
+
+const TEST_PHOTO_PATH = path.join(import.meta.dirname, 'fixtures', 'test-photo.png')
 
 // Cross-user visibility (does an opted-in user's feed show up for someone
 // else, does an opted-out user's stay hidden) needs a second real account
@@ -96,4 +99,26 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
   await page.getByRole('button', { name: 'Supprimer définitivement' }).click()
   await expect(page).toHaveURL('/programs', { timeout: 20_000 })
+})
+
+test('uploads a progress photo, shows it in the feed, then deletes it', async ({ page }) => {
+  const caption = `E2E Photo ${Date.now()}`
+
+  await page.goto('/feed')
+  // The trigger button opens a native file picker Playwright can't drive —
+  // setInputFiles targets the hidden <input type="file"> directly instead,
+  // same pattern already used for JSON import in data-import.spec.ts.
+  await page.getByLabel('Choisir une photo').setInputFiles(TEST_PHOTO_PATH)
+  await expect(page.getByAltText('Aperçu')).toBeVisible()
+
+  await page.getByLabel('Légende (optionnel)').fill(caption)
+  await page.getByRole('button', { name: 'Publier' }).click()
+
+  const photoEntry = page.locator('li').filter({ hasText: caption })
+  await expect(photoEntry).toBeVisible({ timeout: 10_000 })
+  await expect(photoEntry.getByRole('img')).toBeVisible()
+
+  await photoEntry.getByRole('button', { name: 'Supprimer cette photo du feed' }).click()
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+  await expect(photoEntry).toHaveCount(0)
 })

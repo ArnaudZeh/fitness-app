@@ -313,6 +313,33 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          photo_date: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          photo_date?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          photo_date?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string

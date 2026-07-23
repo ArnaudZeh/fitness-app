@@ -1,22 +1,21 @@
 import { supabase } from '@/lib/supabase'
-import type { Milestone } from '@/lib/social-display'
-
-export interface FeedItem extends Milestone {
-  displayName: string
-}
+import { fetchProgressPhotos, getSignedPhotoUrl } from '@/lib/progress-photos-api'
+import { mergeFeedEntries } from '@/lib/social-display'
+import type { FeedEntry, MilestoneFeedEntry, PhotoFeedEntry } from '@/lib/social-display'
 
 // public_profiles only ever contains rows for users who opted in — a
-// missing lookup (own milestones, before this user opted in themselves)
-// falls back to a generic label rather than showing nothing.
-export async function fetchFeed(): Promise<FeedItem[]> {
-  const { data: milestones, error } = await supabase
-    .from('milestones')
-    .select('*')
-    .order('achieved_at', { ascending: false })
-    .limit(50)
-  if (error) throw error
+// missing lookup (own entries, before this user opted in themselves) falls
+// back to a generic label rather than showing nothing.
+export async function fetchFeed(): Promise<FeedEntry[]> {
+  const [{ data: milestones, error: milestonesError }, photos] = await Promise.all([
+    supabase.from('milestones').select('*').order('achieved_at', { ascending: false }).limit(50),
+    fetchProgressPhotos(),
+  ])
+  if (milestonesError) throw milestonesError
 
-  const userIds = [...new Set(milestones.map((m) => m.user_id))]
+  const userIds = [
+    ...new Set([...milestones.map((m) => m.user_id), ...photos.map((p) => p.user_id)]),
+  ]
   const { data: profiles, error: profilesError } = await supabase
     .from('public_profiles')
     .select('id, display_name')
@@ -27,10 +26,28 @@ export async function fetchFeed(): Promise<FeedItem[]> {
     (profiles ?? []).map((p) => [p.id, p.display_name ?? 'Utilisateur']),
   )
 
-  return milestones.map((milestone) => ({
-    ...milestone,
+  const milestoneEntries: MilestoneFeedEntry[] = milestones.map((milestone) => ({
+    kind: 'milestone',
+    id: milestone.id,
+    userId: milestone.user_id,
     displayName: displayNameByUserId.get(milestone.user_id) ?? 'Utilisateur',
+    occurredAt: milestone.achieved_at,
+    milestone,
   }))
+
+  const photoEntries: PhotoFeedEntry[] = await Promise.all(
+    photos.map(async (photo) => ({
+      kind: 'photo' as const,
+      id: photo.id,
+      userId: photo.user_id,
+      displayName: displayNameByUserId.get(photo.user_id) ?? 'Utilisateur',
+      occurredAt: `${photo.photo_date}T00:00:00Z`,
+      photo,
+      signedUrl: await getSignedPhotoUrl(photo.storage_path),
+    })),
+  )
+
+  return mergeFeedEntries(milestoneEntries, photoEntries)
 }
 
 export async function deleteMilestone(id: string): Promise<void> {
