@@ -37,8 +37,11 @@ test.describe.serial('cycle module', () => {
 
   test('activates the module from the profile, revealing the nav link', async ({ page }) => {
     await page.goto('/profile')
-    await page.getByRole('button', { name: 'Activer' }).click()
-    await expect(page.getByRole('button', { name: 'Désactiver' })).toBeVisible()
+    const section = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole('heading', { name: 'Module cycles' }) })
+    await section.getByRole('button', { name: 'Activer' }).click()
+    await expect(section.getByRole('button', { name: 'Désactiver' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Cycle' })).toBeVisible()
   })
 
@@ -62,8 +65,11 @@ test.describe.serial('cycle module', () => {
 
   test('deactivates the module, hiding the nav link again', async ({ page }) => {
     await page.goto('/profile')
-    await page.getByRole('button', { name: 'Désactiver' }).click()
-    await expect(page.getByRole('button', { name: 'Activer' })).toBeVisible()
+    const section = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole('heading', { name: 'Module cycles' }) })
+    await section.getByRole('button', { name: 'Désactiver' }).click()
+    await expect(section.getByRole('button', { name: 'Activer' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Cycle' })).toHaveCount(0)
   })
 })

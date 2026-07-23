@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
-import { ChartLine, Moon, Sparkles, UserRound, Wind } from 'lucide-react'
+import { ChartLine, Moon, Sparkles, Trophy, UserRound, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/auth-store'
@@ -28,6 +28,11 @@ export function AppLayout() {
           <span className="hidden text-sm text-muted-foreground sm:inline">
             {session?.user.email}
           </span>
+          <Link to="/feed">
+            <Button variant="outline" size="icon-sm" aria-label="Feed">
+              <Trophy />
+            </Button>
+          </Link>
           <Link to="/analytics">
             <Button variant="outline" size="icon-sm" aria-label="Analytics">
               <ChartLine />

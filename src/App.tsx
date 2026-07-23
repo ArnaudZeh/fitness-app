@@ -38,6 +38,9 @@ const CyclePage = lazy(() =>
 const AnalyticsPage = lazy(() =>
   import('@/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
 )
+const FeedPage = lazy(() =>
+  import('@/pages/FeedPage').then((m) => ({ default: m.FeedPage })),
+)
 
 function App() {
   return (
@@ -62,6 +65,7 @@ function App() {
           <Route path="/apnee" element={<BreathPage />} />
           <Route path="/cycle" element={<CyclePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/feed" element={<FeedPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

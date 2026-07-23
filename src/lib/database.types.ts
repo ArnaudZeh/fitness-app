@@ -191,6 +191,47 @@ export type Database = {
         }
         Relationships: []
       }
+      milestones: {
+        Row: {
+          achieved_at: string
+          created_at: string
+          exercise_id: string | null
+          exercise_name: string | null
+          id: string
+          milestone_type: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          achieved_at?: string
+          created_at?: string
+          exercise_id?: string | null
+          exercise_name?: string | null
+          id?: string
+          milestone_type: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          achieved_at?: string
+          created_at?: string
+          exercise_id?: string | null
+          exercise_name?: string | null
+          id?: string
+          milestone_type?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -201,6 +242,7 @@ export type Database = {
           height_cm: number | null
           id: string
           sex: string | null
+          social_sharing_enabled: boolean
           target_weight_kg: number | null
           timezone: string | null
           updated_at: string
@@ -214,6 +256,7 @@ export type Database = {
           height_cm?: number | null
           id: string
           sex?: string | null
+          social_sharing_enabled?: boolean
           target_weight_kg?: number | null
           timezone?: string | null
           updated_at?: string
@@ -227,6 +270,7 @@ export type Database = {
           height_cm?: number | null
           id?: string
           sex?: string | null
+          social_sharing_enabled?: boolean
           target_weight_kg?: number | null
           timezone?: string | null
           updated_at?: string
@@ -625,7 +669,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          display_name: string | null
+          id: string | null
+        }
+        Insert: {
+          display_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          display_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       ai_vault_create_secret: {
@@ -637,6 +695,10 @@ export type Database = {
       ai_vault_update_secret: {
         Args: { p_id: string; p_secret: string }
         Returns: undefined
+      }
+      estimate_one_rep_max: {
+        Args: { p_reps: number; p_weight_kg: number }
+        Returns: number
       }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
     }
