@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/lib/auth-store'
 import { useDeleteMilestone, useSocialFeed } from '@/hooks/useSocialFeed'
-import { MILESTONE_TYPE_LABELS } from '@/lib/social-api'
 import type { FeedItem } from '@/lib/social-api'
+import { formatMilestoneValue, MILESTONE_TYPE_LABELS } from '@/lib/social-display'
 
 function formatAchievedAt(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
@@ -97,10 +97,9 @@ function FeedItemCard({
           {MILESTONE_TYPE_LABELS[item.milestone_type]}
           {item.exercise_name && ` — ${item.exercise_name}`}
         </p>
-        {/* kg is correct for the only milestone_type P9a detects
-            (one_rep_max) — P9b's weekly_tonnage is also kg, but
-            regularity_streak (weeks) will need a per-type unit. */}
-        <p className="font-mono text-lg font-semibold tabular-nums">{item.value} kg</p>
+        <p className="font-mono text-lg font-semibold tabular-nums">
+          {formatMilestoneValue(item)}
+        </p>
         <p className="text-sm text-muted-foreground">{formatAchievedAt(item.achieved_at)}</p>
       </CardContent>
     </Card>

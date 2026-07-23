@@ -68,18 +68,28 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   // see src/lib/one-rep-max.ts), not just "a Squat record" — other specs in
   // this suite also log Squat sets (e.g. 100kg x 5), which leaves their own
   // milestone entries in the same feed.
-  const feedEntry = page
+  const oneRepMaxEntry = page
     .locator('li')
     .filter({ hasText: 'Nouveau record — 1RM estimé — Squat' })
     .filter({ hasText: '1144.69 kg' })
-  await expect(feedEntry).toBeVisible({ timeout: 10_000 })
+  await expect(oneRepMaxEntry).toBeVisible({ timeout: 10_000 })
 
-  // Cleanup: the milestone is independent history, not cascaded by deleting
-  // the program/session — removed explicitly via its own delete button
+  // Same set (999kg x 5 = 4995kg tonnage) is also, incidentally, this
+  // week's best by a wide margin over anything else this suite logs.
+  const tonnageEntry = page
+    .locator('li')
+    .filter({ hasText: 'Nouveau record — tonnage hebdo' })
+    .filter({ hasText: '4995 kg cette semaine-là' })
+  await expect(tonnageEntry).toBeVisible()
+
+  // Cleanup: milestones are independent history, not cascaded by deleting
+  // the program/session — removed explicitly via their own delete buttons
   // (milestones' delete policy scopes this to the owner).
-  await feedEntry.getByRole('button', { name: 'Supprimer ce record du feed' }).click()
-  await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
-  await expect(feedEntry).toHaveCount(0)
+  for (const entry of [oneRepMaxEntry, tonnageEntry]) {
+    await entry.getByRole('button', { name: 'Supprimer ce record du feed' }).click()
+    await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+    await expect(entry).toHaveCount(0)
+  }
 
   await page.goto('/programs')
   await page.getByRole('link', { name: programName }).click()

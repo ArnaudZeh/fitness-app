@@ -1,16 +1,8 @@
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@/lib/database.types'
-
-export type Milestone = Database['public']['Tables']['milestones']['Row']
+import type { Milestone } from '@/lib/social-display'
 
 export interface FeedItem extends Milestone {
   displayName: string
-}
-
-export const MILESTONE_TYPE_LABELS: Record<Milestone['milestone_type'], string> = {
-  one_rep_max: 'Nouveau record — 1RM estimé',
-  weekly_tonnage: 'Nouveau record — tonnage hebdo',
-  regularity_streak: 'Nouveau record — régularité',
 }
 
 // public_profiles only ever contains rows for users who opted in — a
