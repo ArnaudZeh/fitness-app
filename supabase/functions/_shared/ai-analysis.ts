@@ -35,7 +35,7 @@ async function callAnthropic(apiKey: string, userMessage: string): Promise<strin
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-8',
+      model: 'claude-sonnet-5',
       max_tokens: 1536,
       system: SYSTEM_PROMPT,
       thinking: { type: 'adaptive' },
