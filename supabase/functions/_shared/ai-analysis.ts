@@ -1,4 +1,5 @@
 import type { AiProvider } from './provider-validation.ts'
+import { TREND_ANALYSIS_SYSTEM_PROMPT } from './coach-persona.ts'
 
 const FETCH_TIMEOUT_MS = 45_000
 
@@ -11,15 +12,6 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
     clearTimeout(timeout)
   }
 }
-
-const SYSTEM_PROMPT = [
-  "Tu es un coach de musculation qui analyse les données d'entraînement d'un utilisateur.",
-  'Réponds en français, en 3 à 5 phrases ou quelques points clés maximum — concis, factuel,',
-  'bienveillant. Base-toi uniquement sur les données fournies (JSON : tonnage hebdomadaire,',
-  'nombre de séances cette semaine, progression du 1RM estimé par exercice). Signale les',
-  'tendances notables (progression, plateau, baisse de régularité) et termine par une seule',
-  'suggestion concrète. Ne donne aucun avis médical.',
-].join(' ')
 
 interface AnthropicContentBlock {
   type: string
@@ -37,7 +29,7 @@ async function callAnthropic(apiKey: string, userMessage: string): Promise<strin
     body: JSON.stringify({
       model: 'claude-sonnet-5',
       max_tokens: 1536,
-      system: SYSTEM_PROMPT,
+      system: TREND_ANALYSIS_SYSTEM_PROMPT,
       thinking: { type: 'adaptive' },
       messages: [{ role: 'user', content: userMessage }],
     }),
@@ -73,7 +65,7 @@ async function callOpenAi(apiKey: string, userMessage: string): Promise<string> 
       model: 'gpt-5.6',
       max_tokens: 1024,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: TREND_ANALYSIS_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
     }),
