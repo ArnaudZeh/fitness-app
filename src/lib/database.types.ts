@@ -72,6 +72,77 @@ export type Database = {
         }
         Relationships: []
       }
+      breath_protocols: {
+        Row: {
+          created_at: string
+          cycles: number
+          hold_seconds: number
+          id: string
+          name: string
+          recovery_seconds: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycles: number
+          hold_seconds: number
+          id?: string
+          name: string
+          recovery_seconds: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cycles?: number
+          hold_seconds?: number
+          id?: string
+          name?: string
+          recovery_seconds?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      breath_session_logs: {
+        Row: {
+          completed_at: string
+          completed_cycles: number
+          created_at: string
+          id: string
+          protocol_id: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completed_cycles: number
+          created_at?: string
+          id?: string
+          protocol_id: string
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          completed_cycles?: number
+          created_at?: string
+          id?: string
+          protocol_id?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "breath_session_logs_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "breath_protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           created_at: string

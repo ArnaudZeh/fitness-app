@@ -11,6 +11,7 @@ import { ProgramDetailPage } from '@/pages/ProgramDetailPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { SessionLogPage } from '@/pages/SessionLogPage'
 import { WellnessPage } from '@/pages/WellnessPage'
+import { BreathPage } from '@/pages/BreathPage'
 
 // Recharts pulls in a sizeable chunk (~110kB gzip) only needed on this one
 // route — lazy-loaded so every other page's initial bundle stays lean.
@@ -40,6 +41,7 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/sessions/:id" element={<SessionLogPage />} />
           <Route path="/bien-etre" element={<WellnessPage />} />
+          <Route path="/apnee" element={<BreathPage />} />
           <Route
             path="/analytics"
             element={

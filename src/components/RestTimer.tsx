@@ -1,31 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Minus, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-function playBeep() {
-  if (typeof AudioContext === 'undefined') return
-  try {
-    const context = new AudioContext()
-    const oscillator = context.createOscillator()
-    const gain = context.createGain()
-    oscillator.connect(gain)
-    gain.connect(context.destination)
-    oscillator.frequency.value = 880
-    gain.gain.setValueAtTime(0.2, context.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.4)
-    oscillator.start()
-    oscillator.stop(context.currentTime + 0.4)
-  } catch {
-    // Audio isn't essential to the rest timer (vibration + visible countdown
-    // still work) — never let a browser audio-policy quirk break logging a set.
-  }
-}
-
-function formatTime(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
+import { formatTime, playBeep, vibrate } from '@/lib/timer-feedback'
 
 interface RestTimerProps {
   initialSeconds: number
@@ -39,11 +15,7 @@ export function RestTimer({ initialSeconds, onDismiss }: RestTimerProps) {
   useEffect(() => {
     if (secondsLeft <= 0) {
       if (!hasRungRef.current) {
-        // Vibration API has no iOS Safari support — this is a no-op there,
-        // the beep still fires as the audible fallback.
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          navigator.vibrate([300, 100, 300])
-        }
+        vibrate([300, 100, 300])
         playBeep()
         hasRungRef.current = true
       }

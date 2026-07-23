@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
-import { ChartLine, Sparkles, UserRound } from 'lucide-react'
+import { ChartLine, Sparkles, UserRound, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/auth-store'
@@ -34,6 +34,11 @@ export function AppLayout() {
           <Link to="/bien-etre">
             <Button variant="outline" size="icon-sm" aria-label="Bien-être">
               <Sparkles />
+            </Button>
+          </Link>
+          <Link to="/apnee">
+            <Button variant="outline" size="icon-sm" aria-label="Hypoxie intermittente">
+              <Wind />
             </Button>
           </Link>
           <Link to="/profile">

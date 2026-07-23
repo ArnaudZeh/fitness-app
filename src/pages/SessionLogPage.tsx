@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Calculator, ChevronLeft, Copy, Mic, MicOff, Plus, Trash2 } from 'lucide-react'
+import { Calculator, ChevronLeft, Copy, Mic, MicOff, Plus, Trash2, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -75,6 +75,11 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
           </Badge>
         </div>
         <div className="flex shrink-0 gap-2">
+          <Link to="/apnee">
+            <Button variant="outline" size="sm">
+              <Wind /> Respiration
+            </Button>
+          </Link>
           {isInProgress && (
             <Button
               size="sm"
