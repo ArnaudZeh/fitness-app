@@ -98,7 +98,7 @@ export function LoginPage() {
             Pas encore de compte ?{' '}
             <Link
               to="/signup"
-              className="text-primary underline-offset-4 hover:underline"
+              className="text-primary underline underline-offset-4 hover:text-primary/80"
             >
               Créer un compte
             </Link>

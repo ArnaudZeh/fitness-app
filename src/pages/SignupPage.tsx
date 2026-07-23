@@ -120,7 +120,10 @@ export function SignupPage() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Déjà un compte ?{' '}
-            <Link to="/login" className="text-primary underline-offset-4 hover:underline">
+            <Link
+              to="/login"
+              className="text-primary underline underline-offset-4 hover:text-primary/80"
+            >
               Se connecter
             </Link>
           </p>

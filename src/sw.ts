@@ -1,9 +1,26 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute } from 'workbox-precaching'
+import { matchPrecache, precacheAndRoute } from 'workbox-precaching'
 
 declare let self: ServiceWorkerGlobalScope
 
 precacheAndRoute(self.__WB_MANIFEST)
+
+// precacheAndRoute only serves exact cached URLs — a client-side route like
+// /bien-etre has no cache entry of its own, so a hard offline reload on any
+// route but "/" would otherwise fail outright. This is the standard SPA
+// fallback: every navigation request gets the cached app shell, and React
+// Router takes it from there. generateSW injects this automatically; the
+// custom injectManifest worker (needed for push notifications) does not.
+// Implemented by hand rather than via workbox-routing's NavigationRoute —
+// that package's prebundled ESM fails to evaluate under vite-plugin-pwa's
+// dev-mode SW harness (works fine in the production build, but breaks
+// `pnpm dev` outright), and this is only a few lines regardless.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode !== 'navigate') return
+  event.respondWith(
+    matchPrecache('/index.html').then((cached) => cached ?? fetch(event.request)),
+  )
+})
 
 interface PushPayload {
   title: string

@@ -1,25 +1,42 @@
-import { lazy, Suspense } from 'react'
+import { lazy } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppLayout } from '@/components/AppLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
-import { ProgramsListPage } from '@/pages/ProgramsListPage'
-import { ProgramNewPage } from '@/pages/ProgramNewPage'
-import { ProgramDetailPage } from '@/pages/ProgramDetailPage'
-import { ProfilePage } from '@/pages/ProfilePage'
-import { SessionLogPage } from '@/pages/SessionLogPage'
-import { WellnessPage } from '@/pages/WellnessPage'
-import { BreathPage } from '@/pages/BreathPage'
-import { CyclePage } from '@/pages/CyclePage'
 
-// Recharts pulls in a sizeable chunk (~110kB gzip) only needed on this one
-// route — lazy-loaded so every other page's initial bundle stays lean.
+// Only the pages reachable on first paint (unauthenticated login/signup, and
+// the authenticated landing page) are eager — every other route is
+// secondary navigation, lazy-loaded so it doesn't inflate the bundle every
+// visitor downloads before they've even signed in. AppLayout wraps all of
+// these in a single Suspense boundary around its <Outlet />.
+const ProgramsListPage = lazy(() =>
+  import('@/pages/ProgramsListPage').then((m) => ({ default: m.ProgramsListPage })),
+)
+const ProgramNewPage = lazy(() =>
+  import('@/pages/ProgramNewPage').then((m) => ({ default: m.ProgramNewPage })),
+)
+const ProgramDetailPage = lazy(() =>
+  import('@/pages/ProgramDetailPage').then((m) => ({ default: m.ProgramDetailPage })),
+)
+const ProfilePage = lazy(() =>
+  import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+)
+const SessionLogPage = lazy(() =>
+  import('@/pages/SessionLogPage').then((m) => ({ default: m.SessionLogPage })),
+)
+const WellnessPage = lazy(() =>
+  import('@/pages/WellnessPage').then((m) => ({ default: m.WellnessPage })),
+)
+const BreathPage = lazy(() =>
+  import('@/pages/BreathPage').then((m) => ({ default: m.BreathPage })),
+)
+const CyclePage = lazy(() =>
+  import('@/pages/CyclePage').then((m) => ({ default: m.CyclePage })),
+)
 const AnalyticsPage = lazy(() =>
-  import('@/pages/AnalyticsPage').then((module) => ({
-    default: module.AnalyticsPage,
-  })),
+  import('@/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
 )
 
 function App() {
@@ -44,14 +61,7 @@ function App() {
           <Route path="/bien-etre" element={<WellnessPage />} />
           <Route path="/apnee" element={<BreathPage />} />
           <Route path="/cycle" element={<CyclePage />} />
-          <Route
-            path="/analytics"
-            element={
-              <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
-                <AnalyticsPage />
-              </Suspense>
-            }
-          />
+          <Route path="/analytics" element={<AnalyticsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

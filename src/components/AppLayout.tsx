@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
 import { ChartLine, Moon, Sparkles, UserRound, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -65,7 +65,9 @@ export function AppLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-2xl p-4">
-        <Outlet />
+        <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )

@@ -29,6 +29,7 @@ export default defineConfig({
         name: 'Fitness',
         short_name: 'Fitness',
         description: 'Suivi de musculation, hypoxie intermittente et bien-être',
+        lang: 'fr',
         theme_color: '#0b0f14',
         background_color: '#0b0f14',
         display: 'standalone',
