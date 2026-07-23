@@ -84,7 +84,7 @@ export function ProgramGeneratePage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
-              Logue quelques séances d'abord — l'IA ne propose que des exercices que tu as déjà
+              Logue quelques séances d'abord. L'IA ne propose que des exercices que tu as déjà
               pratiqués.
             </p>
           </CardContent>
@@ -139,7 +139,7 @@ export function ProgramGeneratePage() {
                     <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
                       {day.exercises.map((exercise, index) => (
                         <li key={`${day.dayOfWeek}-${index}`}>
-                          {exercise.exerciseName} — {exercise.targetSets} × {exercise.targetRepsMin}
+                          {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}
                           -{exercise.targetRepsMax} reps
                           {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
                         </li>
@@ -252,7 +252,7 @@ export function ProgramGeneratePage() {
                 id="constraints"
                 value={constraints}
                 onChange={(event) => setConstraints(event.target.value)}
-                placeholder="Optionnel — ex. épaule sensible, pas de squat, préférence pour le haut du corps…"
+                placeholder="Optionnel · ex. épaule sensible, pas de squat, préférence pour le haut du corps…"
               />
             </div>
 

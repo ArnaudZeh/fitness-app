@@ -4,9 +4,9 @@ export type Milestone = Database['public']['Tables']['milestones']['Row']
 export type ProgressPhoto = Database['public']['Tables']['progress_photos']['Row']
 
 export const MILESTONE_TYPE_LABELS: Record<Milestone['milestone_type'], string> = {
-  one_rep_max: 'Nouveau record — 1RM estimé',
-  weekly_tonnage: 'Nouveau record — tonnage hebdo',
-  regularity_streak: 'Nouveau record — régularité',
+  one_rep_max: 'Nouveau record · 1RM estimé',
+  weekly_tonnage: 'Nouveau record · tonnage hebdo',
+  regularity_streak: 'Nouveau record · régularité',
 }
 
 // one_rep_max keeps decimal precision (a specific lift weight) — the other

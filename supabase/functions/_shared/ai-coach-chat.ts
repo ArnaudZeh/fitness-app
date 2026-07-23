@@ -129,7 +129,7 @@ async function runAdaptTool(
   if (!day || day.dayType !== 'training' || day.exercises.length === 0) {
     return {
       message:
-        "Je ne trouve pas de séance d'entraînement pour ce jour-là dans ton programme actif — dis-moi quel jour tu veux adapter, ou crée d'abord un programme.",
+        "Je ne trouve pas de séance d'entraînement pour ce jour-là dans ton programme actif. Dis-moi quel jour tu veux adapter, ou crée d'abord un programme.",
       proposal: null,
     }
   }

@@ -60,7 +60,7 @@ export function useSpeechToText(onResult: (transcript: string) => void) {
       onResult(transcript)
     }
     recognition.onerror = () => {
-      setError('Non reconnu — réessaie ou saisis manuellement.')
+      setError('Non reconnu, réessaie ou saisis manuellement.')
     }
     recognition.onend = () => setIsListening(false)
 

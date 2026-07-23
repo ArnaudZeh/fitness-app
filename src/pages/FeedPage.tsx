@@ -148,7 +148,7 @@ function MilestoneCard({
       <CardContent className="flex flex-col gap-1">
         <p className="font-medium">
           {MILESTONE_TYPE_LABELS[milestone.milestone_type]}
-          {milestone.exercise_name && ` — ${milestone.exercise_name}`}
+          {milestone.exercise_name && ` · ${milestone.exercise_name}`}
         </p>
         <p className="font-mono text-lg font-semibold tabular-nums">
           {formatMilestoneValue(milestone)}

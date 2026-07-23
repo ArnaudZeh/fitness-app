@@ -413,7 +413,7 @@ function BreathRunner({
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background p-6 text-center">
         <p className="text-2xl font-semibold">Protocole terminé 🎉</p>
         <p className="text-muted-foreground">
-          {protocol.cycles} cycles complétés — {protocol.name}
+          {protocol.cycles} cycles complétés · {protocol.name}
         </p>
         <Button type="button" size="lg" onClick={onClose}>
           Fermer

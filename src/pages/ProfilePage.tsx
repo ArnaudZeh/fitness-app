@@ -72,7 +72,7 @@ function CycleModuleSection({ profile }: { profile: Profile }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">
-          Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par phase —
+          Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par phase :
           recommandations générales, pas un outil médical.
         </p>
         {updateProfile.isError && (
@@ -107,7 +107,7 @@ function SocialSharingSection({ profile }: { profile: Profile }) {
       <CardContent className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">
           Une fois activé, tes nouveaux records (1RM estimé) apparaissent dans le feed, visible
-          par les autres utilisateurs de l'app — un cercle fermé, pas un réseau ouvert. Le feed
+          par les autres utilisateurs de l'app : un cercle fermé, pas un réseau ouvert. Le feed
           reste consultable même sans activer le partage.
         </p>
         {updateProfile.isError && (

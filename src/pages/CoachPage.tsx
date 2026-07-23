@@ -36,7 +36,7 @@ function ExerciseList({
     <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
       {exercises.map((exercise, index) => (
         <li key={`${exercise.exerciseName}-${index}`}>
-          {exercise.exerciseName} — {exercise.targetSets} × {exercise.targetRepsMin}-
+          {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}-
           {exercise.targetRepsMax} reps
           {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
         </li>
@@ -208,7 +208,7 @@ export function CoachPage() {
           {(messages ?? []).length === 0 && (
             <p className="text-sm text-muted-foreground">
               Pose une question sur ta progression, demande un programme ou une adaptation de
-              séance — ton coach a accès à ton profil, ton historique et ton programme actif.
+              séance : ton coach a accès à ton profil, ton historique et ton programme actif.
             </p>
           )}
 

@@ -139,7 +139,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
       <CardHeader>
         <CardTitle as="h2">Aujourd'hui</CardTitle>
         <CardDescription>
-          {program.name} — {WEEKDAY_LABELS[todayIsoDayOfWeek]}
+          {program.name} · {WEEKDAY_LABELS[todayIsoDayOfWeek]}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -164,7 +164,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
               <ul className="flex flex-col gap-1">
                 {(exercises ?? []).map((slot) => (
                   <li key={slot.id} className="text-sm text-muted-foreground">
-                    {slot.exercise.name} — {slot.target_sets} x {slot.target_reps_min}-
+                    {slot.exercise.name} · {slot.target_sets} x {slot.target_reps_min}-
                     {slot.target_reps_max}
                   </li>
                 ))}
@@ -204,7 +204,7 @@ function RecentHighlightCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
         <p className="font-mono text-lg font-semibold tabular-nums">
-          {highlight.exerciseName} — {highlight.weightKg} kg x {highlight.reps}
+          {highlight.exerciseName} · {highlight.weightKg} kg x {highlight.reps}
         </p>
         {highlight.estimatedOneRepMaxKg !== null && (
           <p className="text-sm text-muted-foreground">
@@ -342,7 +342,7 @@ function AiTrendAnalysisCard({
       <CardHeader>
         <CardTitle as="h2">Analyse IA</CardTitle>
         <CardDescription>
-          Tendance de tes 8 dernières semaines — un appel à ta propre clé à chaque analyse.
+          Tendance de tes 8 dernières semaines (un appel à ta propre clé à chaque analyse).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

@@ -123,7 +123,7 @@ export function SessionAdaptationDialog({
 
         {configuredProviders.length > 0 && availableExercises.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Logue quelques séances d'abord — l'IA ne propose que des exercices que tu as déjà
+            Logue quelques séances d'abord. L'IA ne propose que des exercices que tu as déjà
             pratiqués.
           </p>
         )}
@@ -154,7 +154,7 @@ export function SessionAdaptationDialog({
                   id="day-context"
                   value={dayContext}
                   onChange={(event) => setDayContext(event.target.value)}
-                  placeholder="Optionnel — ex. fatigué, courbatures, épaule qui tire, peu de temps…"
+                  placeholder="Optionnel · ex. fatigué, courbatures, épaule qui tire, peu de temps…"
                 />
               </div>
 

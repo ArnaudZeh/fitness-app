@@ -12,24 +12,24 @@ export interface CyclePhaseAdvice {
 export const CYCLE_PHASE_ADVICE: Record<CyclePhase, CyclePhaseAdvice> = {
   menstruelle: {
     training:
-      "La fatigue et la perception d'effort sont souvent plus élevées les premiers jours — une charge modérée et l'écoute des sensations sont raisonnables, le repos actif est une option tout à fait valable.",
+      "La fatigue et la perception d'effort sont souvent plus élevées les premiers jours. Une charge modérée et l'écoute des sensations sont raisonnables, le repos actif est une option tout à fait valable.",
     nutrition:
       "Pas de restriction calorique particulière recommandée à cette période ; les apports en fer peuvent mériter une attention.",
   },
   folliculaire: {
     training:
-      "L'énergie et la récupération sont généralement meilleures durant cette phase — souvent un bon moment pour viser une charge plus élevée ou un volume plus ambitieux.",
+      "L'énergie et la récupération sont généralement meilleures durant cette phase. C'est souvent un bon moment pour viser une charge plus élevée ou un volume plus ambitieux.",
     nutrition:
       'Bonne tolérance aux glucides en général, utile pour soutenir des séances plus intenses.',
   },
   ovulation: {
     training:
-      "Pic d'énergie possible chez certaines autour de l'ovulation — une vigilance sur la stabilité articulaire (laxité ligamentaire parfois un peu plus élevée) reste pertinente.",
+      "Pic d'énergie possible chez certaines autour de l'ovulation. Une vigilance sur la stabilité articulaire (laxité ligamentaire parfois un peu plus élevée) reste pertinente.",
     nutrition: "Pas d'ajustement particulier à signaler ; l'hydratation reste à surveiller.",
   },
   luteale: {
     training:
-      "La fatigue et le besoin de récupération augmentent souvent en fin de phase lutéale — réduire volume ou charge à cette période est raisonnable, un deload ponctuel n'a rien d'anormal.",
+      "La fatigue et le besoin de récupération augmentent souvent en fin de phase lutéale. Réduire volume ou charge à cette période est raisonnable, un deload ponctuel n'a rien d'anormal.",
     nutrition:
       'Des besoins caloriques légèrement plus élevés sont possibles ; une vigilance sur un déficit énergétique trop marqué est particulièrement pertinente à cette période.',
   },

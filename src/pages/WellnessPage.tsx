@@ -193,7 +193,7 @@ function DayView({
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h2">Aujourd'hui — {weekdayLabel(todayIsoDayOfWeek)}</CardTitle>
+        <CardTitle as="h2">Aujourd'hui · {weekdayLabel(todayIsoDayOfWeek)}</CardTitle>
       </CardHeader>
       <CardContent>
         {todaysActivities.length === 0 ? (

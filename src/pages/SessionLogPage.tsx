@@ -207,7 +207,7 @@ function SessionLogExerciseCard({
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
                 <p className="font-mono tabular-nums">
-                  Série {set.set_number} — {set.actual_weight_kg} kg x {set.actual_reps}
+                  Série {set.set_number} · {set.actual_weight_kg} kg x {set.actual_reps}
                   {set.actual_rpe !== null ? ` @ RPE ${set.actual_rpe}` : ''}
                 </p>
                 {!disabled && (

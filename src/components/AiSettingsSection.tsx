@@ -31,7 +31,7 @@ export function AiSettingsSection() {
       <CardContent className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">
           Renseigne ta propre clé API pour activer les fonctionnalités IA. Ta clé est
-          chiffrée et n'est utilisée que pour tes propres appels — elle n'est jamais
+          chiffrée et n'est utilisée que pour tes propres appels. Elle n'est jamais
           partagée ni visible en clair, y compris par nous.
         </p>
         {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
@@ -99,7 +99,7 @@ function ProviderKeyRow({
       >
         <div className="flex min-w-[12rem] flex-1 flex-col gap-2">
           <Label htmlFor={`api-key-${provider}`}>
-            {isConfigured ? 'Remplacer la clé' : 'Clé API'} —{' '}
+            {isConfigured ? 'Remplacer la clé' : 'Clé API'} ·{' '}
             {AI_PROVIDER_LABELS[provider]}
           </Label>
           <Input

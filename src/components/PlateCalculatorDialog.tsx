@@ -101,7 +101,7 @@ export function PlateCalculatorDialog({
               </p>
               {!breakdown.isExact && (
                 <p className="text-center text-sm text-destructive">
-                  Charge non atteignable exactement avec ces plaques — le plus proche :{' '}
+                  Charge non atteignable exactement avec ces plaques, le plus proche :{' '}
                   {breakdown.achievedWeightKg} kg.
                 </p>
               )}

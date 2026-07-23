@@ -96,7 +96,7 @@ function PhaseCard() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Aucune date enregistrée pour l'instant — ajoute la date de début de tes dernières
+            Aucune date enregistrée pour l'instant. Ajoute la date de début de tes dernières
             règles ci-dessous pour voir une estimation de phase.
           </p>
         </CardContent>

@@ -189,7 +189,7 @@ export function ExerciseSlotFormDialog({
               id="target-rest-seconds"
               type="number"
               min={1}
-              placeholder={`Optionnel — ${defaultRestSeconds}s par défaut`}
+              placeholder={`Optionnel · ${defaultRestSeconds}s par défaut`}
               value={targetRestSeconds}
               onChange={(event) => setTargetRestSeconds(event.target.value)}
             />
@@ -213,7 +213,7 @@ export function ExerciseSlotFormDialog({
             <Label htmlFor="superset-group">Superset</Label>
             <Input
               id="superset-group"
-              placeholder="Optionnel — ex: A"
+              placeholder="Optionnel · ex: A"
               value={supersetGroup}
               onChange={(event) => setSupersetGroup(event.target.value)}
             />

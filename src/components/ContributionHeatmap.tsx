@@ -73,7 +73,7 @@ export function ContributionHeatmap({
           {days.map((day) => (
             <div
               key={day.date}
-              title={`${day.date} — ${day.volumeKg > 0 ? `${Math.round(day.volumeKg)} kg déplacés` : 'aucune séance'}`}
+              title={`${day.date} · ${day.volumeKg > 0 ? `${Math.round(day.volumeKg)} kg déplacés` : 'aucune séance'}`}
               className={cn('size-3 rounded-sm', LEVEL_CLASS[day.level])}
             />
           ))}
