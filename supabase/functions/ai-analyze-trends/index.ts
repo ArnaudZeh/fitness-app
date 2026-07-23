@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   if (isResponse(ctx)) return ctx
   const { userId, admin } = ctx
 
-  let body: { provider?: string; summary?: unknown }
+  let body: { provider?: string; summary?: unknown; profileContext?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -25,6 +25,12 @@ Deno.serve(async (req) => {
   }
   if (!body.summary) {
     return jsonResponse({ error: 'Résumé manquant.' }, 400)
+  }
+  // profileContext can legitimately be "all nulls" (a user who hasn't
+  // filled in their profile yet) — only reject it if the key is missing
+  // entirely, not if it's present but empty.
+  if (!body.profileContext) {
+    return jsonResponse({ error: 'Contexte de profil manquant.' }, 400)
   }
 
   const { data: existing, error: existingError } = await admin
@@ -50,7 +56,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const analysis = await analyzeTrends(provider, secretValue, body.summary)
+    const analysis = await analyzeTrends(provider, secretValue, body.summary, body.profileContext)
     return jsonResponse({ analysis })
   } catch (err) {
     console.error(err)

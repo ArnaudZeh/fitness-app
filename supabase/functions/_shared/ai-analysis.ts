@@ -82,16 +82,20 @@ async function callOpenAi(apiKey: string, userMessage: string): Promise<string> 
   return text
 }
 
-// summary is already a compact, pre-aggregated JSON object (built client-side
-// from the same pure functions the Analytics page charts from) — this
-// function only relays it to the provider, it never queries training data
-// itself.
+// summary and profileContext are already compact, pre-aggregated JSON
+// objects (built client-side, from the same pure functions the app itself
+// uses for Analytics/Profile) — this function only relays them to the
+// provider, it never queries user data itself.
 export async function analyzeTrends(
   provider: AiProvider,
   apiKey: string,
   summary: unknown,
+  profileContext: unknown,
 ): Promise<string> {
-  const userMessage = `Voici mes données d'entraînement récentes (JSON) :\n${JSON.stringify(summary)}`
+  const userMessage = [
+    `Profil de l'utilisateur (JSON) :\n${JSON.stringify(profileContext)}`,
+    `Données d'entraînement récentes (JSON) :\n${JSON.stringify(summary)}`,
+  ].join('\n\n')
   return provider === 'anthropic'
     ? callAnthropic(apiKey, userMessage)
     : callOpenAi(apiKey, userMessage)

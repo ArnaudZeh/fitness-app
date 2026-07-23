@@ -29,8 +29,10 @@ import {
   getMostRecentHighlight,
 } from '@/lib/analytics'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
+import { buildUserProfileContext } from '@/lib/user-context'
 import { WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { Program } from '@/lib/programs-api'
+import type { Profile } from '@/lib/profile-api'
 
 function getTodayIsoDayOfWeek(now: Date = new Date()): number {
   const day = now.getDay()
@@ -72,7 +74,13 @@ export function HomePage() {
         targetWeightKg={profile?.target_weight_kg ?? null}
       />
 
-      <AiTrendAnalysisCard history={history ?? []} />
+      {profile && (
+        <AiTrendAnalysisCard
+          history={history ?? []}
+          profile={profile}
+          weightEntries={weightEntries ?? []}
+        />
+      )}
 
       <Link to="/programs">
         <Card>
@@ -290,8 +298,12 @@ function WeightCard({
 
 function AiTrendAnalysisCard({
   history,
+  profile,
+  weightEntries,
 }: {
   history: NonNullable<ReturnType<typeof useSetHistory>['data']>
+  profile: Profile
+  weightEntries: NonNullable<ReturnType<typeof useWeightEntries>['data']>
 }) {
   const { data: keyStatuses } = useAiProviderKeys()
   const analyzeTrends = useAnalyzeTrends()
@@ -373,7 +385,11 @@ function AiTrendAnalysisCard({
           disabled={!activeProvider || !hasEnoughHistory || analyzeTrends.isPending}
           onClick={() => {
             if (!activeProvider) return
-            analyzeTrends.mutate({ provider: activeProvider, summary: buildTrendSummary(history) })
+            analyzeTrends.mutate({
+              provider: activeProvider,
+              summary: buildTrendSummary(history),
+              profileContext: buildUserProfileContext(profile, weightEntries),
+            })
           }}
         >
           <Sparkles /> {analyzeTrends.isPending ? 'Analyse en cours…' : 'Analyser mes progrès'}
