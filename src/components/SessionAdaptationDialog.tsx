@@ -15,6 +15,7 @@ import {
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
+import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useApplySessionAdaptation, useGenerateSessionAdaptation } from '@/hooks/useSessionAdaptation'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
@@ -40,6 +41,7 @@ export function SessionAdaptationDialog({
   const { data: keyStatuses } = useAiProviderKeys()
   const { data: profile } = useProfile()
   const { data: weightEntries } = useWeightEntries()
+  const { data: cycleEntries } = useCycleEntries({ enabled: Boolean(profile?.cycle_module_enabled) })
   const { data: history } = useSetHistory()
   const generateAdaptation = useGenerateSessionAdaptation()
   const applyAdaptation = useApplySessionAdaptation(sessionTemplateId)
@@ -70,7 +72,7 @@ export function SessionAdaptationDialog({
     if (!activeProvider || !profile) return
     generateAdaptation.mutate({
       provider: activeProvider,
-      profileContext: buildUserProfileContext(profile, weightEntries ?? []),
+      profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
       trendSummary: buildTrendSummary(history ?? []),
       currentExercises: currentSlots.map((slot) => ({
         exerciseId: slot.exercise_id,

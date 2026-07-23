@@ -47,6 +47,7 @@ describe('buildUserProfileContext', () => {
     const context = buildUserProfileContext(
       profile,
       [{ weight_kg: 78.5 }, { weight_kg: 78.2 }],
+      [],
       now,
     )
     expect(context).toEqual({
@@ -56,11 +57,12 @@ describe('buildUserProfileContext', () => {
       goal: 'prise_de_muscle',
       targetWeightKg: 85,
       currentWeightKg: 78.5,
+      cyclePhase: null,
     })
   })
 
   it('leaves fields null when the profile has nothing filled in', () => {
-    const context = buildUserProfileContext(fakeProfile(), [], now)
+    const context = buildUserProfileContext(fakeProfile(), [], [], now)
     expect(context).toEqual({
       sex: null,
       ageYears: null,
@@ -68,6 +70,30 @@ describe('buildUserProfileContext', () => {
       goal: null,
       targetWeightKg: null,
       currentWeightKg: null,
+      cyclePhase: null,
     })
+  })
+
+  it('includes the cycle phase when the module is enabled and entries exist', () => {
+    const profile = fakeProfile({ cycle_module_enabled: true })
+    const context = buildUserProfileContext(
+      profile,
+      [],
+      [{ start_date: '2026-07-01' }],
+      now, // 2026-07-23 → cycle day 23
+    )
+    expect(context.cyclePhase).toEqual({ phase: 'luteale', cycleDay: 23 })
+  })
+
+  it('omits the cycle phase when the module is disabled, even with entries', () => {
+    const profile = fakeProfile({ cycle_module_enabled: false })
+    const context = buildUserProfileContext(profile, [], [{ start_date: '2026-07-01' }], now)
+    expect(context.cyclePhase).toBeNull()
+  })
+
+  it('omits the cycle phase when the module is enabled but no entries exist', () => {
+    const profile = fakeProfile({ cycle_module_enabled: true })
+    const context = buildUserProfileContext(profile, [], [], now)
+    expect(context.cyclePhase).toBeNull()
   })
 })

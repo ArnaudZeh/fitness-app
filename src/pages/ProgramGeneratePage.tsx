@@ -17,6 +17,7 @@ import {
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
+import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useApplyProgramProposal, useGenerateProgram } from '@/hooks/useProgramGeneration'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
@@ -31,6 +32,7 @@ export function ProgramGeneratePage() {
   const navigate = useNavigate()
   const { data: profile } = useProfile()
   const { data: weightEntries } = useWeightEntries()
+  const { data: cycleEntries } = useCycleEntries({ enabled: Boolean(profile?.cycle_module_enabled) })
   const { data: history } = useSetHistory()
   const { data: keyStatuses } = useAiProviderKeys()
 
@@ -96,7 +98,7 @@ export function ProgramGeneratePage() {
     if (!activeProvider || !profile) return
     generateProgram.mutate({
       provider: activeProvider,
-      profileContext: buildUserProfileContext(profile, weightEntries ?? []),
+      profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
       availableExercises,
       daysPerWeek,
       equipment,
@@ -170,7 +172,7 @@ export function ProgramGeneratePage() {
                   profile &&
                   generateProgram.mutate({
                     provider: activeProvider,
-                    profileContext: buildUserProfileContext(profile, weightEntries ?? []),
+                    profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
                     availableExercises,
                     daysPerWeek,
                     equipment,

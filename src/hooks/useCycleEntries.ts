@@ -3,8 +3,15 @@ import * as api from '@/lib/cycle-api'
 
 const cycleEntriesKey = ['cycle-entries'] as const
 
-export function useCycleEntries() {
-  return useQuery({ queryKey: cycleEntriesKey, queryFn: api.fetchCycleEntries })
+// `enabled` lets couche-IA callers skip fetching cycle data entirely for
+// users who haven't opted into the module — the same opt-in strictness as
+// everywhere else the module appears, not just a UI gate on /cycle.
+export function useCycleEntries(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: cycleEntriesKey,
+    queryFn: api.fetchCycleEntries,
+    enabled: options.enabled ?? true,
+  })
 }
 
 export function useCreateCycleEntry() {

@@ -19,6 +19,7 @@ import {
 } from '@/hooks/useSessionTemplates'
 import { useSessionLogs, useStartSessionLog } from '@/hooks/useSessionLogs'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
+import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
@@ -306,6 +307,7 @@ function AiTrendAnalysisCard({
   weightEntries: NonNullable<ReturnType<typeof useWeightEntries>['data']>
 }) {
   const { data: keyStatuses } = useAiProviderKeys()
+  const { data: cycleEntries } = useCycleEntries({ enabled: profile.cycle_module_enabled })
   const analyzeTrends = useAnalyzeTrends()
   const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
 
@@ -388,7 +390,7 @@ function AiTrendAnalysisCard({
             analyzeTrends.mutate({
               provider: activeProvider,
               summary: buildTrendSummary(history),
-              profileContext: buildUserProfileContext(profile, weightEntries),
+              profileContext: buildUserProfileContext(profile, weightEntries, cycleEntries ?? []),
             })
           }}
         >
