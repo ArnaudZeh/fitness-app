@@ -44,6 +44,9 @@ const AnalyticsPage = lazy(() =>
 const FeedPage = lazy(() =>
   import('@/pages/FeedPage').then((m) => ({ default: m.FeedPage })),
 )
+const CoachPage = lazy(() =>
+  import('@/pages/CoachPage').then((m) => ({ default: m.CoachPage })),
+)
 
 function App() {
   return (
@@ -70,6 +73,7 @@ function App() {
           <Route path="/cycle" element={<CyclePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/feed" element={<FeedPage />} />
+          <Route path="/coach" element={<CoachPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

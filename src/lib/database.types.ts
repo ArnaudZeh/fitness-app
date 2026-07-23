@@ -72,6 +72,39 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_messages: {
+        Row: {
+          applied_at: string | null
+          content: string
+          created_at: string
+          id: string
+          role: string
+          tool_name: string | null
+          tool_proposal: Json | null
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          tool_name?: string | null
+          tool_proposal?: Json | null
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tool_name?: string | null
+          tool_proposal?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       breath_protocols: {
         Row: {
           created_at: string

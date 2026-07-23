@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
-import { ChartLine, Moon, Sparkles, Trophy, UserRound, Wind } from 'lucide-react'
+import { Bot, ChartLine, LogOut, Moon, Sparkles, Trophy, UserRound, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/auth-store'
@@ -24,10 +24,15 @@ export function AppLayout() {
         <Link to="/" className="font-heading text-lg font-semibold">
           Fitness
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <span className="hidden text-sm text-muted-foreground sm:inline">
             {session?.user.email}
           </span>
+          <Link to="/coach">
+            <Button variant="outline" size="icon-sm" aria-label="Coach">
+              <Bot />
+            </Button>
+          </Link>
           <Link to="/feed">
             <Button variant="outline" size="icon-sm" aria-label="Feed">
               <Trophy />
@@ -62,7 +67,17 @@ export function AppLayout() {
           </Link>
           <Button
             variant="outline"
+            size="icon-sm"
+            className="sm:hidden"
+            aria-label="Se déconnecter"
+            onClick={() => void supabase.auth.signOut()}
+          >
+            <LogOut />
+          </Button>
+          <Button
+            variant="outline"
             size="sm"
+            className="hidden sm:inline-flex"
             onClick={() => void supabase.auth.signOut()}
           >
             Se déconnecter
