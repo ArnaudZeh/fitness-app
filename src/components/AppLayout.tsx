@@ -1,14 +1,16 @@
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
-import { ChartLine, Sparkles, UserRound, Wind } from 'lucide-react'
+import { ChartLine, Moon, Sparkles, UserRound, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/auth-store'
 import { syncTimezone } from '@/lib/profile-api'
+import { useProfile } from '@/hooks/useProfile'
 
 export function AppLayout() {
   const session = useAuthStore((state) => state.session)
   const userId = session?.user.id
+  const { data: profile } = useProfile()
 
   // Best-effort — a failed sync just means the wellness reminder scheduler
   // uses a stale timezone until the next successful visit, not a broken UI.
@@ -41,6 +43,13 @@ export function AppLayout() {
               <Wind />
             </Button>
           </Link>
+          {profile?.cycle_module_enabled && (
+            <Link to="/cycle">
+              <Button variant="outline" size="icon-sm" aria-label="Cycle">
+                <Moon />
+              </Button>
+            </Link>
+          )}
           <Link to="/profile">
             <Button variant="outline" size="icon-sm" aria-label="Mon profil">
               <UserRound />

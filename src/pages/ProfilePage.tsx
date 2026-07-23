@@ -53,9 +53,44 @@ export function ProfilePage() {
       <h1 className="text-2xl font-semibold">Mon profil</h1>
       <ProfileForm profile={profile} />
       <WeightSection />
+      <CycleModuleSection profile={profile} />
       <AiSettingsSection />
       <DataOwnershipSection />
     </div>
+  )
+}
+
+function CycleModuleSection({ profile }: { profile: Profile }) {
+  const updateProfile = useUpdateProfile()
+  const enabled = profile.cycle_module_enabled
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Module cycles</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par phase —
+          recommandations générales, pas un outil médical.
+        </p>
+        {updateProfile.isError && (
+          <p role="alert" className="text-sm text-destructive">
+            Impossible d'enregistrer ce changement.
+          </p>
+        )}
+        <Button
+          type="button"
+          variant={enabled ? 'outline' : 'default'}
+          size="sm"
+          className="self-start"
+          disabled={updateProfile.isPending}
+          onClick={() => updateProfile.mutate({ cycle_module_enabled: !enabled })}
+        >
+          {enabled ? 'Désactiver' : 'Activer'}
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 

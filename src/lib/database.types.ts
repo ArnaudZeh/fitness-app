@@ -143,6 +143,30 @@ export type Database = {
           },
         ]
       }
+      cycle_entries: {
+        Row: {
+          created_at: string
+          id: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
@@ -170,6 +194,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          cycle_module_enabled: boolean
           date_of_birth: string | null
           display_name: string | null
           goal: string | null
@@ -182,6 +207,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cycle_module_enabled?: boolean
           date_of_birth?: string | null
           display_name?: string | null
           goal?: string | null
@@ -194,6 +220,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cycle_module_enabled?: boolean
           date_of_birth?: string | null
           display_name?: string | null
           goal?: string | null

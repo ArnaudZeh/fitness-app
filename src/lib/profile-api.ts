@@ -19,6 +19,7 @@ export interface ProfileInput {
   height_cm: number | null
   goal: Goal | null
   target_weight_kg: number | null
+  cycle_module_enabled: boolean
 }
 
 export const SEX_LABELS: Record<Sex, string> = {
