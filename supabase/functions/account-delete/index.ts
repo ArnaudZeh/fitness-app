@@ -8,11 +8,12 @@ import { isResponse, jsonResponse, requireAuthedContext } from '../_shared/http.
 //   (deleting the vault secret drops the row, not the reverse), so a plain
 //   admin.deleteUser() would leave the user's Anthropic/OpenAI key secrets
 //   orphaned in Vault forever.
-// - progress_photos: deleting auth.users cascades the DB row (real FK), but
-//   the actual image bytes live in Storage, which has no FK relationship to
-//   auth.users at all — confirmed by testing, not assumed — so the files
-//   would be orphaned in the bucket forever, still counting against quota
-//   and still existing despite the user asking for their data deleted.
+// - posts: deleting auth.users cascades the DB row (real FK), but the
+//   actual image bytes (when a post has a photo) live in Storage, which has
+//   no FK relationship to auth.users at all — confirmed by testing, not
+//   assumed — so the files would be orphaned in the bucket forever, still
+//   counting against quota and still existing despite the user asking for
+//   their data deleted.
 // Both are cleaned up explicitly before the auth user is deleted.
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -40,19 +41,20 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { data: photos, error: photosError } = await admin
-    .from('progress_photos')
+  const { data: posts, error: postsError } = await admin
+    .from('posts')
     .select('storage_path')
     .eq('user_id', userId)
-  if (photosError) {
-    console.error(photosError)
+    .not('storage_path', 'is', null)
+  if (postsError) {
+    console.error(postsError)
     return jsonResponse({ error: 'Erreur serveur.' }, 500)
   }
 
-  if (photos && photos.length > 0) {
+  if (posts && posts.length > 0) {
     const { error: removeError } = await admin.storage
       .from('progress-photos')
-      .remove(photos.map((p) => p.storage_path))
+      .remove(posts.map((p) => p.storage_path as string))
     if (removeError) {
       console.error(removeError)
       return jsonResponse({ error: 'Erreur serveur.' }, 500)
