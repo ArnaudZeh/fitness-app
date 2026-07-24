@@ -12,7 +12,7 @@ export function useLogWeightEntry() {
   return useMutation({
     mutationFn: ({ weightKg, recordedAt }: { weightKg: number; recordedAt: string }) =>
       api.logWeightEntry(weightKg, recordedAt),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: weightEntriesKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: weightEntriesKey }),
   })
 }
 
@@ -20,6 +20,6 @@ export function useDeleteWeightEntry() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.deleteWeightEntry(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: weightEntriesKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: weightEntriesKey }),
   })
 }

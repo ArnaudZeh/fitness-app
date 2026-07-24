@@ -15,7 +15,7 @@ export function useSaveAiProviderKey() {
   return useMutation({
     mutationFn: ({ provider, apiKey }: { provider: api.AiProvider; apiKey: string }) =>
       api.saveAiProviderKey(provider, apiKey),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: aiProviderKeysKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: aiProviderKeysKey }),
   })
 }
 
@@ -23,7 +23,7 @@ export function useTestAiProviderKey() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (provider: api.AiProvider) => api.testAiProviderKey(provider),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: aiProviderKeysKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: aiProviderKeysKey }),
   })
 }
 
@@ -31,6 +31,6 @@ export function useDeleteAiProviderKey() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (provider: api.AiProvider) => api.deleteAiProviderKey(provider),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: aiProviderKeysKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: aiProviderKeysKey }),
   })
 }

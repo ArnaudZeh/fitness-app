@@ -136,7 +136,7 @@ function AssistantProposalCard({
 }
 
 export function CoachPage() {
-  const { data: keyStatuses } = useAiProviderKeys()
+  const { data: keyStatuses, isLoading: isLoadingKeyStatuses } = useAiProviderKeys()
   const { data: profile } = useProfile()
   const { data: weightEntries } = useWeightEntries()
   const { data: cycleEntries } = useCycleEntries({ enabled: Boolean(profile?.cycle_module_enabled) })
@@ -215,7 +215,9 @@ export function CoachPage() {
         )}
       </div>
 
-      {configuredProviders.length === 0 ? (
+      {isLoadingKeyStatuses ? (
+        <p className="text-muted-foreground">Chargement…</p>
+      ) : configuredProviders.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col gap-3 pt-6">
             <p className="text-sm text-muted-foreground">

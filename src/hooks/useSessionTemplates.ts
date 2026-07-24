@@ -27,7 +27,7 @@ export function useUpdateSessionTemplateDayType(programId: string) {
   return useMutation({
     mutationFn: ({ id, dayType }: { id: string; dayType: DayType }) =>
       api.updateSessionTemplateDayType(id, dayType),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
   })
 }
 
@@ -44,7 +44,7 @@ export function useCreateSessionTemplateExercise(templateId: string) {
     mutationFn: (input: api.SessionTemplateExerciseInput) =>
       api.createSessionTemplateExercise(templateId, input),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
   })
 }
 
@@ -59,7 +59,7 @@ export function useUpdateSessionTemplateExercise(templateId: string) {
       input: api.SessionTemplateExerciseInput
     }) => api.updateSessionTemplateExercise(id, input),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
   })
 }
 
@@ -68,7 +68,7 @@ export function useDeleteSessionTemplateExercise(templateId: string) {
   return useMutation({
     mutationFn: (id: string) => api.deleteSessionTemplateExercise(id),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
   })
 }
 
@@ -78,6 +78,6 @@ export function useSwapSessionTemplateExerciseOrder(templateId: string) {
     mutationFn: ({ a, b }: { a: SessionTemplateExercise; b: SessionTemplateExercise }) =>
       api.swapSessionTemplateExerciseOrder(a, b),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
   })
 }

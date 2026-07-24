@@ -12,6 +12,6 @@ export function useCreateExercise() {
   return useMutation({
     mutationFn: (input: { name: string; muscle_group: string | null }) =>
       api.createExercise(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: exercisesKey }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: exercisesKey }),
   })
 }
