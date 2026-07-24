@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
@@ -58,6 +59,14 @@ export function SessionAdaptationDialog({
         { id: record.exerciseId, name: record.exerciseName, muscleGroup: record.muscleGroup },
       ]),
     ).values(),
+  )
+  // Kept separate from availableExercises (not sent to the AI — it's local
+  // UI lookup data, no reason to bloat the request with image URLs).
+  const thumbnailByExerciseId = new Map(
+    (history ?? []).map((record) => [
+      record.exerciseId,
+      { imageUrl: record.imageUrl, muscleGroup: record.muscleGroup },
+    ]),
   )
 
   function handleOpenChange(next: boolean) {
@@ -184,13 +193,19 @@ export function SessionAdaptationDialog({
               {generateAdaptation.data.exercises.map((exercise, index) => (
                 <li
                   key={`${exercise.exerciseId}-${index}`}
-                  className="rounded-md border border-border p-2"
+                  className="flex items-center gap-2 rounded-md border border-border p-2"
                 >
-                  <p className="font-medium">{exercise.exerciseName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {exercise.targetSets} × {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
-                    {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
-                  </p>
+                  <ExerciseThumbnail
+                    imageUrl={thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null}
+                    muscleGroup={thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null}
+                  />
+                  <div>
+                    <p className="font-medium">{exercise.exerciseName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {exercise.targetSets} × {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
+                      {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>

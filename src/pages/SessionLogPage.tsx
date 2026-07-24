@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { RestTimer } from '@/components/RestTimer'
 import { PlateCalculatorDialog } from '@/components/PlateCalculatorDialog'
 import {
@@ -187,6 +188,7 @@ function SessionLogExerciseCard({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
+          <ExerciseThumbnail imageUrl={slot.image_url} muscleGroup={slot.muscle_group} />
           <CardTitle as="h3">{slot.exercise_name}</CardTitle>
           {slot.superset_group && (
             <Badge variant="outline">Superset {slot.superset_group}</Badge>

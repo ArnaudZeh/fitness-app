@@ -5,6 +5,7 @@ export interface SetHistoryRecord {
   exerciseId: string
   exerciseName: string
   muscleGroup: string | null
+  imageUrl: string | null
   weightKg: number
   reps: number
   rpe: number | null
@@ -17,7 +18,7 @@ interface SetHistoryRow {
   actual_reps: number
   actual_rpe: number | null
   session_template_exercise: {
-    exercise: { id: string; name: string; muscle_group: string | null } | null
+    exercise: { id: string; name: string; muscle_group: string | null; image_url: string | null } | null
   } | null
   session_log: { started_at: string } | null
 }
@@ -35,7 +36,7 @@ export async function fetchSetHistory(): Promise<SetHistoryRecord[]> {
       actual_reps,
       actual_rpe,
       session_template_exercise:session_template_exercises (
-        exercise:exercises ( id, name, muscle_group )
+        exercise:exercises ( id, name, muscle_group, image_url )
       ),
       session_log:session_logs ( started_at )
     `)
@@ -52,6 +53,7 @@ export async function fetchSetHistory(): Promise<SetHistoryRecord[]> {
       exerciseId: exercise.id,
       exerciseName: exercise.name,
       muscleGroup: exercise.muscle_group,
+      imageUrl: exercise.image_url,
       weightKg: row.actual_weight_kg,
       reps: row.actual_reps,
       rpe: row.actual_rpe,

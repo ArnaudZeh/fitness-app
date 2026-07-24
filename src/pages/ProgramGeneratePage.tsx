@@ -20,6 +20,7 @@ import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useApplyProgramProposal, useGenerateProgram } from '@/hooks/useProgramGeneration'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
 import { PROGRAM_FOCUS_LABELS } from '@/lib/programs-api'
@@ -56,6 +57,14 @@ export function ProgramGeneratePage() {
         { id: record.exerciseId, name: record.exerciseName, muscleGroup: record.muscleGroup },
       ]),
     ).values(),
+  )
+  // Kept separate from availableExercises (not sent to the AI — it's local
+  // UI lookup data, no reason to bloat the request with image URLs).
+  const thumbnailByExerciseId = new Map(
+    (history ?? []).map((record) => [
+      record.exerciseId,
+      { imageUrl: record.imageUrl, muscleGroup: record.muscleGroup },
+    ]),
   )
 
   if (configuredProviders.length === 0) {
@@ -136,12 +145,18 @@ export function ProgramGeneratePage() {
                     <Badge variant="outline">{DAY_TYPE_LABELS[day.dayType]}</Badge>
                   </div>
                   {day.exercises.length > 0 && (
-                    <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
                       {day.exercises.map((exercise, index) => (
-                        <li key={`${day.dayOfWeek}-${index}`}>
-                          {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}
-                          -{exercise.targetRepsMax} reps
-                          {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+                        <li key={`${day.dayOfWeek}-${index}`} className="flex items-center gap-2">
+                          <ExerciseThumbnail
+                            imageUrl={thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null}
+                            muscleGroup={thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null}
+                          />
+                          <span>
+                            {exercise.exerciseName} · {exercise.targetSets} ×{' '}
+                            {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
+                            {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+                          </span>
                         </li>
                       ))}
                     </ul>

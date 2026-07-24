@@ -80,7 +80,7 @@ export async function cacheSessionPlan(
       supabase.from('session_templates').select('*').eq('id', sessionTemplateId).single(),
       supabase
         .from('session_template_exercises')
-        .select('*, exercise:exercises(id, name, muscle_group)')
+        .select('*, exercise:exercises(id, name, muscle_group, image_url)')
         .eq('session_template_id', sessionTemplateId)
         .order('order_index', { ascending: true }),
     ])
@@ -90,8 +90,10 @@ export async function cacheSessionPlan(
 
     const exercises: CachedPlanExercise[] = slotsResult.data.map((slot) => ({
       id: slot.id,
+      exercise_id: slot.exercise.id,
       exercise_name: slot.exercise.name,
       muscle_group: slot.exercise.muscle_group,
+      image_url: slot.exercise.image_url,
       order_index: slot.order_index,
       target_sets: slot.target_sets,
       target_reps_min: slot.target_reps_min,

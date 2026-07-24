@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
@@ -35,25 +36,41 @@ function todayLocalDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+type ExerciseThumbnailInfo = { imageUrl: string | null; muscleGroup: string | null }
+
 function ExerciseList({
   exercises,
+  thumbnailByExerciseId,
 }: {
-  exercises: { exerciseName: string; targetSets: number; targetRepsMin: number; targetRepsMax: number; targetRpe: number | null }[]
+  exercises: { exerciseId: string; exerciseName: string; targetSets: number; targetRepsMin: number; targetRepsMax: number; targetRpe: number | null }[]
+  thumbnailByExerciseId: Map<string, ExerciseThumbnailInfo>
 }) {
   return (
-    <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+    <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
       {exercises.map((exercise, index) => (
-        <li key={`${exercise.exerciseName}-${index}`}>
-          {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}-
-          {exercise.targetRepsMax} reps
-          {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+        <li key={`${exercise.exerciseName}-${index}`} className="flex items-center gap-2">
+          <ExerciseThumbnail
+            imageUrl={thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null}
+            muscleGroup={thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null}
+          />
+          <span>
+            {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}-
+            {exercise.targetRepsMax} reps
+            {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+          </span>
         </li>
       ))}
     </ul>
   )
 }
 
-function AssistantProposalCard({ message }: { message: AssistantMessage }) {
+function AssistantProposalCard({
+  message,
+  thumbnailByExerciseId,
+}: {
+  message: AssistantMessage
+  thumbnailByExerciseId: Map<string, ExerciseThumbnailInfo>
+}) {
   const proposal = message.toolProposal
   const applyProposal = useApplyAssistantProposal()
   if (!proposal) return null
@@ -76,14 +93,20 @@ function AssistantProposalCard({ message }: { message: AssistantMessage }) {
               .map((day) => (
                 <div key={day.dayOfWeek} className="flex flex-col gap-1">
                   <p className="text-sm font-medium">{WEEKDAY_LABELS[day.dayOfWeek]}</p>
-                  <ExerciseList exercises={day.exercises} />
+                  <ExerciseList
+                    exercises={day.exercises}
+                    thumbnailByExerciseId={thumbnailByExerciseId}
+                  />
                 </div>
               ))}
           </>
         )}
 
         {proposal.type === 'adapter_seance' && (
-          <ExerciseList exercises={proposal.proposal.exercises} />
+          <ExerciseList
+            exercises={proposal.proposal.exercises}
+            thumbnailByExerciseId={thumbnailByExerciseId}
+          />
         )}
 
         {applyProposal.isError && (
@@ -144,6 +167,14 @@ export function CoachPage() {
         { id: record.exerciseId, name: record.exerciseName, muscleGroup: record.muscleGroup },
       ]),
     ).values(),
+  )
+  // Kept separate from availableExercises (not sent to the AI — it's local
+  // UI lookup data, no reason to bloat the request with image URLs).
+  const thumbnailByExerciseId = new Map(
+    (history ?? []).map((record) => [
+      record.exerciseId,
+      { imageUrl: record.imageUrl, muscleGroup: record.muscleGroup },
+    ]),
   )
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -252,7 +283,10 @@ export function CoachPage() {
                   </Button>
                 )}
                 {message.role === 'assistant' && message.toolProposal && (
-                  <AssistantProposalCard message={message} />
+                  <AssistantProposalCard
+                    message={message}
+                    thumbnailByExerciseId={thumbnailByExerciseId}
+                  />
                 )}
               </li>
             ))}

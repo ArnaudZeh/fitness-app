@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseSlotFormDialog } from '@/components/ExerciseSlotFormDialog'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { SessionAdaptationDialog } from '@/components/SessionAdaptationDialog'
 import { useCreateExercise, useExercises } from '@/hooks/useExercises'
 import {
@@ -85,18 +86,24 @@ export function SessionTemplateCard({
                 key={slot.id}
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{slot.exercise.name}</p>
-                    {slot.superset_group && (
-                      <Badge variant="outline">Superset {slot.superset_group}</Badge>
-                    )}
+                <div className="flex items-center gap-2">
+                  <ExerciseThumbnail
+                    imageUrl={slot.exercise.image_url}
+                    muscleGroup={slot.exercise.muscle_group}
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{slot.exercise.name}</p>
+                      {slot.superset_group && (
+                        <Badge variant="outline">Superset {slot.superset_group}</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
+                      {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
+                      {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]}s
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-                    {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
-                    {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]}s
-                  </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Button

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useAuthStore } from '@/lib/auth-store'
 import {
   useDeleteMilestone,
@@ -146,10 +147,15 @@ function MilestoneCard({
         deleteLabel="Supprimer ce record du feed"
       />
       <CardContent className="flex flex-col gap-1">
-        <p className="font-medium">
-          {MILESTONE_TYPE_LABELS[milestone.milestone_type]}
-          {milestone.exercise_name && ` · ${milestone.exercise_name}`}
-        </p>
+        <div className="flex items-center gap-2">
+          {milestone.exercise_id && (
+            <ExerciseThumbnail imageUrl={milestone.exercise?.image_url ?? null} muscleGroup={null} />
+          )}
+          <p className="font-medium">
+            {MILESTONE_TYPE_LABELS[milestone.milestone_type]}
+            {milestone.exercise_name && ` · ${milestone.exercise_name}`}
+          </p>
+        </div>
         <p className="font-mono text-lg font-semibold tabular-nums">
           {formatMilestoneValue(milestone)}
         </p>

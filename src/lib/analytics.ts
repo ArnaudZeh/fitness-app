@@ -4,18 +4,23 @@ import type { SetHistoryRecord } from '@/lib/analytics-api'
 export interface ExerciseOption {
   exerciseId: string
   exerciseName: string
+  imageUrl: string | null
 }
 
 // Unique exercises the user actually has logged history for, alphabetical —
 // no point offering an exercise with nothing to chart.
 export function getLoggedExercises(records: SetHistoryRecord[]): ExerciseOption[] {
-  const byId = new Map<string, string>()
+  const byId = new Map<string, ExerciseOption>()
   for (const record of records) {
-    if (!byId.has(record.exerciseId)) byId.set(record.exerciseId, record.exerciseName)
+    if (!byId.has(record.exerciseId)) {
+      byId.set(record.exerciseId, {
+        exerciseId: record.exerciseId,
+        exerciseName: record.exerciseName,
+        imageUrl: record.imageUrl,
+      })
+    }
   }
-  return [...byId.entries()]
-    .map(([exerciseId, exerciseName]) => ({ exerciseId, exerciseName }))
-    .sort((a, b) => a.exerciseName.localeCompare(b.exerciseName))
+  return [...byId.values()].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName))
 }
 
 export interface DailyExerciseBest {
@@ -188,6 +193,8 @@ export function buildTrendSummary(
 export interface RecentHighlight {
   date: string
   exerciseName: string
+  imageUrl: string | null
+  muscleGroup: string | null
   weightKg: number
   reps: number
   estimatedOneRepMaxKg: number | null
@@ -212,6 +219,8 @@ export function getMostRecentHighlight(
   return {
     date: latestDate,
     exerciseName: heaviest.exerciseName,
+    imageUrl: heaviest.imageUrl,
+    muscleGroup: heaviest.muscleGroup,
     weightKg: heaviest.weightKg,
     reps: heaviest.reps,
     estimatedOneRepMaxKg:

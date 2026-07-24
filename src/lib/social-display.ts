@@ -29,9 +29,13 @@ interface FeedEntryCommon {
   occurredAt: string
 }
 
+export type MilestoneWithImage = Milestone & {
+  exercise: { image_url: string | null } | null
+}
+
 export interface MilestoneFeedEntry extends FeedEntryCommon {
   kind: 'milestone'
-  milestone: Milestone
+  milestone: MilestoneWithImage
 }
 
 export interface PhotoFeedEntry extends FeedEntryCommon {

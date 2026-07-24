@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { ContributionHeatmap } from '@/components/ContributionHeatmap'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useProfile } from '@/hooks/useProfile'
 import { usePrograms } from '@/hooks/usePrograms'
 import {
@@ -156,9 +157,16 @@ function TodayCard({ program }: { program: Program | undefined }) {
         ) : (
           <>
             {(exercises ?? []).length > 0 && (
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-2">
                 {(exercises ?? []).map((slot) => (
-                  <li key={slot.id} className="text-sm text-muted-foreground">
+                  <li
+                    key={slot.id}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
+                    <ExerciseThumbnail
+                      imageUrl={slot.exercise.image_url}
+                      muscleGroup={slot.exercise.muscle_group}
+                    />
                     {slot.exercise.name} · {slot.target_sets} x {slot.target_reps_min}-
                     {slot.target_reps_max}
                   </li>
@@ -198,9 +206,12 @@ function RecentHighlightCard({
         <CardTitle as="h2">Dernière séance</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
-        <p className="font-mono text-lg font-semibold tabular-nums">
-          {highlight.exerciseName} · {highlight.weightKg} kg x {highlight.reps}
-        </p>
+        <div className="flex items-center gap-2">
+          <ExerciseThumbnail imageUrl={highlight.imageUrl} muscleGroup={highlight.muscleGroup} />
+          <p className="font-mono text-lg font-semibold tabular-nums">
+            {highlight.exerciseName} · {highlight.weightKg} kg x {highlight.reps}
+          </p>
+        </div>
         {highlight.estimatedOneRepMaxKg !== null && (
           <p className="text-sm text-muted-foreground">
             1RM estimé : {Math.round(highlight.estimatedOneRepMaxKg)} kg

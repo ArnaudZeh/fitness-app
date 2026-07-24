@@ -8,7 +8,11 @@ import type { FeedEntry, MilestoneFeedEntry, PhotoFeedEntry } from '@/lib/social
 // back to a generic label rather than showing nothing.
 export async function fetchFeed(): Promise<FeedEntry[]> {
   const [{ data: milestones, error: milestonesError }, photos] = await Promise.all([
-    supabase.from('milestones').select('*').order('achieved_at', { ascending: false }).limit(50),
+    supabase
+      .from('milestones')
+      .select('*, exercise:exercises(image_url)')
+      .order('achieved_at', { ascending: false })
+      .limit(50),
     fetchProgressPhotos(),
   ])
   if (milestonesError) throw milestonesError

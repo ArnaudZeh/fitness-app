@@ -15,7 +15,7 @@ type SessionTemplateExerciseRow =
   Database['public']['Tables']['session_template_exercises']['Row']
 
 export interface SessionTemplateExercise extends SessionTemplateExerciseRow {
-  exercise: { id: string; name: string; muscle_group: string | null }
+  exercise: { id: string; name: string; muscle_group: string | null; image_url: string | null }
 }
 
 export interface SessionTemplateExerciseInput {
@@ -126,7 +126,7 @@ export async function fetchSessionTemplateExercises(
 ): Promise<SessionTemplateExercise[]> {
   const { data, error } = await supabase
     .from('session_template_exercises')
-    .select('*, exercise:exercises(id, name, muscle_group)')
+    .select('*, exercise:exercises(id, name, muscle_group, image_url)')
     .eq('session_template_id', sessionTemplateId)
     .order('order_index', { ascending: true })
   if (error) throw error
@@ -148,7 +148,7 @@ export async function createSessionTemplateExercise(
       user_id: userId,
       order_index: nextOrderIndex(existing),
     })
-    .select('*, exercise:exercises(id, name, muscle_group)')
+    .select('*, exercise:exercises(id, name, muscle_group, image_url)')
     .single()
   if (error) throw error
   return data
@@ -162,7 +162,7 @@ export async function updateSessionTemplateExercise(
     .from('session_template_exercises')
     .update(input)
     .eq('id', id)
-    .select('*, exercise:exercises(id, name, muscle_group)')
+    .select('*, exercise:exercises(id, name, muscle_group, image_url)')
     .single()
   if (error) throw error
   return data

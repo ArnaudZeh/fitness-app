@@ -11,8 +11,10 @@ import type { SessionLogStatus } from '@/lib/session-logs-api'
 
 export interface CachedPlanExercise {
   id: string
+  exercise_id: string
   exercise_name: string
   muscle_group: string | null
+  image_url: string | null
   order_index: number
   target_sets: number
   target_reps_min: number

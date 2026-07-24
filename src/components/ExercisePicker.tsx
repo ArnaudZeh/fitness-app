@@ -1,16 +1,5 @@
 import { useState } from 'react'
-import {
-  Activity,
-  BicepsFlexed,
-  CircleDot,
-  Dumbbell,
-  Footprints,
-  type LucideIcon,
-  PersonStanding,
-  Plus,
-  Shirt,
-  Target,
-} from 'lucide-react'
+import { CircleDot, Plus } from 'lucide-react'
 import {
   Command,
   CommandEmpty,
@@ -20,19 +9,10 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command'
+import { ExerciseThumbnail, MUSCLE_GROUP_ICONS } from '@/components/ExerciseThumbnail'
 import type { Exercise } from '@/lib/exercises-api'
 
 export const NEW_EXERCISE_VALUE = '__new__'
-
-const MUSCLE_GROUP_ICONS: Record<string, LucideIcon> = {
-  pectoraux: Dumbbell,
-  dos: Shirt,
-  épaules: PersonStanding,
-  bras: BicepsFlexed,
-  jambes: Footprints,
-  core: Target,
-  full_body: Activity,
-}
 
 const MUSCLE_GROUP_LABELS: Record<string, string> = {
   pectoraux: 'Pectoraux',
@@ -52,33 +32,6 @@ function groupHeading(muscleGroup: string) {
       <Icon className="size-3.5" />
       {label}
     </span>
-  )
-}
-
-// Falls back to the muscle-group icon both when an exercise has no photo
-// (most of the catalog, coverage is partial) and when the photo URL fails
-// to load — an external image host going down shouldn't leave a broken-image
-// icon in the picker.
-function ExerciseThumbnail({ exercise }: { exercise: Exercise }) {
-  const [failed, setFailed] = useState(false)
-  const Icon = MUSCLE_GROUP_ICONS[exercise.muscle_group ?? ''] ?? CircleDot
-
-  if (!exercise.image_url || failed) {
-    return (
-      <span className="flex size-8 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
-        <Icon className="size-4" />
-      </span>
-    )
-  }
-
-  return (
-    <img
-      src={exercise.image_url}
-      alt=""
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="size-8 shrink-0 rounded object-cover"
-    />
   )
 }
 
@@ -111,7 +64,12 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {selectedExercise && <ExerciseThumbnail exercise={selectedExercise} />}
+        {selectedExercise && (
+          <ExerciseThumbnail
+            imageUrl={selectedExercise.image_url}
+            muscleGroup={selectedExercise.muscle_group}
+          />
+        )}
         <p>
           Sélection :{' '}
           <span className="text-foreground">{selectedExercise?.name ?? 'aucune'}</span>
@@ -135,7 +93,10 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
                   onSelect={() => onSelect(exercise.id)}
                   className="gap-2"
                 >
-                  <ExerciseThumbnail exercise={exercise} />
+                  <ExerciseThumbnail
+                    imageUrl={exercise.image_url}
+                    muscleGroup={exercise.muscle_group}
+                  />
                   {exercise.name}
                 </CommandItem>
               ))}

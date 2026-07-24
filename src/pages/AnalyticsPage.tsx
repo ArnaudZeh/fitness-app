@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ContributionHeatmap } from '@/components/ContributionHeatmap'
+import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import {
   computeDailyVolume,
@@ -139,7 +140,10 @@ export function AnalyticsPage() {
             <SelectContent>
               {exercises.map((exercise) => (
                 <SelectItem key={exercise.exerciseId} value={exercise.exerciseId}>
-                  {exercise.exerciseName}
+                  <span className="flex items-center gap-2">
+                    <ExerciseThumbnail imageUrl={exercise.imageUrl} muscleGroup={null} />
+                    {exercise.exerciseName}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
