@@ -57,8 +57,8 @@ export function AnalyticsPage() {
 
   if (history.length === 0) {
     return (
-      <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold">Analytics</h1>
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Analytics</h1>
         <p className="text-muted-foreground">
           Aucune série enregistrée pour l'instant. Logge quelques séances pour voir tes
           statistiques ici.
@@ -82,8 +82,8 @@ export function AnalyticsPage() {
   const dailyVolume = computeDailyVolume(history)
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Analytics</h1>
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Analytics</h1>
 
       <Card>
         <CardHeader>

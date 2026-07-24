@@ -49,10 +49,10 @@ export function ProgramDetailPage() {
   const templateById = new Map(sortedTemplates.map((template) => [template.id, template]))
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{program.name}</h1>
+          <h1 className="text-xl font-semibold">{program.name}</h1>
           {program.description && (
             <p className="mt-1 text-muted-foreground">{program.description}</p>
           )}

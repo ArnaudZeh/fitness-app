@@ -31,18 +31,22 @@ test.describe.serial('cycle module', () => {
   }) => {
     await page.goto('/cycle')
     await expect(page.getByText('Ce module est désactivé.')).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Hypoxie intermittente' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Cycle' })).toHaveCount(0)
+
+    await page.goto('/profile')
+    const section = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole('heading', { name: 'Module cycles' }) })
+    await expect(section.getByRole('link', { name: 'Voir mon cycle' })).toHaveCount(0)
   })
 
-  test('activates the module from the profile, revealing the nav link', async ({ page }) => {
+  test('activates the module from the profile, revealing the cycle link', async ({ page }) => {
     await page.goto('/profile')
     const section = page
       .locator('[data-slot="card"]')
       .filter({ has: page.getByRole('heading', { name: 'Module cycles' }) })
     await section.getByRole('button', { name: 'Activer' }).click()
     await expect(section.getByRole('button', { name: 'Désactiver' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Cycle' })).toBeVisible()
+    await expect(section.getByRole('link', { name: 'Voir mon cycle' })).toBeVisible()
   })
 
   test('logs a cycle start date and shows an estimated phase', async ({ page }) => {
@@ -63,13 +67,13 @@ test.describe.serial('cycle module', () => {
     await expect(page.getByText('Aucune date enregistrée').first()).toBeVisible()
   })
 
-  test('deactivates the module, hiding the nav link again', async ({ page }) => {
+  test('deactivates the module, hiding the cycle link again', async ({ page }) => {
     await page.goto('/profile')
     const section = page
       .locator('[data-slot="card"]')
       .filter({ has: page.getByRole('heading', { name: 'Module cycles' }) })
     await section.getByRole('button', { name: 'Désactiver' }).click()
     await expect(section.getByRole('button', { name: 'Activer' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Cycle' })).toHaveCount(0)
+    await expect(section.getByRole('link', { name: 'Voir mon cycle' })).toHaveCount(0)
   })
 })

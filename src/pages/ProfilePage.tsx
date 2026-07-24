@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react'
+import { Link } from 'react-router'
 import { LogOut, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,9 +51,9 @@ export function ProfilePage() {
     )
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Mon profil</h1>
+        <h1 className="text-xl font-semibold">Mon profil</h1>
         <Button
           type="button"
           variant="outline"
@@ -94,16 +95,22 @@ function CycleModuleSection({ profile }: { profile: Profile }) {
             Impossible d'enregistrer ce changement.
           </p>
         )}
-        <Button
-          type="button"
-          variant={enabled ? 'outline' : 'default'}
-          size="sm"
-          className="self-start"
-          disabled={updateProfile.isPending}
-          onClick={() => updateProfile.mutate({ cycle_module_enabled: !enabled })}
-        >
-          {enabled ? 'Désactiver' : 'Activer'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={enabled ? 'outline' : 'default'}
+            size="sm"
+            disabled={updateProfile.isPending}
+            onClick={() => updateProfile.mutate({ cycle_module_enabled: !enabled })}
+          >
+            {enabled ? 'Désactiver' : 'Activer'}
+          </Button>
+          {enabled && (
+            <Button asChild variant="outline" size="sm">
+              <Link to="/cycle">Voir mon cycle</Link>
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

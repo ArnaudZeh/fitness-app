@@ -18,7 +18,7 @@ export function ProgramsListPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold">Mes programmes</h1>
+        <h1 className="text-xl font-semibold">Mes programmes</h1>
         <div className="flex gap-2">
           <Link to="/programs/generate" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">

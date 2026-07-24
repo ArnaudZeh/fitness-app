@@ -36,7 +36,7 @@ export function ProgramNewPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Nouveau programme</h1>
+      <h1 className="text-xl font-semibold">Nouveau programme</h1>
       <Card>
         <CardHeader>
           <CardTitle as="h2">Informations générales</CardTitle>

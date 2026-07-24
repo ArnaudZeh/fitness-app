@@ -27,7 +27,9 @@ import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
 import {
   buildTrendSummary,
   computeDailyVolume,
+  computeWeeklyTonnage,
   countTrainingDaysThisWeek,
+  getIsoWeekStart,
 } from '@/lib/analytics'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
@@ -54,8 +56,8 @@ export function HomePage() {
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">
+    <div className="flex flex-col gap-3">
+      <h1 className="text-xl font-semibold">
         Bonjour{profile?.display_name ? `, ${profile.display_name}` : ''}
       </h1>
 
@@ -75,17 +77,6 @@ export function HomePage() {
           weightEntries={weightEntries ?? []}
         />
       )}
-
-      <Link to="/programs">
-        <Card>
-          <CardHeader>
-            <CardTitle as="h2">Mes programmes</CardTitle>
-            <CardDescription>
-              Créer, éditer et suivre tes programmes de musculation
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </Link>
     </div>
   )
 }
@@ -196,16 +187,24 @@ function ThisWeekCard({
 }) {
   const sessionsThisWeek = countTrainingDaysThisWeek(history)
   const dailyVolume = computeDailyVolume(history)
+  const currentWeekStart = getIsoWeekStart(new Date().toISOString().slice(0, 10))
+  const tonnageThisWeek =
+    computeWeeklyTonnage(history).find((w) => w.weekStart === currentWeekStart)?.tonnageKg ?? 0
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h2">Cette semaine</CardTitle>
+        <CardTitle as="h2">Analytics</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="font-mono text-2xl font-semibold tabular-nums">
-          {sessionsThisWeek} séance{sessionsThisWeek > 1 ? 's' : ''}
-        </p>
+      <CardContent className="flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <p className="font-mono text-xl font-semibold tabular-nums">
+            {sessionsThisWeek} séance{sessionsThisWeek > 1 ? 's' : ''}
+          </p>
+          <p className="font-mono text-xl font-semibold tabular-nums">
+            {Math.round(tonnageThisWeek)} kg
+          </p>
+        </div>
         <ContributionHeatmap dailyVolumeKg={dailyVolume} weeksToShow={8} />
         <Link to="/analytics" className="text-sm text-primary hover:underline">
           Voir les stats complètes →

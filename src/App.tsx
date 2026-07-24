@@ -32,9 +32,6 @@ const SessionLogPage = lazy(() =>
 const WellnessPage = lazy(() =>
   import('@/pages/WellnessPage').then((m) => ({ default: m.WellnessPage })),
 )
-const BreathPage = lazy(() =>
-  import('@/pages/BreathPage').then((m) => ({ default: m.BreathPage })),
-)
 const CyclePage = lazy(() =>
   import('@/pages/CyclePage').then((m) => ({ default: m.CyclePage })),
 )
@@ -69,7 +66,6 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/sessions/:id" element={<SessionLogPage />} />
           <Route path="/bien-etre" element={<WellnessPage />} />
-          <Route path="/apnee" element={<BreathPage />} />
           <Route path="/cycle" element={<CyclePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/feed" element={<FeedPage />} />

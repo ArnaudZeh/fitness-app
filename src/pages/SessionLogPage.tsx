@@ -57,7 +57,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   const focus: ProgramFocus = plan?.focus ?? 'hypertrophie'
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <Link
         to={`/programs/${log.program_id}`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -67,7 +67,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-xl font-semibold">
             {plan ? WEEKDAY_LABELS[plan.day_of_week] : 'Séance'}
           </h1>
           {plan && <p className="mt-1 text-muted-foreground">{plan.program_name}</p>}
@@ -76,7 +76,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
           </Badge>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Link to="/apnee">
+          <Link to="/bien-etre">
             <Button variant="outline" size="sm">
               <Wind /> Respiration
             </Button>

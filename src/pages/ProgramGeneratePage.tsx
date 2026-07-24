@@ -70,7 +70,7 @@ export function ProgramGeneratePage() {
   if (configuredProviders.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Générer un programme avec l'IA</h1>
+        <h1 className="text-xl font-semibold">Générer un programme avec l'IA</h1>
         <Card>
           <CardContent className="flex flex-col gap-3 pt-6">
             <p className="text-sm text-muted-foreground">
@@ -89,7 +89,7 @@ export function ProgramGeneratePage() {
   if (availableExercises.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Générer un programme avec l'IA</h1>
+        <h1 className="text-xl font-semibold">Générer un programme avec l'IA</h1>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
@@ -125,7 +125,7 @@ export function ProgramGeneratePage() {
     const proposal = generateProgram.data
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Proposition de l'IA</h1>
+        <h1 className="text-xl font-semibold">Proposition de l'IA</h1>
         <Card>
           <CardHeader className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
@@ -209,7 +209,7 @@ export function ProgramGeneratePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Générer un programme avec l'IA</h1>
+      <h1 className="text-xl font-semibold">Générer un programme avec l'IA</h1>
       <Card>
         <CardHeader>
           <CardTitle as="h2">Paramètres</CardTitle>

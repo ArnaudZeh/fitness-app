@@ -35,7 +35,10 @@ test('shows logged sets in the analytics page', async ({ page }) => {
   await page.getByRole('button', { name: 'Terminer la séance' }).click()
   await expect(page.getByText('Terminée')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Analytics' }).click()
+  // Analytics has no entry in the floating nav (2026-07-23 redesign) — the
+  // dashboard's condensed preview card is the only way in now.
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Voir les stats complètes' }).click()
   await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Régularité' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Tonnage hebdomadaire' })).toBeVisible()

@@ -199,7 +199,7 @@ export function CoachPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
           <Sparkles className="size-6" /> Coach
         </h1>
         {(messages ?? []).length > 0 && (

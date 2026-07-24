@@ -41,8 +41,8 @@ export function CyclePage() {
 
   if (!profile?.cycle_module_enabled) {
     return (
-      <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold">Cycle</h1>
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Cycle</h1>
         <Card>
           <CardContent className="flex flex-col gap-3 pt-6">
             <p className="text-sm text-muted-foreground">
@@ -61,8 +61,8 @@ export function CyclePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Cycle</h1>
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Cycle</h1>
 
       <Card className="border-muted-foreground/30 bg-muted/50">
         <CardContent className="pt-6">
