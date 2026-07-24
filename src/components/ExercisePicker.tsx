@@ -55,6 +55,33 @@ function groupHeading(muscleGroup: string) {
   )
 }
 
+// Falls back to the muscle-group icon both when an exercise has no photo
+// (most of the catalog, coverage is partial) and when the photo URL fails
+// to load — an external image host going down shouldn't leave a broken-image
+// icon in the picker.
+function ExerciseThumbnail({ exercise }: { exercise: Exercise }) {
+  const [failed, setFailed] = useState(false)
+  const Icon = MUSCLE_GROUP_ICONS[exercise.muscle_group ?? ''] ?? CircleDot
+
+  if (!exercise.image_url || failed) {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+        <Icon className="size-4" />
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={exercise.image_url}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="size-8 shrink-0 rounded object-cover"
+    />
+  )
+}
+
 interface ExercisePickerProps {
   exercises: Exercise[]
   value: string
@@ -83,10 +110,13 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-sm text-muted-foreground">
-        Sélection :{' '}
-        <span className="text-foreground">{selectedExercise?.name ?? 'aucune'}</span>
-      </p>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        {selectedExercise && <ExerciseThumbnail exercise={selectedExercise} />}
+        <p>
+          Sélection :{' '}
+          <span className="text-foreground">{selectedExercise?.name ?? 'aucune'}</span>
+        </p>
+      </div>
       <Command shouldFilter={false} className="rounded-lg border border-border">
         <CommandInput
           value={search}
@@ -103,7 +133,9 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
                   value={exercise.id}
                   data-checked={exercise.id === value}
                   onSelect={() => onSelect(exercise.id)}
+                  className="gap-2"
                 >
+                  <ExerciseThumbnail exercise={exercise} />
                   {exercise.name}
                 </CommandItem>
               ))}
