@@ -288,7 +288,6 @@ export type Database = {
           milestone_type: string
           user_id: string
           value: number
-          week_start: string | null
         }
         Insert: {
           achieved_at?: string
@@ -299,7 +298,6 @@ export type Database = {
           milestone_type: string
           user_id: string
           value: number
-          week_start?: string | null
         }
         Update: {
           achieved_at?: string
@@ -310,7 +308,6 @@ export type Database = {
           milestone_type?: string
           user_id?: string
           value?: number
-          week_start?: string | null
         }
         Relationships: [
           {
@@ -814,12 +811,7 @@ export type Database = {
         Args: { p_target_id: string; p_target_type: string }
         Returns: boolean
       }
-      estimate_one_rep_max: {
-        Args: { p_reps: number; p_weight_kg: number }
-        Returns: number
-      }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
-      iso_week_start: { Args: { p_timestamp: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

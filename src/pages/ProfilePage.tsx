@@ -66,7 +66,6 @@ export function ProfilePage() {
       <ProfileForm profile={profile} />
       <WeightSection />
       <CycleModuleSection profile={profile} />
-      <SocialSharingSection profile={profile} />
       <AiSettingsSection />
       <DataOwnershipSection />
     </div>
@@ -111,44 +110,6 @@ function CycleModuleSection({ profile }: { profile: Profile }) {
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function SocialSharingSection({ profile }: { profile: Profile }) {
-  const updateProfile = useUpdateProfile()
-  const enabled = profile.social_sharing_enabled
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h2">Partage de progrès</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <details className="text-sm text-muted-foreground">
-          <summary className="cursor-pointer select-none">Qu'est-ce que c'est ?</summary>
-          <p className="mt-2">
-            Une fois activé, tes nouveaux records (1RM estimé) apparaissent dans le feed, visible
-            par les autres utilisateurs de l'app : un cercle fermé, pas un réseau ouvert. Le feed
-            reste consultable même sans activer le partage.
-          </p>
-        </details>
-        {updateProfile.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            Impossible d'enregistrer ce changement.
-          </p>
-        )}
-        <Button
-          type="button"
-          variant={enabled ? 'outline' : 'default'}
-          size="sm"
-          className="self-start"
-          disabled={updateProfile.isPending}
-          onClick={() => updateProfile.mutate({ social_sharing_enabled: !enabled })}
-        >
-          {enabled ? 'Désactiver' : 'Activer'}
-        </Button>
       </CardContent>
     </Card>
   )

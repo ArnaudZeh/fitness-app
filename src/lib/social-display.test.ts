@@ -3,25 +3,14 @@ import { formatMilestoneValue, mergeFeedEntries } from '@/lib/social-display'
 import type { MilestoneFeedEntry, MilestoneWithImage, Post, PostFeedEntry } from '@/lib/social-display'
 
 describe('formatMilestoneValue', () => {
-  it('shows one_rep_max with decimal precision', () => {
+  it('shows one_rep_max in kg', () => {
     expect(formatMilestoneValue({ milestone_type: 'one_rep_max', value: 126.04 })).toBe(
       '126.04 kg',
     )
   })
 
-  it('rounds weekly_tonnage to a whole number', () => {
-    expect(formatMilestoneValue({ milestone_type: 'weekly_tonnage', value: 899.6 })).toBe(
-      '900 kg cette semaine-là',
-    )
-  })
-
-  it('pluralizes regularity_streak correctly', () => {
-    expect(formatMilestoneValue({ milestone_type: 'regularity_streak', value: 1 })).toBe(
-      "1 semaine d'affilée",
-    )
-    expect(formatMilestoneValue({ milestone_type: 'regularity_streak', value: 4 })).toBe(
-      "4 semaines d'affilée",
-    )
+  it('shows weight_goal in kg', () => {
+    expect(formatMilestoneValue({ milestone_type: 'weight_goal', value: 70 })).toBe('70 kg')
   })
 })
 
@@ -35,7 +24,6 @@ function fakeMilestoneEntry(id: string, occurredAt: string): MilestoneFeedEntry 
     exercise_id: null,
     exercise_name: 'Squat',
     value: 100,
-    week_start: null,
     achieved_at: occurredAt,
     created_at: occurredAt,
     exercise: null,

@@ -48,8 +48,8 @@ export function FeedPage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
-              Rien pour l'instant. Active le partage de progrès dans ton profil pour que tes
-              propres records et posts apparaissent ici pour les autres.
+              Rien pour l'instant. Les objectifs de poids atteints, les records et les posts de
+              tout le monde apparaîtront ici.
             </p>
           </CardContent>
         </Card>
@@ -360,7 +360,6 @@ function CreatePostCard() {
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture="environment"
           aria-label="Choisir une photo"
           className="hidden"
           onChange={handleFileChange}

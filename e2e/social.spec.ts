@@ -5,28 +5,7 @@ test.use({ storageState: 'e2e/.auth/user.json' })
 
 const TEST_PHOTO_PATH = path.join(import.meta.dirname, 'fixtures', 'test-photo.png')
 
-// Cross-user visibility (does an opted-in user's feed show up for someone
-// else, does an opted-out user's stay hidden) needs a second real account
-// to verify meaningfully — too destructive/slow for the shared e2e suite,
-// same call already made for account deletion in P5a. Verified manually
-// instead with a throwaway account + direct SQL (see TODOS.md).
-test('toggles progress sharing from the profile', async ({ page }) => {
-  await page.goto('/profile')
-  const section = page
-    .locator('[data-slot="card"]')
-    .filter({ has: page.getByRole('heading', { name: 'Partage de progrès' }) })
-  const toggle = section.getByRole('button', { name: /^(Activer|Désactiver)$/ })
-  const wasEnabled = (await toggle.textContent())?.trim() === 'Désactiver'
-
-  await toggle.click()
-  await expect(toggle).toHaveText(wasEnabled ? 'Activer' : 'Désactiver')
-
-  // Leave it as found.
-  await toggle.click()
-  await expect(toggle).toHaveText(wasEnabled ? 'Désactiver' : 'Activer')
-})
-
-test('logging a new best set creates a milestone visible in the feed', async ({ page }) => {
+test('logging a genuine 1-rep max creates a milestone visible in the feed', async ({ page }) => {
   const programName = `E2E Social ${Date.now()}`
 
   await page.goto('/programs')
@@ -52,11 +31,14 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   await mondayCard.getByRole('button', { name: /Démarrer la séance|Continuer la séance/ }).click()
   await page.waitForURL(/\/sessions\//)
 
-  // A very deliberately heavy, one-off weight — astronomically unlikely to
-  // already be this fixture account's best on Squat, so this is a new PR
-  // regardless of what other tests logged before it.
+  // A genuine 1-rep attempt (reps=1) at a very deliberately heavy weight —
+  // astronomically unlikely to already be this fixture account's best on
+  // Squat, so this is a new PR regardless of what other tests logged
+  // before it. Only reps=1 sets count as a real 1RM now (2026-07-24): a
+  // heavy set of 5 no longer gets estimated into a "record" via the
+  // Epley/Brzycki formula.
   await page.getByLabel('Charge (kg)').fill('999')
-  await page.getByLabel('Reps').fill('5')
+  await page.getByLabel('Reps').fill('1')
   await page.getByRole('button', { name: /Série \d/ }).click()
   await expect(page.getByText('999 kg')).toBeVisible()
 
@@ -67,38 +49,80 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   await page.waitForTimeout(3_000)
 
   await page.goto('/feed')
-  // Scoped to the exact estimated 1RM for 999kg x 5 (Epley/Brzycki average,
-  // see src/lib/one-rep-max.ts), not just "a Squat record" — other specs in
-  // this suite also log Squat sets (e.g. 100kg x 5), which leaves their own
-  // milestone entries in the same feed.
+  // The stored value is now the exact weight lifted (999kg), not an
+  // estimated 1RM from a higher-rep set — no formula involved anymore.
   const oneRepMaxEntry = page
     .locator('li')
-    .filter({ hasText: 'Nouveau record · 1RM estimé · Squat' })
-    .filter({ hasText: '1144.69 kg' })
+    .filter({ hasText: 'Nouveau record · 1RM · Squat' })
+    .filter({ hasText: '999 kg' })
   await expect(oneRepMaxEntry).toBeVisible({ timeout: 10_000 })
 
-  // Same set (999kg x 5 = 4995kg tonnage) is also, incidentally, this
-  // week's best by a wide margin over anything else this suite logs.
-  const tonnageEntry = page
-    .locator('li')
-    .filter({ hasText: 'Nouveau record · tonnage hebdo' })
-    .filter({ hasText: '4995 kg cette semaine-là' })
-  await expect(tonnageEntry).toBeVisible()
-
   // Cleanup: milestones are independent history, not cascaded by deleting
-  // the program/session — removed explicitly via their own delete buttons
+  // the program/session — removed explicitly via their own delete button
   // (milestones' delete policy scopes this to the owner).
-  for (const entry of [oneRepMaxEntry, tonnageEntry]) {
-    await entry.getByRole('button', { name: 'Supprimer ce record du feed' }).click()
-    await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
-    await expect(entry).toHaveCount(0)
-  }
+  await oneRepMaxEntry.getByRole('button', { name: 'Supprimer ce record du feed' }).click()
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+  await expect(oneRepMaxEntry).toHaveCount(0)
 
   await page.goto('/programs')
   await page.getByRole('link', { name: programName }).click()
   await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
   await page.getByRole('button', { name: 'Supprimer définitivement' }).click()
   await expect(page).toHaveURL('/programs', { timeout: 20_000 })
+})
+
+test('reaching a weight goal creates a milestone visible in the feed', async ({ page }) => {
+  // A very deliberately specific target — astronomically unlikely to
+  // collide with a weight this fixture account already happens to be at.
+  const targetWeightKg = '77.7'
+
+  const infoCard = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByRole('heading', { name: 'Informations' }) })
+  const weightCard = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByRole('heading', { name: 'Poids', exact: true }) })
+
+  await page.goto('/profile')
+  await page.getByLabel('Poids cible (kg)').fill(targetWeightKg)
+  await infoCard.getByRole('button', { name: 'Enregistrer', exact: true }).click()
+
+  await page.getByLabel("Peser aujourd'hui (kg)").fill(targetWeightKg)
+  await weightCard.getByRole('button', { name: 'Enregistrer', exact: true }).click()
+  await expect(page.getByText(`${targetWeightKg} kg`).first()).toBeVisible()
+
+  await page.goto('/feed')
+  const goalEntry = page
+    .locator('li')
+    .filter({ hasText: 'Objectif de poids atteint' })
+    .filter({ hasText: `${targetWeightKg} kg` })
+  await expect(goalEntry).toBeVisible({ timeout: 10_000 })
+
+  // Cleanup: delete the milestone, the weight entry, and clear the target
+  // so this test leaves the fixture account as it found it.
+  await goalEntry.getByRole('button', { name: 'Supprimer ce record du feed' }).click()
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+  await expect(goalEntry).toHaveCount(0)
+
+  await page.goto('/profile')
+  await page.getByRole('button', { name: 'Supprimer cette pesée' }).click()
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+  await page.getByLabel('Poids cible (kg)').fill('')
+  // click() only waits for the event to dispatch, not for the mutation it
+  // triggers — without waiting for the PATCH response, the test ends and
+  // Playwright tears down the page before the request ever reaches the
+  // network, silently leaving target_weight_kg dirty for the next run
+  // (confirmed via network trace: only the earlier "set to 77.7" PATCH was
+  // ever sent). toBeEnabled() alone isn't enough either — it can observe
+  // the pre-click "enabled" state before React re-renders to pending, so
+  // it must wait for the actual response.
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' && response.url().includes('/rest/v1/profiles'),
+    ),
+    infoCard.getByRole('button', { name: 'Enregistrer', exact: true }).click(),
+  ])
 })
 
 test('creates a post with a photo, shows it in the feed, then deletes it', async ({ page }) => {
