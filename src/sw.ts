@@ -5,20 +5,27 @@ declare let self: ServiceWorkerGlobalScope
 
 precacheAndRoute(self.__WB_MANIFEST)
 
+// Derived from the SW's own registration scope rather than hardcoded as
+// "/" — this worker is served from the domain root in dev but from
+// "/fitness-app/" on GitHub Pages (a project page), and every path below
+// needs to resolve correctly under either.
+const scopePath = new URL(self.registration.scope).pathname
+
 // precacheAndRoute only serves exact cached URLs — a client-side route like
 // /bien-etre has no cache entry of its own, so a hard offline reload on any
-// route but "/" would otherwise fail outright. This is the standard SPA
-// fallback: every navigation request gets the cached app shell, and React
-// Router takes it from there. generateSW injects this automatically; the
-// custom injectManifest worker (needed for push notifications) does not.
-// Implemented by hand rather than via workbox-routing's NavigationRoute —
-// that package's prebundled ESM fails to evaluate under vite-plugin-pwa's
-// dev-mode SW harness (works fine in the production build, but breaks
-// `pnpm dev` outright), and this is only a few lines regardless.
+// route but the app root would otherwise fail outright. This is the
+// standard SPA fallback: every navigation request gets the cached app
+// shell, and React Router takes it from there. generateSW injects this
+// automatically; the custom injectManifest worker (needed for push
+// notifications) does not. Implemented by hand rather than via
+// workbox-routing's NavigationRoute — that package's prebundled ESM fails
+// to evaluate under vite-plugin-pwa's dev-mode SW harness (works fine in
+// the production build, but breaks `pnpm dev` outright), and this is only
+// a few lines regardless.
 self.addEventListener('fetch', (event) => {
   if (event.request.mode !== 'navigate') return
   event.respondWith(
-    matchPrecache('/index.html').then((cached) => cached ?? fetch(event.request)),
+    matchPrecache(`${scopePath}index.html`).then((cached) => cached ?? fetch(event.request)),
   )
 })
 
@@ -39,8 +46,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
+      icon: `${scopePath}pwa-192x192.png`,
+      badge: `${scopePath}pwa-192x192.png`,
       data: { url: payload.url ?? '/bien-etre' },
     }),
   )
@@ -48,7 +55,13 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = (event.notification.data as { url?: string } | undefined)?.url ?? '/bien-etre'
+  // payload.url comes from the server (send-wellness-reminders) as a
+  // root-relative app path, e.g. "/bien-etre" — it doesn't know which base
+  // path this deployment is served from, so that's resolved here instead.
+  const relativePath = (
+    (event.notification.data as { url?: string } | undefined)?.url ?? '/bien-etre'
+  ).replace(/^\//, '')
+  const url = `${scopePath}${relativePath}`
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
