@@ -24,16 +24,13 @@ import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
-import { useLatestMilestone } from '@/hooks/useSocialFeed'
 import {
   buildTrendSummary,
   computeDailyVolume,
   countTrainingDaysThisWeek,
-  getMostRecentHighlight,
 } from '@/lib/analytics'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
-import { MILESTONE_TYPE_LABELS, formatMilestoneValue } from '@/lib/social-display'
 import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { Program } from '@/lib/programs-api'
 import type { Profile } from '@/lib/profile-api'
@@ -63,10 +60,6 @@ export function HomePage() {
       </h1>
 
       <TodayCard program={activeProgram} />
-
-      {history && history.length > 0 && <RecentHighlightCard history={history} />}
-
-      <LatestMilestoneCard />
 
       <ThisWeekCard history={history ?? []} />
 
@@ -191,68 +184,6 @@ function TodayCard({ program }: { program: Program | undefined }) {
             </Button>
           </>
         )}
-      </CardContent>
-    </Card>
-  )
-}
-
-function RecentHighlightCard({
-  history,
-}: {
-  history: NonNullable<ReturnType<typeof useSetHistory>['data']>
-}) {
-  const highlight = getMostRecentHighlight(history)
-  if (!highlight) return null
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h2">Dernière séance</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <ExerciseThumbnail imageUrl={highlight.imageUrl} muscleGroup={highlight.muscleGroup} />
-          <p className="font-mono text-lg font-semibold tabular-nums">
-            {highlight.exerciseName} · {highlight.weightKg} kg x {highlight.reps}
-          </p>
-        </div>
-        {highlight.estimatedOneRepMaxKg !== null && (
-          <p className="text-sm text-muted-foreground">
-            1RM estimé : {Math.round(highlight.estimatedOneRepMaxKg)} kg
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-function LatestMilestoneCard() {
-  const { data: milestone } = useLatestMilestone()
-  if (!milestone) return null
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h2">Dernier record</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          {milestone.exercise_id && (
-            <ExerciseThumbnail imageUrl={milestone.exercise?.image_url ?? null} muscleGroup={null} />
-          )}
-          <div>
-            <p className="font-medium">
-              {MILESTONE_TYPE_LABELS[milestone.milestone_type]}
-              {milestone.exercise_name && ` · ${milestone.exercise_name}`}
-            </p>
-            <p className="font-mono text-lg font-semibold tabular-nums">
-              {formatMilestoneValue(milestone)}
-            </p>
-          </div>
-        </div>
-        <Link to="/feed" className="text-sm text-primary hover:underline">
-          Voir tous les records →
-        </Link>
       </CardContent>
     </Card>
   )

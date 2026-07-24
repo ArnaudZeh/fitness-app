@@ -96,7 +96,7 @@ async function insertAssistantMessage(
       role: 'assistant',
       content,
       tool_name: proposal?.type ?? null,
-      tool_proposal: proposal,
+      tool_proposal: proposal as unknown as Database['public']['Tables']['assistant_messages']['Insert']['tool_proposal'],
     })
     .select()
     .single()

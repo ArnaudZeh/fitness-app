@@ -1,53 +1,41 @@
-import { type ChangeEvent, useRef, useState } from 'react'
-import { Trash2, Trophy } from 'lucide-react'
+import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
+import { Heart, MessageCircle, MessageSquare, Trash2, Trophy } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useAuthStore } from '@/lib/auth-store'
 import {
+  useAddComment,
+  useComments,
+  useCreatePost,
+  useDeleteComment,
   useDeleteMilestone,
-  useDeleteProgressPhoto,
+  useDeletePost,
   useSocialFeed,
-  useUploadProgressPhoto,
+  useToggleLike,
 } from '@/hooks/useSocialFeed'
 import { formatMilestoneValue, MILESTONE_TYPE_LABELS } from '@/lib/social-display'
-import type { FeedEntry } from '@/lib/social-display'
+import type { FeedEntry, FeedTargetType } from '@/lib/social-display'
 
-function formatAchievedAt(iso: string): string {
+function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
-}
-
-function formatPhotoDate(isoDate: string): string {
-  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-}
-
-function todayLocalDate(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 export function FeedPage() {
   const { data: feed, isLoading, isError } = useSocialFeed()
   const currentUserId = useAuthStore((state) => state.session?.user.id)
   const deleteMilestone = useDeleteMilestone()
-  const deletePhoto = useDeleteProgressPhoto()
+  const deletePost = useDeletePost()
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Feed</h1>
 
-      <UploadPhotoCard />
+      <CreatePostCard />
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
       {isError && (
@@ -61,7 +49,7 @@ export function FeedPage() {
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
               Rien pour l'instant. Active le partage de progrès dans ton profil pour que tes
-              propres records et photos apparaissent ici pour les autres.
+              propres records et posts apparaissent ici pour les autres.
             </p>
           </CardContent>
         </Card>
@@ -78,10 +66,10 @@ export function FeedPage() {
                   onDelete={() => deleteMilestone.mutateAsync(entry.milestone.id)}
                 />
               ) : (
-                <PhotoCard
+                <PostCard
                   entry={entry}
                   isOwn={entry.userId === currentUserId}
-                  onDelete={() => deletePhoto.mutateAsync(entry.photo)}
+                  onDelete={() => deletePost.mutateAsync(entry.post)}
                 />
               )}
             </li>
@@ -93,11 +81,13 @@ export function FeedPage() {
 }
 
 function FeedCardHeader({
+  icon: Icon,
   displayName,
   isOwn,
   onDelete,
   deleteLabel,
 }: {
+  icon: LucideIcon
   displayName: string
   isOwn: boolean
   onDelete: () => Promise<void>
@@ -107,7 +97,7 @@ function FeedCardHeader({
     <CardHeader>
       <CardTitle as="h2" className="flex items-center justify-between gap-2 text-base">
         <span className="flex items-center gap-2">
-          <Trophy className="size-4 text-primary" />
+          <Icon className="size-4 text-primary" />
           {displayName}
         </span>
         {isOwn && (
@@ -128,6 +118,113 @@ function FeedCardHeader({
   )
 }
 
+function ReactionBar({
+  targetType,
+  targetId,
+  likeCount,
+  likedByMe,
+  commentCount,
+}: {
+  targetType: FeedTargetType
+  targetId: string
+  likeCount: number
+  likedByMe: boolean
+  commentCount: number
+}) {
+  const toggleLike = useToggleLike()
+  const [commentsOpen, setCommentsOpen] = useState(false)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={toggleLike.isPending}
+          className={likedByMe ? 'text-primary' : ''}
+          onClick={() => toggleLike.mutate({ targetType, targetId, likedByMe })}
+        >
+          <Heart className={likedByMe ? 'fill-current' : ''} />
+          {likeCount > 0 && likeCount}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setCommentsOpen((open) => !open)}
+        >
+          <MessageCircle />
+          {commentCount > 0 && commentCount}
+        </Button>
+      </div>
+      {commentsOpen && <CommentsSection targetType={targetType} targetId={targetId} />}
+    </div>
+  )
+}
+
+function CommentsSection({
+  targetType,
+  targetId,
+}: {
+  targetType: FeedTargetType
+  targetId: string
+}) {
+  const { data: comments, isLoading } = useComments(targetType, targetId, true)
+  const addComment = useAddComment(targetType, targetId)
+  const deleteComment = useDeleteComment(targetType, targetId)
+  const currentUserId = useAuthStore((state) => state.session?.user.id)
+  const [draft, setDraft] = useState('')
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (draft.trim() === '') return
+    addComment.mutate(draft.trim(), { onSuccess: () => setDraft('') })
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-border pt-2">
+      {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {(comments ?? []).map((comment) => (
+        <div key={comment.id} className="flex items-start justify-between gap-2 text-sm">
+          <p>
+            <span className="font-medium">{comment.displayName}</span> {comment.content}
+          </p>
+          {comment.user_id === currentUserId && (
+            <ConfirmDialog
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Supprimer ce commentaire"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              }
+              title="Supprimer ce commentaire ?"
+              description="Cette action est irréversible."
+              confirmLabel="Supprimer"
+              onConfirm={() => deleteComment.mutateAsync(comment.id)}
+            />
+          )}
+        </div>
+      ))}
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <Input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Ajouter un commentaire…"
+          disabled={addComment.isPending}
+        />
+        <Button type="submit" size="sm" disabled={draft.trim() === '' || addComment.isPending}>
+          Envoyer
+        </Button>
+      </form>
+    </div>
+  )
+}
+
 function MilestoneCard({
   entry,
   isOwn,
@@ -141,12 +238,13 @@ function MilestoneCard({
   return (
     <Card>
       <FeedCardHeader
+        icon={Trophy}
         displayName={entry.displayName}
         isOwn={isOwn}
         onDelete={onDelete}
         deleteLabel="Supprimer ce record du feed"
       />
-      <CardContent className="flex flex-col gap-1">
+      <CardContent className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           {milestone.exercise_id && (
             <ExerciseThumbnail imageUrl={milestone.exercise?.image_url ?? null} muscleGroup={null} />
@@ -159,50 +257,66 @@ function MilestoneCard({
         <p className="font-mono text-lg font-semibold tabular-nums">
           {formatMilestoneValue(milestone)}
         </p>
-        <p className="text-sm text-muted-foreground">{formatAchievedAt(milestone.achieved_at)}</p>
+        <p className="text-sm text-muted-foreground">{formatTimestamp(milestone.achieved_at)}</p>
+        <ReactionBar
+          targetType="milestone"
+          targetId={milestone.id}
+          likeCount={entry.likeCount}
+          likedByMe={entry.likedByMe}
+          commentCount={entry.commentCount}
+        />
       </CardContent>
     </Card>
   )
 }
 
-function PhotoCard({
+function PostCard({
   entry,
   isOwn,
   onDelete,
 }: {
-  entry: Extract<FeedEntry, { kind: 'photo' }>
+  entry: Extract<FeedEntry, { kind: 'post' }>
   isOwn: boolean
   onDelete: () => Promise<void>
 }) {
-  const { photo } = entry
+  const { post } = entry
   return (
     <Card>
       <FeedCardHeader
+        icon={MessageSquare}
         displayName={entry.displayName}
         isOwn={isOwn}
         onDelete={onDelete}
-        deleteLabel="Supprimer cette photo du feed"
+        deleteLabel="Supprimer ce post du feed"
       />
       <CardContent className="flex flex-col gap-2">
-        <img
-          src={entry.signedUrl}
-          alt={photo.caption ?? 'Photo de progression'}
-          className="max-h-96 w-full rounded-md object-cover"
+        {entry.signedUrl && (
+          <img
+            src={entry.signedUrl}
+            alt={post.content ?? 'Photo publiée'}
+            className="max-h-96 w-full rounded-md object-cover"
+          />
+        )}
+        {post.content && <p className="text-sm">{post.content}</p>}
+        <p className="text-sm text-muted-foreground">{formatTimestamp(post.created_at)}</p>
+        <ReactionBar
+          targetType="post"
+          targetId={post.id}
+          likeCount={entry.likeCount}
+          likedByMe={entry.likedByMe}
+          commentCount={entry.commentCount}
         />
-        {photo.caption && <p className="text-sm">{photo.caption}</p>}
-        <p className="text-sm text-muted-foreground">{formatPhotoDate(photo.photo_date)}</p>
       </CardContent>
     </Card>
   )
 }
 
-function UploadPhotoCard() {
-  const uploadPhoto = useUploadProgressPhoto()
+function CreatePostCard() {
+  const createPost = useCreatePost()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [content, setContent] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [caption, setCaption] = useState('')
-  const [photoDate, setPhotoDate] = useState(todayLocalDate())
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -211,32 +325,37 @@ function UploadPhotoCard() {
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setSelectedFile(file)
     setPreviewUrl(URL.createObjectURL(file))
-    setCaption('')
-    setPhotoDate(todayLocalDate())
-    uploadPhoto.reset()
   }
 
-  function reset() {
+  function removePhoto() {
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setSelectedFile(null)
     setPreviewUrl(null)
   }
 
   async function handleSubmit() {
-    if (!selectedFile) return
-    await uploadPhoto.mutateAsync({
+    await createPost.mutateAsync({
+      content: content.trim() === '' ? null : content.trim(),
       file: selectedFile,
-      input: { caption: caption.trim() === '' ? null : caption.trim(), photoDate },
     })
-    reset()
+    setContent('')
+    removePhoto()
   }
+
+  const canSubmit = content.trim() !== '' || selectedFile !== null
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h2">Ajouter une photo</CardTitle>
+        <CardTitle as="h2">Créer un post</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        <Textarea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="Partage une pensée, une victoire…"
+        />
+
         <input
           ref={fileInputRef}
           type="file"
@@ -247,66 +366,44 @@ function UploadPhotoCard() {
           onChange={handleFileChange}
         />
 
-        {!selectedFile ? (
+        {previewUrl ? (
+          <div className="flex flex-col gap-2">
+            <img
+              src={previewUrl}
+              alt="Aperçu"
+              className="max-h-64 w-full rounded-md object-cover"
+            />
+            <Button type="button" variant="ghost" size="sm" className="self-start" onClick={removePhoto}>
+              Retirer la photo
+            </Button>
+          </div>
+        ) : (
           <Button
             type="button"
             variant="outline"
+            size="sm"
             className="self-start"
             onClick={() => fileInputRef.current?.click()}
           >
-            Choisir une photo
+            Ajouter une photo
           </Button>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {previewUrl && (
-              <img
-                src={previewUrl}
-                alt="Aperçu"
-                className="max-h-64 w-full rounded-md object-cover"
-              />
-            )}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="photo-caption">Légende (optionnel)</Label>
-              <Input
-                id="photo-caption"
-                value={caption}
-                onChange={(event) => setCaption(event.target.value)}
-                placeholder="Optionnel"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="photo-date">Date</Label>
-              <Input
-                id="photo-date"
-                type="date"
-                value={photoDate}
-                onChange={(event) => setPhotoDate(event.target.value)}
-              />
-            </div>
-            {uploadPhoto.isError && (
-              <p role="alert" className="text-sm text-destructive">
-                Impossible d'envoyer cette photo.
-              </p>
-            )}
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                disabled={uploadPhoto.isPending}
-                onClick={() => void handleSubmit()}
-              >
-                {uploadPhoto.isPending ? 'Envoi…' : 'Publier'}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={uploadPhoto.isPending}
-                onClick={reset}
-              >
-                Annuler
-              </Button>
-            </div>
-          </div>
         )}
+
+        {createPost.isError && (
+          <p role="alert" className="text-sm text-destructive">
+            Impossible de publier ce post.
+          </p>
+        )}
+
+        <Button
+          type="button"
+          size="sm"
+          className="self-start"
+          disabled={!canSubmit || createPost.isPending}
+          onClick={() => void handleSubmit()}
+        >
+          {createPost.isPending ? 'Publication…' : 'Publier'}
+        </Button>
       </CardContent>
     </Card>
   )

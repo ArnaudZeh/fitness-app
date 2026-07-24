@@ -6,7 +6,6 @@ import {
   computeWeeklyTonnage,
   countTrainingDaysThisWeek,
   getLoggedExercises,
-  getMostRecentHighlight,
 } from '@/lib/analytics'
 import type { SetHistoryRecord } from '@/lib/analytics-api'
 
@@ -16,6 +15,7 @@ function makeRecord(overrides: Partial<SetHistoryRecord> = {}): SetHistoryRecord
     exerciseId: 'ex-squat',
     exerciseName: 'Squat',
     muscleGroup: 'jambes',
+    imageUrl: null,
     weightKg: 100,
     reps: 8,
     rpe: null,
@@ -32,8 +32,8 @@ describe('getLoggedExercises', () => {
       makeRecord({ exerciseId: 'ex-squat', exerciseName: 'Squat' }),
     ]
     expect(getLoggedExercises(records)).toEqual([
-      { exerciseId: 'ex-bench', exerciseName: 'Bench Press' },
-      { exerciseId: 'ex-squat', exerciseName: 'Squat' },
+      { exerciseId: 'ex-bench', exerciseName: 'Bench Press', imageUrl: null },
+      { exerciseId: 'ex-squat', exerciseName: 'Squat', imageUrl: null },
     ])
   })
 
@@ -151,40 +151,6 @@ describe('countTrainingDaysThisWeek', () => {
     expect(countTrainingDaysThisWeek([makeRecord({ loggedAt: '2026-07-13' })], now)).toBe(
       0,
     )
-  })
-})
-
-describe('getMostRecentHighlight', () => {
-  it('returns the heaviest set from the most recently logged day', () => {
-    const records = [
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 200, reps: 1 }),
-      makeRecord({
-        loggedAt: '2026-07-20',
-        weightKg: 100,
-        reps: 8,
-        exerciseName: 'Squat',
-      }),
-      makeRecord({
-        loggedAt: '2026-07-20',
-        weightKg: 60,
-        reps: 10,
-        exerciseName: 'Leg Press',
-      }),
-    ]
-    const result = getMostRecentHighlight(records)
-    expect(result?.date).toBe('2026-07-20')
-    expect(result?.exerciseName).toBe('Squat')
-    expect(result?.weightKg).toBe(100)
-    expect(result?.estimatedOneRepMaxKg).not.toBeNull()
-  })
-
-  it('returns null for no history', () => {
-    expect(getMostRecentHighlight([])).toBeNull()
-  })
-
-  it('leaves estimatedOneRepMaxKg null outside the reliable rep range', () => {
-    const result = getMostRecentHighlight([makeRecord({ weightKg: 40, reps: 20 })])
-    expect(result?.estimatedOneRepMaxKg).toBeNull()
   })
 })
 

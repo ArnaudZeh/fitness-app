@@ -227,6 +227,57 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          target_id: string
+          target_type: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          target_id: string
+          target_type: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          target_id?: string
+          target_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      feed_likes: {
+        Row: {
+          created_at: string
+          id: string
+          target_id: string
+          target_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          target_id: string
+          target_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          target_id?: string
+          target_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       milestones: {
         Row: {
           achieved_at: string
@@ -270,6 +321,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      posts: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          storage_path: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          storage_path?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          storage_path?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -345,33 +420,6 @@ export type Database = {
           name?: string
           status?: string
           updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      progress_photos: {
-        Row: {
-          caption: string | null
-          created_at: string
-          id: string
-          photo_date: string
-          storage_path: string
-          user_id: string
-        }
-        Insert: {
-          caption?: string | null
-          created_at?: string
-          id?: string
-          photo_date?: string
-          storage_path: string
-          user_id: string
-        }
-        Update: {
-          caption?: string | null
-          created_at?: string
-          id?: string
-          photo_date?: string
-          storage_path?: string
           user_id?: string
         }
         Relationships: []
@@ -761,6 +809,10 @@ export type Database = {
       ai_vault_update_secret: {
         Args: { p_id: string; p_secret: string }
         Returns: undefined
+      }
+      can_view_feed_target: {
+        Args: { p_target_id: string; p_target_type: string }
+        Returns: boolean
       }
       estimate_one_rep_max: {
         Args: { p_reps: number; p_weight_kg: number }

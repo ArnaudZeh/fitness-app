@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatMilestoneValue, mergeFeedEntries } from '@/lib/social-display'
-import type { Milestone, MilestoneFeedEntry, PhotoFeedEntry, ProgressPhoto } from '@/lib/social-display'
+import type { MilestoneFeedEntry, MilestoneWithImage, Post, PostFeedEntry } from '@/lib/social-display'
 
 describe('formatMilestoneValue', () => {
   it('shows one_rep_max with decimal precision', () => {
@@ -25,8 +25,10 @@ describe('formatMilestoneValue', () => {
   })
 })
 
+const noReactions = { likeCount: 0, likedByMe: false, commentCount: 0 }
+
 function fakeMilestoneEntry(id: string, occurredAt: string): MilestoneFeedEntry {
-  const milestone: Milestone = {
+  const milestone: MilestoneWithImage = {
     id,
     user_id: 'u1',
     milestone_type: 'one_rep_max',
@@ -36,34 +38,43 @@ function fakeMilestoneEntry(id: string, occurredAt: string): MilestoneFeedEntry 
     week_start: null,
     achieved_at: occurredAt,
     created_at: occurredAt,
-  }
-  return { kind: 'milestone', id, userId: 'u1', displayName: 'Alex', occurredAt, milestone }
-}
-
-function fakePhotoEntry(id: string, occurredAt: string): PhotoFeedEntry {
-  const photo: ProgressPhoto = {
-    id,
-    user_id: 'u1',
-    storage_path: `u1/${id}.jpg`,
-    caption: null,
-    photo_date: occurredAt.slice(0, 10),
-    created_at: occurredAt,
+    exercise: null,
   }
   return {
-    kind: 'photo',
+    kind: 'milestone',
     id,
     userId: 'u1',
     displayName: 'Alex',
     occurredAt,
-    photo,
+    milestone,
+    ...noReactions,
+  }
+}
+
+function fakePostEntry(id: string, occurredAt: string): PostFeedEntry {
+  const post: Post = {
+    id,
+    user_id: 'u1',
+    storage_path: `u1/${id}.jpg`,
+    content: null,
+    created_at: occurredAt,
+  }
+  return {
+    kind: 'post',
+    id,
+    userId: 'u1',
+    displayName: 'Alex',
+    occurredAt,
+    post,
     signedUrl: 'https://example.test/signed',
+    ...noReactions,
   }
 }
 
 describe('mergeFeedEntries', () => {
-  it('interleaves milestones and photos sorted by occurredAt descending', () => {
+  it('interleaves milestones and posts sorted by occurredAt descending', () => {
     const oldest = fakeMilestoneEntry('m1', '2026-01-01T00:00:00Z')
-    const middle = fakePhotoEntry('p1', '2026-01-15T00:00:00Z')
+    const middle = fakePostEntry('p1', '2026-01-15T00:00:00Z')
     const newest = fakeMilestoneEntry('m2', '2026-02-01T00:00:00Z')
 
     const merged = mergeFeedEntries([oldest, newest], [middle])

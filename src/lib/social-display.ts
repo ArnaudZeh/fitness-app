@@ -1,7 +1,8 @@
 import type { Database } from '@/lib/database.types'
 
 export type Milestone = Database['public']['Tables']['milestones']['Row']
-export type ProgressPhoto = Database['public']['Tables']['progress_photos']['Row']
+export type Post = Database['public']['Tables']['posts']['Row']
+export type FeedTargetType = 'milestone' | 'post'
 
 export const MILESTONE_TYPE_LABELS: Record<Milestone['milestone_type'], string> = {
   one_rep_max: 'Nouveau record · 1RM estimé',
@@ -22,7 +23,13 @@ export function formatMilestoneValue(item: Pick<Milestone, 'milestone_type' | 'v
   return `${item.value} kg`
 }
 
-interface FeedEntryCommon {
+export interface FeedReactions {
+  likeCount: number
+  likedByMe: boolean
+  commentCount: number
+}
+
+interface FeedEntryCommon extends FeedReactions {
   id: string
   userId: string
   displayName: string
@@ -38,23 +45,22 @@ export interface MilestoneFeedEntry extends FeedEntryCommon {
   milestone: MilestoneWithImage
 }
 
-export interface PhotoFeedEntry extends FeedEntryCommon {
-  kind: 'photo'
-  photo: ProgressPhoto
-  signedUrl: string
+export interface PostFeedEntry extends FeedEntryCommon {
+  kind: 'post'
+  post: Post
+  signedUrl: string | null
 }
 
-export type FeedEntry = MilestoneFeedEntry | PhotoFeedEntry
+export type FeedEntry = MilestoneFeedEntry | PostFeedEntry
 
-// Milestones and photos come from two different tables/queries — merged
-// and sorted here rather than in SQL, since a photo's "date" (photo_date)
-// and a milestone's "date" (achieved_at, a timestamp) aren't the same kind
-// of value to begin with.
+// Milestones and posts come from two different tables/queries — merged and
+// sorted here rather than in SQL, since they don't share a source table to
+// order by in the first place.
 export function mergeFeedEntries(
   milestoneEntries: MilestoneFeedEntry[],
-  photoEntries: PhotoFeedEntry[],
+  postEntries: PostFeedEntry[],
 ): FeedEntry[] {
-  return [...milestoneEntries, ...photoEntries].sort((a, b) =>
+  return [...milestoneEntries, ...postEntries].sort((a, b) =>
     b.occurredAt.localeCompare(a.occurredAt),
   )
 }
