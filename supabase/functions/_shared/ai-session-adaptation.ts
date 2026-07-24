@@ -162,6 +162,15 @@ export async function adaptSession(
 ): Promise<SessionAdaptationProposal> {
   const proposal =
     provider === 'anthropic' ? await callAnthropic(apiKey, input) : await callOpenAi(apiKey, input)
-  validateAdaptation(proposal, new Set(input.availableExercises.map((e) => e.id)))
+  // Allowed pool is availableExercises (already logged) UNION currentExercises
+  // (already legitimately assigned to this session) — the persona explicitly
+  // encourages keeping an exercise unchanged when the data doesn't justify a
+  // full rewrite, and a kept exercise is valid regardless of whether the
+  // user happens to have logged a completed set for it yet.
+  const allowedExerciseIds = new Set([
+    ...input.availableExercises.map((e) => e.id),
+    ...input.currentExercises.map((e) => e.exerciseId),
+  ])
+  validateAdaptation(proposal, allowedExerciseIds)
   return proposal
 }

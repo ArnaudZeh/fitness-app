@@ -119,6 +119,14 @@ async function runGenerateTool(
     equipment: args.equipment ?? '',
     constraints: args.constraints ?? '',
   })
+  // No exercise pool to draw from (e.g. nothing logged yet) means the model
+  // correctly leaves every day empty rather than inventing exercises — but
+  // an empty program isn't a usable proposal, just a dead-end "create"
+  // button. Surface the model's own explanation as plain text instead.
+  const hasAnyExercise = proposal.days.some((day) => day.exercises.length > 0)
+  if (!hasAnyExercise) {
+    return { message: proposal.rationale, proposal: null }
+  }
   return {
     message: `Voici une proposition de programme : « ${proposal.programName} ». ${proposal.rationale}`,
     proposal: { type: 'generer_programme', proposal },
