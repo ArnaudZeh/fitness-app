@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
-import { Mic, MicOff, Send, Sparkles, Volume2, VolumeX } from 'lucide-react'
+import { Bot, Mic, MicOff, Send, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -219,12 +219,18 @@ export function CoachPage() {
         <p className="text-muted-foreground">Chargement…</p>
       ) : configuredProviders.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col gap-3 pt-6">
-            <p className="text-sm text-muted-foreground">
-              Configure une clé API (Anthropic ou OpenAI) dans ton profil pour parler avec ton
-              coach.
-            </p>
-            <Button asChild size="sm" className="self-start">
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Bot className="size-8" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="font-medium">Ton coach n'est pas encore configuré</p>
+              <p className="mx-auto max-w-xs text-sm text-muted-foreground">
+                Connecte ta propre clé API (Anthropic ou OpenAI) pour discuter de ta progression,
+                générer un programme ou adapter une séance à la volée.
+              </p>
+            </div>
+            <Button asChild size="sm">
               <Link to="/profile">Configurer une clé</Link>
             </Button>
           </CardContent>

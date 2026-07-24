@@ -29,45 +29,45 @@ export function AppLayout() {
             {session?.user.email}
           </span>
           <Link to="/coach">
-            <Button variant="outline" size="icon-sm" aria-label="Coach">
+            <Button variant="outline" size="icon-xl" aria-label="Coach">
               <Bot />
             </Button>
           </Link>
           <Link to="/feed">
-            <Button variant="outline" size="icon-sm" aria-label="Feed">
+            <Button variant="outline" size="icon-xl" aria-label="Feed">
               <Trophy />
             </Button>
           </Link>
           <Link to="/analytics">
-            <Button variant="outline" size="icon-sm" aria-label="Analytics">
+            <Button variant="outline" size="icon-xl" aria-label="Analytics">
               <ChartLine />
             </Button>
           </Link>
           <Link to="/bien-etre">
-            <Button variant="outline" size="icon-sm" aria-label="Bien-être">
+            <Button variant="outline" size="icon-xl" aria-label="Bien-être">
               <Sparkles />
             </Button>
           </Link>
           <Link to="/apnee">
-            <Button variant="outline" size="icon-sm" aria-label="Hypoxie intermittente">
+            <Button variant="outline" size="icon-xl" aria-label="Hypoxie intermittente">
               <Wind />
             </Button>
           </Link>
           {profile?.cycle_module_enabled && (
             <Link to="/cycle">
-              <Button variant="outline" size="icon-sm" aria-label="Cycle">
+              <Button variant="outline" size="icon-xl" aria-label="Cycle">
                 <Moon />
               </Button>
             </Link>
           )}
           <Link to="/profile">
-            <Button variant="outline" size="icon-sm" aria-label="Mon profil">
+            <Button variant="outline" size="icon-xl" aria-label="Mon profil">
               <UserRound />
             </Button>
           </Link>
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon-xl"
             className="sm:hidden"
             aria-label="Se déconnecter"
             onClick={() => void supabase.auth.signOut()}

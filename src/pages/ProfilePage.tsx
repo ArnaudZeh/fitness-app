@@ -71,10 +71,13 @@ function CycleModuleSection({ profile }: { profile: Profile }) {
         <CardTitle as="h2">Module cycles</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">
-          Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par phase :
-          recommandations générales, pas un outil médical.
-        </p>
+        <details className="text-sm text-muted-foreground">
+          <summary className="cursor-pointer select-none">Qu'est-ce que c'est ?</summary>
+          <p className="mt-2">
+            Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par phase :
+            recommandations générales, pas un outil médical.
+          </p>
+        </details>
         {updateProfile.isError && (
           <p role="alert" className="text-sm text-destructive">
             Impossible d'enregistrer ce changement.
@@ -105,11 +108,14 @@ function SocialSharingSection({ profile }: { profile: Profile }) {
         <CardTitle as="h2">Partage de progrès</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">
-          Une fois activé, tes nouveaux records (1RM estimé) apparaissent dans le feed, visible
-          par les autres utilisateurs de l'app : un cercle fermé, pas un réseau ouvert. Le feed
-          reste consultable même sans activer le partage.
-        </p>
+        <details className="text-sm text-muted-foreground">
+          <summary className="cursor-pointer select-none">Qu'est-ce que c'est ?</summary>
+          <p className="mt-2">
+            Une fois activé, tes nouveaux records (1RM estimé) apparaissent dans le feed, visible
+            par les autres utilisateurs de l'app : un cercle fermé, pas un réseau ouvert. Le feed
+            reste consultable même sans activer le partage.
+          </p>
+        </details>
         {updateProfile.isError && (
           <p role="alert" className="text-sm text-destructive">
             Impossible d'enregistrer ce changement.

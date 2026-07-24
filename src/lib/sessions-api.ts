@@ -63,6 +63,16 @@ export const WEEKDAY_LABELS: Record<number, string> = {
   7: 'Dimanche',
 }
 
+export const WEEKDAY_SHORT_LABELS: Record<number, string> = {
+  1: 'Lun',
+  2: 'Mar',
+  3: 'Mer',
+  4: 'Jeu',
+  5: 'Ven',
+  6: 'Sam',
+  7: 'Dim',
+}
+
 // JS's Date.getDay() is 0=Sunday..6=Saturday — remapped to this app's
 // 1=Monday..7=Sunday convention (matching WEEKDAY_LABELS and day_of_week
 // columns) everywhere a "what day is it" question comes up.

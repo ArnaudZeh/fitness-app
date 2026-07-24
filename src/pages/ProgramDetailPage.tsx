@@ -17,7 +17,9 @@ import {
   PROGRAM_STATUS_LABELS,
   type ProgramStatus,
 } from '@/lib/programs-api'
-import { WEEKDAY_LABELS } from '@/lib/sessions-api'
+import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from '@/lib/sessions-api'
+import type { SessionTemplate } from '@/lib/sessions-api'
+import { cn } from '@/lib/utils'
 
 const PROGRAM_STATUS_OPTIONS: ProgramStatus[] = ['draft', 'active', 'archived']
 
@@ -107,9 +109,10 @@ export function ProgramDetailPage() {
 
       <div className="flex flex-col gap-3">
         <h2 className="font-heading text-lg font-medium">Semaine type</h2>
+        {sortedTemplates.length > 1 && <WeekOverviewStrip templates={sortedTemplates} />}
         <ul className="flex flex-col gap-3">
           {sortedTemplates.map((template) => (
-            <li key={template.id}>
+            <li key={template.id} id={`day-${template.day_of_week}`}>
               <SessionTemplateCard template={template} focus={program.focus} />
             </li>
           ))}
@@ -168,6 +171,38 @@ export function ProgramDetailPage() {
           </ul>
         </div>
       )}
+    </div>
+  )
+}
+
+// Glance-able week shape (repos/entraînement per day) without scrolling
+// through 7 full-height cards to see the pattern — jumps to the matching
+// card below on tap, which still owns all the actual editing UI.
+function WeekOverviewStrip({ templates }: { templates: SessionTemplate[] }) {
+  return (
+    <div className="grid grid-cols-7 gap-1.5">
+      {templates.map((template) => {
+        const isTraining = template.day_type === 'training'
+        return (
+          <a
+            key={template.id}
+            href={`#day-${template.day_of_week}`}
+            className={cn(
+              'flex flex-col items-center gap-1.5 rounded-lg border px-1 py-2 text-center transition-colors',
+              isTraining
+                ? 'border-primary/30 bg-primary/10 text-foreground'
+                : 'border-border text-muted-foreground',
+            )}
+          >
+            <span className="text-[0.65rem] font-medium uppercase">
+              {WEEKDAY_SHORT_LABELS[template.day_of_week]}
+            </span>
+            <span
+              className={cn('size-1.5 rounded-full', isTraining ? 'bg-primary' : 'bg-current')}
+            />
+          </a>
+        )
+      })}
     </div>
   )
 }

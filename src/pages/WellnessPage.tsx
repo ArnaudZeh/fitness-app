@@ -329,12 +329,13 @@ function ActivityFields({
       </div>
       <div className="flex flex-col gap-2">
         <Label>Jours</Label>
-        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border p-0.5">
+        <div className="grid grid-cols-7 gap-1 rounded-lg border border-border p-0.5">
           {WEEKDAYS.map((day) => (
             <Button
               key={day}
               type="button"
               size="sm"
+              className="px-0"
               variant={daysOfWeek.includes(day) ? 'default' : 'ghost'}
               onClick={() =>
                 setDaysOfWeek(

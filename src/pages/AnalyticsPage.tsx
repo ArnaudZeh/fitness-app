@@ -123,6 +123,7 @@ export function AnalyticsPage() {
                 dataKey="tonnageKg"
                 className="fill-primary"
                 radius={4}
+                maxBarSize={48}
                 activeBar={{ className: 'fill-primary', stroke: 'none' }}
               />
             </BarChart>

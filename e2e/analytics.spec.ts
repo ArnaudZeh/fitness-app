@@ -30,7 +30,7 @@ test('shows logged sets in the analytics page', async ({ page }) => {
   await page.getByLabel('Charge (kg)').fill('100')
   await page.getByLabel('Reps').fill('5')
   await page.getByRole('button', { name: 'Série 1' }).click()
-  await expect(page.getByText('Série 1 — 100 kg x 5')).toBeVisible()
+  await expect(page.getByText('Série 1 · 100 kg x 5')).toBeVisible()
 
   await page.getByRole('button', { name: 'Terminer la séance' }).click()
   await expect(page.getByText('Terminée')).toBeVisible()

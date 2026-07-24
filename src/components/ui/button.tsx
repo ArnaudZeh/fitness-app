@@ -32,6 +32,10 @@ const buttonVariants = cva(
         'icon-sm':
           'size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg',
         'icon-lg': 'size-9',
+        // Meets the ~44px minimum touch target size (Apple HIG/Material) —
+        // for icon buttons that are a primary, standalone tap target on
+        // mobile (e.g. persistent header nav), not a dense inline action.
+        'icon-xl': 'size-11',
       },
     },
     defaultVariants: {

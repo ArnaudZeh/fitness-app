@@ -10,7 +10,7 @@ test('rejects an invalid Anthropic key with a clear error, persists nothing', as
   await expect(page.getByText('Anthropic (Claude)', { exact: true })).toBeVisible()
   await expect(page.getByText('Non configurée').first()).toBeVisible()
 
-  const apiKeyInput = page.getByLabel('Clé API — Anthropic (Claude)')
+  const apiKeyInput = page.getByLabel('Clé API · Anthropic (Claude)')
   await apiKeyInput.fill('sk-ant-totally-fake-invalid-key')
 
   const form = apiKeyInput.locator('xpath=ancestor::form[1]')
