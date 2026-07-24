@@ -35,7 +35,7 @@ test('logs a set while offline, then syncs once back online', async ({ page }) =
   await page.getByLabel('Charge (kg)').fill('70')
   await page.getByLabel('Reps').fill('10')
   await page.getByRole('button', { name: 'Série 1' }).click()
-  await expect(page.getByText('Série 1 — 70 kg x 10')).toBeVisible()
+  await expect(page.getByText('Série 1 · 70 kg x 10')).toBeVisible()
   // No error surfaced to the user for a purely local, offline write.
   await expect(page.getByRole('alert')).toHaveCount(0)
 
@@ -54,7 +54,7 @@ test('logs a set while offline, then syncs once back online', async ({ page }) =
   )
   await page.reload()
 
-  await expect(page.getByText('Série 1 — 70 kg x 10')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('Série 1 · 70 kg x 10')).toBeVisible({ timeout: 20_000 })
 
   await page.getByRole('link', { name: 'Retour au programme' }).click()
   await expect(page.getByRole('heading', { name: programName })).toBeVisible()

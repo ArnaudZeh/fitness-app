@@ -73,7 +73,7 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   // milestone entries in the same feed.
   const oneRepMaxEntry = page
     .locator('li')
-    .filter({ hasText: 'Nouveau record — 1RM estimé — Squat' })
+    .filter({ hasText: 'Nouveau record · 1RM estimé · Squat' })
     .filter({ hasText: '1144.69 kg' })
   await expect(oneRepMaxEntry).toBeVisible({ timeout: 10_000 })
 
@@ -81,7 +81,7 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   // week's best by a wide margin over anything else this suite logs.
   const tonnageEntry = page
     .locator('li')
-    .filter({ hasText: 'Nouveau record — tonnage hebdo' })
+    .filter({ hasText: 'Nouveau record · tonnage hebdo' })
     .filter({ hasText: '4995 kg cette semaine-là' })
   await expect(tonnageEntry).toBeVisible()
 
@@ -101,24 +101,24 @@ test('logging a new best set creates a milestone visible in the feed', async ({ 
   await expect(page).toHaveURL('/programs', { timeout: 20_000 })
 })
 
-test('uploads a progress photo, shows it in the feed, then deletes it', async ({ page }) => {
+test('creates a post with a photo, shows it in the feed, then deletes it', async ({ page }) => {
   const caption = `E2E Photo ${Date.now()}`
 
   await page.goto('/feed')
+  await page.getByPlaceholder('Partage une pensée, une victoire…').fill(caption)
   // The trigger button opens a native file picker Playwright can't drive —
   // setInputFiles targets the hidden <input type="file"> directly instead,
   // same pattern already used for JSON import in data-import.spec.ts.
   await page.getByLabel('Choisir une photo').setInputFiles(TEST_PHOTO_PATH)
   await expect(page.getByAltText('Aperçu')).toBeVisible()
 
-  await page.getByLabel('Légende (optionnel)').fill(caption)
   await page.getByRole('button', { name: 'Publier' }).click()
 
   const photoEntry = page.locator('li').filter({ hasText: caption })
   await expect(photoEntry).toBeVisible({ timeout: 10_000 })
   await expect(photoEntry.getByRole('img')).toBeVisible()
 
-  await photoEntry.getByRole('button', { name: 'Supprimer cette photo du feed' }).click()
+  await photoEntry.getByRole('button', { name: 'Supprimer ce post du feed' }).click()
   await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
   await expect(photoEntry).toHaveCount(0)
 })

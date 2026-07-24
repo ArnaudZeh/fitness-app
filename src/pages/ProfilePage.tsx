@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { LogOut, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,7 @@ import {
 import { AiSettingsSection } from '@/components/AiSettingsSection'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DataOwnershipSection } from '@/components/DataOwnershipSection'
+import { supabase } from '@/lib/supabase'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import {
   useDeleteWeightEntry,
@@ -50,7 +51,17 @@ export function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Mon profil</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Mon profil</h1>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void supabase.auth.signOut()}
+        >
+          <LogOut /> Se déconnecter
+        </Button>
+      </div>
       <ProfileForm profile={profile} />
       <WeightSection />
       <CycleModuleSection profile={profile} />

@@ -1,8 +1,7 @@
 import { Suspense, useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
-import { Bot, ChartLine, LogOut, Moon, Sparkles, Trophy, UserRound, Wind } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
+import { Bot, ChartLine, Moon, Sparkles, Trophy, UserRound, Wind } from 'lucide-react'
+import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
 import { useAuthStore } from '@/lib/auth-store'
 import { syncTimezone } from '@/lib/profile-api'
 import { useProfile } from '@/hooks/useProfile'
@@ -18,73 +17,37 @@ export function AppLayout() {
     if (userId) void syncTimezone().catch(() => {})
   }, [userId])
 
+  const navItems: NavItem[] = [
+    { name: 'Coach', url: '/coach', icon: Bot },
+    { name: 'Feed', url: '/feed', icon: Trophy },
+    { name: 'Analytics', url: '/analytics', icon: ChartLine },
+    { name: 'Bien-être', url: '/bien-etre', icon: Sparkles },
+    { name: 'Hypoxie', url: '/apnee', icon: Wind, ariaLabel: 'Hypoxie intermittente' },
+    ...(profile?.cycle_module_enabled
+      ? [{ name: 'Cycle', url: '/cycle', icon: Moon }]
+      : []),
+    { name: 'Profil', url: '/profile', icon: UserRound },
+  ]
+
   return (
     <div className="min-h-svh bg-background text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-4 py-3">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3">
         <Link to="/" className="font-heading text-lg font-semibold">
           Fitness
         </Link>
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <span className="hidden text-sm text-muted-foreground sm:inline">
-            {session?.user.email}
-          </span>
-          <Link to="/coach">
-            <Button variant="outline" size="icon-xl" aria-label="Coach">
-              <Bot />
-            </Button>
-          </Link>
-          <Link to="/feed">
-            <Button variant="outline" size="icon-xl" aria-label="Feed">
-              <Trophy />
-            </Button>
-          </Link>
-          <Link to="/analytics">
-            <Button variant="outline" size="icon-xl" aria-label="Analytics">
-              <ChartLine />
-            </Button>
-          </Link>
-          <Link to="/bien-etre">
-            <Button variant="outline" size="icon-xl" aria-label="Bien-être">
-              <Sparkles />
-            </Button>
-          </Link>
-          <Link to="/apnee">
-            <Button variant="outline" size="icon-xl" aria-label="Hypoxie intermittente">
-              <Wind />
-            </Button>
-          </Link>
-          {profile?.cycle_module_enabled && (
-            <Link to="/cycle">
-              <Button variant="outline" size="icon-xl" aria-label="Cycle">
-                <Moon />
-              </Button>
-            </Link>
-          )}
-          <Link to="/profile">
-            <Button variant="outline" size="icon-xl" aria-label="Mon profil">
-              <UserRound />
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            size="icon-xl"
-            className="sm:hidden"
-            aria-label="Se déconnecter"
-            onClick={() => void supabase.auth.signOut()}
-          >
-            <LogOut />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden sm:inline-flex"
-            onClick={() => void supabase.auth.signOut()}
-          >
-            Se déconnecter
-          </Button>
+        <div className="hidden sm:block">
+          <NavBar items={navItems} />
         </div>
+        <span className="hidden justify-self-end text-sm text-muted-foreground sm:inline">
+          {session?.user.email}
+        </span>
       </header>
-      <main className="mx-auto max-w-2xl p-4">
+
+      <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-4 sm:hidden">
+        <NavBar items={navItems} />
+      </div>
+
+      <main className="mx-auto max-w-2xl p-4 pb-28 sm:pb-4">
         <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
           <Outlet />
         </Suspense>

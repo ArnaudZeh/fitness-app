@@ -34,7 +34,7 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
   await page.getByLabel('Charge (kg)').fill('100')
   await page.getByLabel('Reps').fill('5')
   await page.getByRole('button', { name: 'Série 1' }).click()
-  await expect(page.getByText('Série 1 — 100 kg x 5')).toBeVisible()
+  await expect(page.getByText('Série 1 · 100 kg x 5')).toBeVisible()
 
   // Logging a set auto-starts the rest timer.
   await expect(page.getByText('Repos', { exact: true })).toBeVisible()
@@ -42,7 +42,7 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
 
   // Duplicate the set instead of retyping the same charge/reps.
   await page.getByRole('button', { name: 'Dupliquer cette série' }).click()
-  await expect(page.getByText('Série 2 — 100 kg x 5')).toBeVisible()
+  await expect(page.getByText('Série 2 · 100 kg x 5')).toBeVisible()
 
   await page.getByRole('button', { name: 'Terminer la séance' }).click()
   await expect(page.getByText('Terminée')).toBeVisible()
