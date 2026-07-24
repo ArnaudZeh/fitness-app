@@ -1,7 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import { fetchProgressPhotos, getSignedPhotoUrl } from '@/lib/progress-photos-api'
 import { mergeFeedEntries } from '@/lib/social-display'
-import type { FeedEntry, MilestoneFeedEntry, PhotoFeedEntry } from '@/lib/social-display'
+import type {
+  FeedEntry,
+  MilestoneFeedEntry,
+  MilestoneWithImage,
+  PhotoFeedEntry,
+} from '@/lib/social-display'
 
 // public_profiles only ever contains rows for users who opted in — a
 // missing lookup (own entries, before this user opted in themselves) falls
@@ -52,6 +57,25 @@ export async function fetchFeed(): Promise<FeedEntry[]> {
   )
 
   return mergeFeedEntries(milestoneEntries, photoEntries)
+}
+
+// Own milestones only (never another user's, even if opted into sharing) —
+// this is for the dashboard's personal "latest record" glance, not the feed.
+export async function fetchLatestMilestone(): Promise<MilestoneWithImage | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('milestones')
+    .select('*, exercise:exercises(image_url)')
+    .eq('user_id', user.id)
+    .order('achieved_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
 }
 
 export async function deleteMilestone(id: string): Promise<void> {

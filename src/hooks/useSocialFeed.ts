@@ -9,6 +9,10 @@ export function useSocialFeed() {
   return useQuery({ queryKey: feedKey, queryFn: api.fetchFeed })
 }
 
+export function useLatestMilestone() {
+  return useQuery({ queryKey: ['latest-milestone'], queryFn: api.fetchLatestMilestone })
+}
+
 export function useDeleteMilestone() {
   const queryClient = useQueryClient()
   return useMutation({

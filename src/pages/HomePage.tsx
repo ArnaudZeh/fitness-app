@@ -24,6 +24,7 @@ import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
+import { useLatestMilestone } from '@/hooks/useSocialFeed'
 import {
   buildTrendSummary,
   computeDailyVolume,
@@ -32,6 +33,7 @@ import {
 } from '@/lib/analytics'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
+import { MILESTONE_TYPE_LABELS, formatMilestoneValue } from '@/lib/social-display'
 import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { Program } from '@/lib/programs-api'
 import type { Profile } from '@/lib/profile-api'
@@ -63,6 +65,8 @@ export function HomePage() {
       <TodayCard program={activeProgram} />
 
       {history && history.length > 0 && <RecentHighlightCard history={history} />}
+
+      <LatestMilestoneCard />
 
       <ThisWeekCard history={history ?? []} />
 
@@ -222,6 +226,38 @@ function RecentHighlightCard({
   )
 }
 
+function LatestMilestoneCard() {
+  const { data: milestone } = useLatestMilestone()
+  if (!milestone) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Dernier record</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          {milestone.exercise_id && (
+            <ExerciseThumbnail imageUrl={milestone.exercise?.image_url ?? null} muscleGroup={null} />
+          )}
+          <div>
+            <p className="font-medium">
+              {MILESTONE_TYPE_LABELS[milestone.milestone_type]}
+              {milestone.exercise_name && ` · ${milestone.exercise_name}`}
+            </p>
+            <p className="font-mono text-lg font-semibold tabular-nums">
+              {formatMilestoneValue(milestone)}
+            </p>
+          </div>
+        </div>
+        <Link to="/feed" className="text-sm text-primary hover:underline">
+          Voir tous les records →
+        </Link>
+      </CardContent>
+    </Card>
+  )
+}
+
 function ThisWeekCard({
   history,
 }: {
@@ -288,10 +324,14 @@ function WeightCard({
               </p>
             )}
             {targetWeightKg !== null && (
-              <p className="text-sm text-muted-foreground">
-                Objectif : {targetWeightKg} kg (
-                {Math.abs(latest.weight_kg - targetWeightKg).toFixed(1)} kg restants)
-              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Objectif : {targetWeightKg} kg</span>
+                <Badge variant={latest.weight_kg === targetWeightKg ? 'default' : 'outline'}>
+                  {latest.weight_kg === targetWeightKg
+                    ? 'Atteint'
+                    : `${Math.abs(latest.weight_kg - targetWeightKg).toFixed(1)} kg restants`}
+                </Badge>
+              </div>
             )}
             <Link to="/profile" className="text-sm text-primary hover:underline">
               Voir l'historique →
