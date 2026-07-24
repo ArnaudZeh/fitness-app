@@ -25,8 +25,8 @@ export function AppLayout() {
   }, [userId])
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3">
+    <div className="flex h-dvh flex-col bg-background text-foreground">
+      <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3">
         <Link to="/" className="font-heading text-lg font-semibold">
           Fitness
         </Link>
@@ -38,15 +38,20 @@ export function AppLayout() {
         </span>
       </header>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 px-2 pb-2 sm:hidden">
-        <NavBar items={NAV_ITEMS} />
-      </div>
-
-      <main className="mx-auto max-w-2xl p-4 pb-24 sm:pb-4">
+      <main className="mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto p-4">
         <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
           <Outlet />
         </Suspense>
       </main>
+
+      {/* Sibling of main (not position:fixed) so it sits exactly at the
+          shell's bottom edge by construction — a fixed-position nav here
+          used to leave a dead scroll gap on mobile once the browser's
+          address bar hides/shows, since fixed elements and the svh unit
+          don't always agree on where "bottom" is. */}
+      <div className="shrink-0 px-2 pb-2 sm:hidden">
+        <NavBar items={NAV_ITEMS} />
+      </div>
     </div>
   )
 }
