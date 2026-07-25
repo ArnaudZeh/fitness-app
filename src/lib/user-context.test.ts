@@ -19,6 +19,7 @@ function fakeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
     id: 'user-1',
     display_name: null,
+    avatar_path: null,
     date_of_birth: null,
     sex: null,
     height_cm: null,

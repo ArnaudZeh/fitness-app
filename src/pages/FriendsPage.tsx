@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { UserPlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Avatar } from '@/components/Avatar'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import {
   useAcceptFriendRequest,
@@ -202,7 +204,13 @@ function FriendsListCard({ entries }: { entries: FriendEntry[] }) {
                 key={entry.friendshipId}
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
-                <span className="text-sm font-medium">{entry.displayName}</span>
+                <Link
+                  to={`/friends/${entry.userId}`}
+                  className="flex items-center gap-2 text-sm font-medium hover:underline"
+                >
+                  <Avatar url={entry.avatarUrl} displayName={entry.displayName} size="sm" />
+                  {entry.displayName}
+                </Link>
                 <ConfirmDialog
                   trigger={
                     <Button type="button" variant="ghost" size="icon-sm" aria-label="Retirer cet ami">

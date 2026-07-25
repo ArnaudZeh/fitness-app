@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { LogOut, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,10 +13,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { AiSettingsSection } from '@/components/AiSettingsSection'
+import { Avatar } from '@/components/Avatar'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DataOwnershipSection } from '@/components/DataOwnershipSection'
 import { supabase } from '@/lib/supabase'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
+import { useAvatarUrl, useRemoveAvatar, useUploadAvatar } from '@/hooks/useAvatar'
 import {
   useDeleteWeightEntry,
   useLogWeightEntry,
@@ -63,6 +65,7 @@ export function ProfilePage() {
           <LogOut /> Se déconnecter
         </Button>
       </div>
+      <AvatarSection profile={profile} />
       <ProfileForm profile={profile} />
       <WeightSection />
       <CycleModuleSection profile={profile} />
@@ -81,6 +84,70 @@ function AppVersionFooter() {
     <p className="pt-2 text-center text-xs text-muted-foreground">
       Version {__APP_VERSION__} · {buildDate}
     </p>
+  )
+}
+
+function AvatarSection({ profile }: { profile: Profile }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadAvatar = useUploadAvatar()
+  const removeAvatar = useRemoveAvatar()
+  const { data: avatarUrl } = useAvatarUrl(profile.avatar_path)
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    uploadAvatar.mutate(file)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Photo de profil</CardTitle>
+      </CardHeader>
+      <CardContent className="flex items-center gap-4">
+        <Avatar url={avatarUrl ?? null} displayName={profile.display_name ?? '?'} size="lg" />
+        <div className="flex flex-col items-start gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="Choisir une photo de profil"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          {(uploadAvatar.isError || removeAvatar.isError) && (
+            <p role="alert" className="text-sm text-destructive">
+              Impossible de mettre à jour la photo de profil.
+            </p>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploadAvatar.isPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploadAvatar.isPending
+              ? 'Envoi…'
+              : profile.avatar_path
+                ? 'Changer la photo'
+                : 'Ajouter une photo'}
+          </Button>
+          {profile.avatar_path && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={removeAvatar.isPending}
+              onClick={() => removeAvatar.mutate()}
+            >
+              Retirer la photo
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

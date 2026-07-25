@@ -405,6 +405,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           created_at: string
           cycle_module_enabled: boolean
           date_of_birth: string | null
@@ -419,6 +420,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_path?: string | null
           created_at?: string
           cycle_module_enabled?: boolean
           date_of_birth?: string | null
@@ -433,6 +435,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_path?: string | null
           created_at?: string
           cycle_module_enabled?: boolean
           date_of_birth?: string | null
@@ -840,6 +843,30 @@ export type Database = {
       }
     }
     Views: {
+      friend_profile_details: {
+        Row: {
+          age: number | null
+          avatar_path: string | null
+          display_name: string | null
+          goal: string | null
+          id: string | null
+        }
+        Insert: {
+          age?: never
+          avatar_path?: string | null
+          display_name?: string | null
+          goal?: string | null
+          id?: string | null
+        }
+        Update: {
+          age?: never
+          avatar_path?: string | null
+          display_name?: string | null
+          goal?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           display_name: string | null

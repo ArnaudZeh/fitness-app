@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { getSignedAvatarUrl } from '@/lib/avatar-api'
 
 export interface UserSearchResult {
   id: string
@@ -9,6 +10,7 @@ export interface FriendEntry {
   friendshipId: string
   userId: string
   displayName: string
+  avatarUrl: string | null
 }
 
 export interface FriendsData {
@@ -64,6 +66,24 @@ export async function fetchFriendsData(): Promise<FriendsData> {
   if (profilesError) throw profilesError
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? 'Utilisateur']))
 
+  // friend_profile_details only returns a row for someone who's already an
+  // accepted friend (or self) — a still-pending request simply won't have
+  // one, which is fine: those entries just get no avatar rather than an
+  // error, since they can't be resolved to a signed URL either way yet.
+  const { data: details, error: detailsError } = await supabase
+    .from('friend_profile_details')
+    .select('id, avatar_path')
+    .in('id', otherUserIds)
+  if (detailsError) throw detailsError
+  const avatarUrlById = new Map(
+    await Promise.all(
+      (details ?? []).map(async (d): Promise<[string, string | null]> => [
+        d.id ?? '',
+        d.avatar_path ? await getSignedAvatarUrl(d.avatar_path) : null,
+      ]),
+    ),
+  )
+
   const friends: FriendEntry[] = []
   const incomingRequests: FriendEntry[] = []
   const outgoingRequests: FriendEntry[] = []
@@ -74,6 +94,7 @@ export async function fetchFriendsData(): Promise<FriendsData> {
       friendshipId: row.id,
       userId: otherId,
       displayName: nameById.get(otherId) ?? 'Utilisateur',
+      avatarUrl: avatarUrlById.get(otherId) ?? null,
     }
     if (row.status === 'accepted') {
       friends.push(entry)
