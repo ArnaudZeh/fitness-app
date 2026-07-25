@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useAuthStore } from '@/lib/auth-store'
+import { useFriendsData } from '@/hooks/useFriends'
 import {
   useAddComment,
   useComments,
@@ -31,13 +32,20 @@ export function FeedPage() {
   const currentUserId = useAuthStore((state) => state.session?.user.id)
   const deleteMilestone = useDeleteMilestone()
   const deletePost = useDeletePost()
+  const { data: friends } = useFriendsData()
+  const incomingRequestsCount = friends?.incomingRequests.length ?? 0
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Feed</h1>
-        <Link to="/friends" className="text-sm text-primary hover:underline">
+        <Link to="/friends" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
           Gérer mes amis →
+          {incomingRequestsCount > 0 && (
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+              {incomingRequestsCount > 9 ? '9+' : incomingRequestsCount}
+            </span>
+          )}
         </Link>
       </div>
 

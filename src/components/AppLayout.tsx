@@ -3,20 +3,26 @@ import { Link, Outlet } from 'react-router'
 import { Bot, Dumbbell, Home, Sparkles, Trophy, UserRound } from 'lucide-react'
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
 import { useAuthStore } from '@/lib/auth-store'
+import { useFriendsData } from '@/hooks/useFriends'
 import { syncTimezone } from '@/lib/profile-api'
-
-const NAV_ITEMS: NavItem[] = [
-  { name: 'Accueil', url: '/', icon: Home },
-  { name: 'Programmes', url: '/programs', icon: Dumbbell },
-  { name: 'Coach', url: '/coach', icon: Bot },
-  { name: 'Feed', url: '/feed', icon: Trophy },
-  { name: 'Bien-être', url: '/bien-etre', icon: Sparkles },
-  { name: 'Profil', url: '/profile', icon: UserRound },
-]
 
 export function AppLayout() {
   const session = useAuthStore((state) => state.session)
   const userId = session?.user.id
+  // Requests are only reachable via the "Gérer mes amis" link on the Feed
+  // page (no dedicated nav tab), so a corner badge on the Feed icon is the
+  // only way a pending request is ever noticed without opening it first.
+  const { data: friends } = useFriendsData()
+  const incomingRequestsCount = friends?.incomingRequests.length ?? 0
+
+  const navItems: NavItem[] = [
+    { name: 'Accueil', url: '/', icon: Home },
+    { name: 'Programmes', url: '/programs', icon: Dumbbell },
+    { name: 'Coach', url: '/coach', icon: Bot },
+    { name: 'Feed', url: '/feed', icon: Trophy, badgeCount: incomingRequestsCount },
+    { name: 'Bien-être', url: '/bien-etre', icon: Sparkles },
+    { name: 'Profil', url: '/profile', icon: UserRound },
+  ]
 
   // Best-effort — a failed sync just means the wellness reminder scheduler
   // uses a stale timezone until the next successful visit, not a broken UI.
@@ -31,7 +37,7 @@ export function AppLayout() {
           Fitness
         </Link>
         <div className="hidden sm:block">
-          <NavBar items={NAV_ITEMS} />
+          <NavBar items={navItems} />
         </div>
         <span className="hidden justify-self-end text-sm text-muted-foreground sm:inline">
           {session?.user.email}
@@ -50,7 +56,7 @@ export function AppLayout() {
           address bar hides/shows, since fixed elements and the svh unit
           don't always agree on where "bottom" is. */}
       <div className="shrink-0 px-2 pb-2 sm:hidden">
-        <NavBar items={NAV_ITEMS} />
+        <NavBar items={navItems} />
       </div>
     </div>
   )

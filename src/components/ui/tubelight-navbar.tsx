@@ -10,6 +10,9 @@ export interface NavItem {
   // Falls back to `name` — set this when the visible pill label is
   // shortened for space but the accessible name should stay descriptive.
   ariaLabel?: string
+  // Small count dot rendered on the icon's corner (e.g. pending friend
+  // requests) — omitted or 0 renders nothing.
+  badgeCount?: number
 }
 
 interface NavBarProps {
@@ -52,7 +55,14 @@ export function NavBar({ items, className }: NavBarProps) {
               isActive && 'text-primary',
             )}
           >
-            <Icon size={20} strokeWidth={2.25} className="sm:size-4" />
+            <span className="relative inline-flex">
+              <Icon size={20} strokeWidth={2.25} className="sm:size-4" />
+              {!!item.badgeCount && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+                  {item.badgeCount > 9 ? '9+' : item.badgeCount}
+                </span>
+              )}
+            </span>
             <span className="max-w-full truncate">{item.name}</span>
             {isActive && (
               <motion.div
