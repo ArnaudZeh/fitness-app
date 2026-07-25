@@ -278,6 +278,36 @@ export type Database = {
         }
         Relationships: []
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          user_a: string | null
+          user_b: string | null
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          user_a?: string | null
+          user_b?: string | null
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          user_a?: string | null
+          user_b?: string | null
+        }
+        Relationships: []
+      }
       milestones: {
         Row: {
           achieved_at: string
@@ -806,6 +836,10 @@ export type Database = {
       ai_vault_update_secret: {
         Args: { p_id: string; p_secret: string }
         Returns: undefined
+      }
+      are_friends: {
+        Args: { p_user_1: string; p_user_2: string }
+        Returns: boolean
       }
       can_view_feed_target: {
         Args: { p_target_id: string; p_target_type: string }

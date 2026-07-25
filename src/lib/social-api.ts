@@ -4,9 +4,10 @@ import { fetchReactionSummary } from '@/lib/reactions-api'
 import { mergeFeedEntries } from '@/lib/social-display'
 import type { FeedEntry, MilestoneFeedEntry, PostFeedEntry } from '@/lib/social-display'
 
-// public_profiles only ever contains rows for users who opted in — a
-// missing lookup (own entries, before this user opted in themselves) falls
-// back to a generic label rather than showing nothing.
+// public_profiles itself has no visibility restriction (needed so the
+// friends search can find anyone by name) — RLS on milestones/posts is what
+// actually limits this query to the current user's own entries and their
+// friends'. A missing name lookup still falls back to a generic label.
 export async function fetchFeed(): Promise<FeedEntry[]> {
   const [
     { data: milestones, error: milestonesError },

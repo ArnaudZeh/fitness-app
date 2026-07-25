@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { Heart, MessageCircle, MessageSquare, Trash2, Trophy } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,7 +34,12 @@ export function FeedPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Feed</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Feed</h1>
+        <Link to="/friends" className="text-sm text-primary hover:underline">
+          Gérer mes amis →
+        </Link>
+      </div>
 
       <CreatePostCard />
 
@@ -48,8 +54,8 @@ export function FeedPage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
-              Rien pour l'instant. Les objectifs de poids atteints, les records et les posts de
-              tout le monde apparaîtront ici.
+              Rien pour l'instant. Les objectifs de poids atteints, les records et les posts de tes
+              amis apparaîtront ici — ajoute des amis pour commencer.
             </p>
           </CardContent>
         </Card>
