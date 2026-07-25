@@ -55,6 +55,7 @@ function fakePostEntry(id: string, occurredAt: string): PostFeedEntry {
     occurredAt,
     post,
     signedUrl: 'https://example.test/signed',
+    mentions: [],
     ...noReactions,
   }
 }

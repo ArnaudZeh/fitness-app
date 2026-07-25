@@ -1,4 +1,5 @@
 import type { Database } from '@/lib/database.types'
+import type { MentionCandidate } from '@/lib/mentions'
 
 export type Milestone = Database['public']['Tables']['milestones']['Row']
 export type Post = Database['public']['Tables']['posts']['Row']
@@ -39,6 +40,7 @@ export interface PostFeedEntry extends FeedEntryCommon {
   kind: 'post'
   post: Post
   signedUrl: string | null
+  mentions: MentionCandidate[]
 }
 
 export type FeedEntry = MilestoneFeedEntry | PostFeedEntry

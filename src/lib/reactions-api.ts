@@ -1,10 +1,13 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import type { FeedReactions, FeedTargetType } from '@/lib/social-display'
+import { fetchMentionsByContentId } from '@/lib/mentions-api'
+import type { MentionCandidate } from '@/lib/mentions'
 
 export type FeedComment = Database['public']['Tables']['feed_comments']['Row']
 export interface FeedCommentWithAuthor extends FeedComment {
   displayName: string
+  mentions: MentionCandidate[]
 }
 
 async function requireUserId(): Promise<string> {
@@ -100,10 +103,15 @@ export async function fetchComments(
   const displayNameByUserId = new Map(
     (profiles ?? []).map((p) => [p.id, p.display_name ?? 'Utilisateur']),
   )
+  const mentionsByCommentId = await fetchMentionsByContentId(
+    'comment',
+    comments.map((c) => c.id),
+  )
 
   return comments.map((comment) => ({
     ...comment,
     displayName: displayNameByUserId.get(comment.user_id) ?? 'Utilisateur',
+    mentions: mentionsByCommentId.get(comment.id) ?? [],
   }))
 }
 
@@ -111,12 +119,15 @@ export async function addComment(
   targetType: FeedTargetType,
   targetId: string,
   content: string,
-): Promise<void> {
+): Promise<FeedComment> {
   const userId = await requireUserId()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('feed_comments')
     .insert({ user_id: userId, target_type: targetType, target_id: targetId, content })
+    .select()
+    .single()
   if (error) throw error
+  return data
 }
 
 export async function deleteComment(id: string): Promise<void> {

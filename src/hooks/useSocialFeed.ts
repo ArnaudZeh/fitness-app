@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/social-api'
 import * as postsApi from '@/lib/posts-api'
 import * as reactionsApi from '@/lib/reactions-api'
+import * as mentionsApi from '@/lib/mentions-api'
+import { extractMentions, uniqueMentionedUserIds } from '@/lib/mentions'
+import { useFriendsData } from '@/hooks/useFriends'
 import type { FeedTargetType } from '@/lib/social-display'
 import type { Post } from '@/lib/social-display'
 
@@ -23,8 +26,19 @@ export function useDeleteMilestone() {
 
 export function useCreatePost() {
   const queryClient = useQueryClient()
+  const { data: friends } = useFriendsData()
   return useMutation({
-    mutationFn: (input: postsApi.CreatePostInput) => postsApi.createPost(input),
+    mutationFn: async (input: postsApi.CreatePostInput) => {
+      const post = await postsApi.createPost(input)
+      if (input.content && friends) {
+        const candidates = friends.friends.map((f) => ({ userId: f.userId, displayName: f.displayName }))
+        const mentionedIds = uniqueMentionedUserIds(extractMentions(input.content, candidates))
+        if (mentionedIds.length > 0) {
+          await mentionsApi.createMentionNotifications('post', post.id, mentionedIds).catch(() => {})
+        }
+      }
+      return post
+    },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: feedKey }),
   })
 }
@@ -63,8 +77,19 @@ export function useComments(targetType: FeedTargetType, targetId: string, enable
 
 export function useAddComment(targetType: FeedTargetType, targetId: string) {
   const queryClient = useQueryClient()
+  const { data: friends } = useFriendsData()
   return useMutation({
-    mutationFn: (content: string) => reactionsApi.addComment(targetType, targetId, content),
+    mutationFn: async (content: string) => {
+      const comment = await reactionsApi.addComment(targetType, targetId, content)
+      if (friends) {
+        const candidates = friends.friends.map((f) => ({ userId: f.userId, displayName: f.displayName }))
+        const mentionedIds = uniqueMentionedUserIds(extractMentions(content, candidates))
+        if (mentionedIds.length > 0) {
+          await mentionsApi.createMentionNotifications('comment', comment.id, mentionedIds).catch(() => {})
+        }
+      }
+      return comment
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: commentsKey(targetType, targetId) })
       void queryClient.invalidateQueries({ queryKey: feedKey })

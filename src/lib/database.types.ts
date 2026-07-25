@@ -278,6 +278,36 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_mentions: {
+        Row: {
+          author_id: string
+          content_id: string
+          content_type: string
+          created_at: string
+          id: string
+          mentioned_user_id: string
+          read_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content_id: string
+          content_type: string
+          created_at?: string
+          id?: string
+          mentioned_user_id: string
+          read_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          mentioned_user_id?: string
+          read_at?: string | null
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_id: string

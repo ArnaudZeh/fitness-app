@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { getSignedPhotoUrl } from '@/lib/posts-api'
 import { fetchReactionSummary } from '@/lib/reactions-api'
+import { fetchMentionsByContentId } from '@/lib/mentions-api'
 import { mergeFeedEntries } from '@/lib/social-display'
 import type { FeedEntry, MilestoneFeedEntry, PostFeedEntry } from '@/lib/social-display'
 
@@ -41,7 +42,7 @@ export async function fetchFeed(): Promise<FeedEntry[]> {
     (profiles ?? []).map((p) => [p.id, p.display_name ?? 'Utilisateur']),
   )
 
-  const [milestoneReactions, postReactions] = await Promise.all([
+  const [milestoneReactions, postReactions, postMentions] = await Promise.all([
     fetchReactionSummary(
       'milestone',
       milestones.map((m) => m.id),
@@ -51,6 +52,10 @@ export async function fetchFeed(): Promise<FeedEntry[]> {
       'post',
       posts.map((p) => p.id),
       currentUserId,
+    ),
+    fetchMentionsByContentId(
+      'post',
+      posts.map((p) => p.id),
     ),
   ])
   const emptyReactions = { likeCount: 0, likedByMe: false, commentCount: 0 }
@@ -74,6 +79,7 @@ export async function fetchFeed(): Promise<FeedEntry[]> {
       occurredAt: post.created_at,
       post,
       signedUrl: post.storage_path ? await getSignedPhotoUrl(post.storage_path) : null,
+      mentions: postMentions.get(post.id) ?? [],
       ...(postReactions.get(post.id) ?? emptyReactions),
     })),
   )

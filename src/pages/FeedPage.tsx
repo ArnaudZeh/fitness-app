@@ -1,15 +1,15 @@
-import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Heart, MessageCircle, MessageSquare, Trash2, Trophy } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
+import { MentionField } from '@/components/MentionField'
 import { useAuthStore } from '@/lib/auth-store'
 import { useFriendsData } from '@/hooks/useFriends'
+import { useMarkMentionsRead } from '@/hooks/useMentions'
 import {
   useAddComment,
   useComments,
@@ -22,9 +22,34 @@ import {
 } from '@/hooks/useSocialFeed'
 import { formatMilestoneValue, MILESTONE_TYPE_LABELS } from '@/lib/social-display'
 import type { FeedEntry, FeedTargetType } from '@/lib/social-display'
+import { extractMentions } from '@/lib/mentions'
+import type { MentionCandidate } from '@/lib/mentions'
 
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+// Highlights "@Nom" for whoever was actually tagged in this piece of
+// content (passed in as `mentions`, fetched alongside the post/comment) —
+// not a guess from the current viewer's own friends list, which wouldn't
+// necessarily include everyone the author is friends with.
+function MentionedText({ text, mentions }: { text: string; mentions: MentionCandidate[] }) {
+  const matches = extractMentions(text, mentions)
+  if (matches.length === 0) return <>{text}</>
+
+  const parts: ReactNode[] = []
+  let cursor = 0
+  matches.forEach((match, index) => {
+    if (match.start > cursor) parts.push(text.slice(cursor, match.start))
+    parts.push(
+      <span key={index} className="font-medium text-primary">
+        @{match.displayName}
+      </span>,
+    )
+    cursor = match.end
+  })
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return <>{parts}</>
 }
 
 export function FeedPage() {
@@ -34,6 +59,13 @@ export function FeedPage() {
   const deletePost = useDeletePost()
   const { data: friends } = useFriendsData()
   const incomingRequestsCount = friends?.incomingRequests.length ?? 0
+  const { mutate: markMentionsRead } = useMarkMentionsRead()
+
+  // The mention notification badge is meant to clear just by opening the
+  // Feed, unlike friend requests which need an explicit accept/decline.
+  useEffect(() => {
+    markMentionsRead()
+  }, [markMentionsRead])
 
   return (
     <div className="flex flex-col gap-6">
@@ -188,6 +220,8 @@ function CommentsSection({
   const addComment = useAddComment(targetType, targetId)
   const deleteComment = useDeleteComment(targetType, targetId)
   const currentUserId = useAuthStore((state) => state.session?.user.id)
+  const { data: friends } = useFriendsData()
+  const mentionCandidates: MentionCandidate[] = friends?.friends ?? []
   const [draft, setDraft] = useState('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -202,7 +236,8 @@ function CommentsSection({
       {(comments ?? []).map((comment) => (
         <div key={comment.id} className="flex items-start justify-between gap-2 text-sm">
           <p>
-            <span className="font-medium">{comment.displayName}</span> {comment.content}
+            <span className="font-medium">{comment.displayName}</span>{' '}
+            <MentionedText text={comment.content} mentions={comment.mentions} />
           </p>
           {comment.user_id === currentUserId && (
             <ConfirmDialog
@@ -225,12 +260,15 @@ function CommentsSection({
         </div>
       ))}
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <Input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Ajouter un commentaire…"
-          disabled={addComment.isPending}
-        />
+        <div className="flex-1">
+          <MentionField
+            value={draft}
+            onChange={setDraft}
+            candidates={mentionCandidates}
+            placeholder="Ajouter un commentaire… (@ pour taguer un ami)"
+            disabled={addComment.isPending}
+          />
+        </div>
         <Button type="submit" size="sm" disabled={draft.trim() === '' || addComment.isPending}>
           Envoyer
         </Button>
@@ -311,7 +349,11 @@ function PostCard({
             className="max-h-96 w-full rounded-md object-cover"
           />
         )}
-        {post.content && <p className="text-sm">{post.content}</p>}
+        {post.content && (
+          <p className="text-sm">
+            <MentionedText text={post.content} mentions={entry.mentions} />
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">{formatTimestamp(post.created_at)}</p>
         <ReactionBar
           targetType="post"
@@ -327,6 +369,8 @@ function PostCard({
 
 function CreatePostCard() {
   const createPost = useCreatePost()
+  const { data: friends } = useFriendsData()
+  const mentionCandidates: MentionCandidate[] = friends?.friends ?? []
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [content, setContent] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -364,10 +408,12 @@ function CreatePostCard() {
         <CardTitle as="h2">Créer un post</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <Textarea
+        <MentionField
           value={content}
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="Partage une pensée, une victoire…"
+          onChange={setContent}
+          candidates={mentionCandidates}
+          placeholder="Partage une pensée, une victoire… (@ pour taguer un ami)"
+          multiline
         />
 
         <input
