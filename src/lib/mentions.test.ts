@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractMentions, uniqueMentionedUserIds } from '@/lib/mentions'
+import { extractMentions, matchesMentionQuery, uniqueMentionedUserIds } from '@/lib/mentions'
 import type { MentionCandidate } from '@/lib/mentions'
 
 const candidates: MentionCandidate[] = [
@@ -59,5 +59,30 @@ describe('uniqueMentionedUserIds', () => {
   it('dedupes when the same person is mentioned twice', () => {
     const matches = extractMentions('@Tanguy encore @Tanguy', candidates)
     expect(uniqueMentionedUserIds(matches)).toEqual(['u-tanguy'])
+  })
+})
+
+describe('matchesMentionQuery', () => {
+  it('matches everyone on an empty query', () => {
+    expect(matchesMentionQuery('Tanguy', '')).toBe(true)
+  })
+
+  it('matches by first-letter prefix, narrowing as more letters are typed', () => {
+    expect(matchesMentionQuery('Tanguy', 'T')).toBe(true)
+    expect(matchesMentionQuery('Tom', 'T')).toBe(true)
+    expect(matchesMentionQuery('Tanguy', 'To')).toBe(false)
+    expect(matchesMentionQuery('Tom', 'To')).toBe(true)
+  })
+
+  it('does not match a letter that only appears mid-name', () => {
+    expect(matchesMentionQuery('Tanguy', 'ang')).toBe(false)
+  })
+
+  it('matches a later word in a multi-word name', () => {
+    expect(matchesMentionQuery('Tom Dupont', 'Dup')).toBe(true)
+  })
+
+  it('is case-insensitive', () => {
+    expect(matchesMentionQuery('Tanguy', 't')).toBe(true)
   })
 })

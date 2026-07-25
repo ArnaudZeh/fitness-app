@@ -42,7 +42,10 @@ function MentionedText({ text, mentions }: { text: string; mentions: MentionCand
   matches.forEach((match, index) => {
     if (match.start > cursor) parts.push(text.slice(cursor, match.start))
     parts.push(
-      <span key={index} className="font-medium text-primary">
+      <span
+        key={index}
+        className="rounded-md bg-secondary/15 px-1 py-0.5 font-medium text-secondary"
+      >
         @{match.displayName}
       </span>,
     )

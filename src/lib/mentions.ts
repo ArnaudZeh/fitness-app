@@ -37,3 +37,16 @@ export function extractMentions(text: string, candidates: MentionCandidate[]): M
 export function uniqueMentionedUserIds(matches: MentionMatch[]): string[] {
   return [...new Set(matches.map((m) => m.userId))]
 }
+
+// Prefix match against each word of the display name, not a substring
+// search — typing "@t" should surface "Tanguy"/"Tom" the way a first-letter
+// filter would, and "@dup" should still find "Tom Dupont" via the second
+// word. An empty query (bare "@") matches everyone.
+export function matchesMentionQuery(displayName: string, query: string): boolean {
+  if (query.trim() === '') return true
+  const lowerQuery = query.trim().toLowerCase()
+  return displayName
+    .toLowerCase()
+    .split(/\s+/)
+    .some((word) => word.startsWith(lowerQuery))
+}

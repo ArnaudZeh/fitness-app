@@ -3,6 +3,7 @@ import type { ChangeEvent, SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { matchesMentionQuery } from '@/lib/mentions'
 import type { MentionCandidate } from '@/lib/mentions'
 
 interface ActiveQuery {
@@ -94,9 +95,7 @@ export function MentionField({
   }
 
   const suggestions = activeQuery
-    ? candidates
-        .filter((c) => c.displayName.toLowerCase().includes(activeQuery.query.toLowerCase()))
-        .slice(0, 5)
+    ? candidates.filter((c) => matchesMentionQuery(c.displayName, activeQuery.query)).slice(0, 5)
     : []
   const showDropdown = suggestions.length > 0
 
