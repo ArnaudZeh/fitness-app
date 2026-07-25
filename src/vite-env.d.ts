@@ -8,3 +8,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Injected by vite.config.ts's `define` — short git SHA and build
+// timestamp, computed at build time.
+declare const __APP_VERSION__: string
+declare const __BUILD_DATE__: string

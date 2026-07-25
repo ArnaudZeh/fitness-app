@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import path from 'node:path'
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -11,9 +12,26 @@ import { VitePWA } from 'vite-plugin-pwa'
 // when explicitly building for Pages.
 const base = process.env.GITHUB_PAGES === 'true' ? '/fitness-app/' : '/'
 
+// Read directly from git rather than a hand-maintained package.json version
+// (still at the Vite template's default "0.0.0") — commits land on main
+// continuously with no release/tag process, so the short SHA is the only
+// value that's always accurate. Surfaced small at the bottom of Profil as a
+// build reference (e.g. to confirm a deploy actually landed).
+function getGitSha(): string {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    return 'unknown'
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(getGitSha()),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),

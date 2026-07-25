@@ -68,7 +68,19 @@ export function ProfilePage() {
       <CycleModuleSection profile={profile} />
       <AiSettingsSection />
       <DataOwnershipSection />
+      <AppVersionFooter />
     </div>
+  )
+}
+
+function AppVersionFooter() {
+  const buildDate = new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', {
+    dateStyle: 'medium',
+  })
+  return (
+    <p className="pt-2 text-center text-xs text-muted-foreground">
+      Version {__APP_VERSION__} · {buildDate}
+    </p>
   )
 }
 
