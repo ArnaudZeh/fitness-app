@@ -4,6 +4,7 @@ import { Heart, MessageCircle, MessageSquare, Trash2, Trophy } from 'lucide-reac
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar } from '@/components/Avatar'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { MentionField } from '@/components/MentionField'
@@ -131,13 +132,17 @@ export function FeedPage() {
 
 function FeedCardHeader({
   icon: Icon,
+  userId,
   displayName,
+  avatarUrl,
   isOwn,
   onDelete,
   deleteLabel,
 }: {
   icon: LucideIcon
+  userId: string
   displayName: string
+  avatarUrl: string | null
   isOwn: boolean
   onDelete: () => Promise<void>
   deleteLabel: string
@@ -145,10 +150,16 @@ function FeedCardHeader({
   return (
     <CardHeader>
       <CardTitle as="h2" className="flex items-center justify-between gap-2 text-base">
-        <span className="flex items-center gap-2">
-          <Icon className="size-4 text-primary" />
-          {displayName}
-        </span>
+        <Link
+          to={isOwn ? '/profile' : `/friends/${userId}`}
+          className="flex items-center gap-2 hover:underline"
+        >
+          <Avatar url={avatarUrl} displayName={displayName} size="sm" />
+          <span className="flex items-center gap-2">
+            <Icon className="size-4 text-primary" />
+            {displayName}
+          </span>
+        </Link>
         {isOwn && (
           <ConfirmDialog
             trigger={
@@ -294,7 +305,9 @@ function MilestoneCard({
     <Card>
       <FeedCardHeader
         icon={Trophy}
+        userId={entry.userId}
         displayName={entry.displayName}
+        avatarUrl={entry.avatarUrl}
         isOwn={isOwn}
         onDelete={onDelete}
         deleteLabel="Supprimer ce record du feed"
@@ -339,7 +352,9 @@ function PostCard({
     <Card>
       <FeedCardHeader
         icon={MessageSquare}
+        userId={entry.userId}
         displayName={entry.displayName}
+        avatarUrl={entry.avatarUrl}
         isOwn={isOwn}
         onDelete={onDelete}
         deleteLabel="Supprimer ce post du feed"

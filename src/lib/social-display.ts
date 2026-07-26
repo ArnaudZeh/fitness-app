@@ -24,6 +24,7 @@ interface FeedEntryCommon extends FeedReactions {
   id: string
   userId: string
   displayName: string
+  avatarUrl: string | null
   occurredAt: string
 }
 
