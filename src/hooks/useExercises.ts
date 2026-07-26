@@ -2,9 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/exercises-api'
 
 const exercisesKey = ['exercises'] as const
+const usageCountsKey = ['exercises', 'usage-counts'] as const
 
 export function useExercises() {
   return useQuery({ queryKey: exercisesKey, queryFn: api.fetchExercises })
+}
+
+export function useExerciseUsageCounts() {
+  return useQuery({ queryKey: usageCountsKey, queryFn: api.fetchExerciseUsageCounts })
 }
 
 export function useCreateExercise() {
