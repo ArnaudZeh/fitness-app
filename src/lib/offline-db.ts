@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { ProgramFocus } from '@/lib/programs-api'
-import type { SessionLogStatus } from '@/lib/session-logs-api'
+import type { SessionLogStatus, SetSide } from '@/lib/session-logs-api'
 
 // Local-first cache + write queue for the session-logging domain (the one
 // part of the app the brief requires to work with zero network — logging a
@@ -22,6 +22,7 @@ export interface CachedPlanExercise {
   target_rpe: number | null
   target_rest_seconds: number | null
   superset_group: string | null
+  is_unilateral: boolean
 }
 
 export interface CachedSessionPlan {
@@ -53,6 +54,7 @@ export interface LocalSessionLogSet {
   session_log_id: string
   session_template_exercise_id: string
   set_number: number
+  side: SetSide
   actual_reps: number
   actual_weight_kg: number
   actual_rpe: number | null

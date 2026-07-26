@@ -157,6 +157,7 @@ export async function duplicateProgram(program: Program): Promise<Program> {
             target_rest_seconds: slot.target_rest_seconds,
             notes: slot.notes,
             superset_group: slot.superset_group,
+            is_unilateral: slot.is_unilateral,
           })),
         )
       if (newSlotsError) throw newSlotsError

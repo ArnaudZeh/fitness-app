@@ -53,6 +53,7 @@ export function ExerciseSlotFormDialog({
   )
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [supersetGroup, setSupersetGroup] = useState(initialValue?.superset_group ?? '')
+  const [isUnilateral, setIsUnilateral] = useState(initialValue?.is_unilateral ?? false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -79,6 +80,7 @@ export function ExerciseSlotFormDialog({
           targetRestSeconds.trim() === '' ? null : Number(targetRestSeconds),
         notes: notes.trim() === '' ? null : notes,
         superset_group: supersetGroup.trim() === '' ? null : supersetGroup.trim(),
+        is_unilateral: isUnilateral,
       })
       setOpen(false)
     } finally {
@@ -207,6 +209,23 @@ export function ExerciseSlotFormDialog({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <input
+                id="is-unilateral"
+                type="checkbox"
+                checked={isUnilateral}
+                onChange={(event) => setIsUnilateral(event.target.checked)}
+                className="size-4 rounded border-input accent-primary"
+              />
+              <Label htmlFor="is-unilateral">Unilatéral</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Un côté à la fois (ex : tirage vertical câble en unilatéral). Pendant la
+              séance, chaque série se logue séparément à gauche et à droite.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

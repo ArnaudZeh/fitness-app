@@ -94,6 +94,7 @@ export async function applyProgramProposal(proposal: ProgramProposal): Promise<P
         target_rest_seconds: restSeconds,
         notes: null,
         superset_group: null,
+        is_unilateral: false,
       })
     }
   }

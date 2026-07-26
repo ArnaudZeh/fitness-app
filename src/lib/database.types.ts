@@ -521,6 +521,7 @@ export type Database = {
           session_log_id: string
           session_template_exercise_id: string
           set_number: number
+          side: string
           updated_at: string
           user_id: string
         }
@@ -533,6 +534,7 @@ export type Database = {
           session_log_id: string
           session_template_exercise_id: string
           set_number: number
+          side?: string
           updated_at?: string
           user_id: string
         }
@@ -545,6 +547,7 @@ export type Database = {
           session_log_id?: string
           session_template_exercise_id?: string
           set_number?: number
+          side?: string
           updated_at?: string
           user_id?: string
         }
@@ -621,6 +624,7 @@ export type Database = {
           created_at: string
           exercise_id: string
           id: string
+          is_unilateral: boolean
           notes: string | null
           order_index: number
           session_template_id: string
@@ -637,6 +641,7 @@ export type Database = {
           created_at?: string
           exercise_id: string
           id?: string
+          is_unilateral?: boolean
           notes?: string | null
           order_index: number
           session_template_id: string
@@ -653,6 +658,7 @@ export type Database = {
           created_at?: string
           exercise_id?: string
           id?: string
+          is_unilateral?: boolean
           notes?: string | null
           order_index?: number
           session_template_id?: string

@@ -94,6 +94,7 @@ export function SessionTemplateCard({
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{slot.exercise.name}</p>
+                      {slot.is_unilateral && <Badge variant="outline">Unilatéral</Badge>}
                       {slot.superset_group && (
                         <Badge variant="outline">Superset {slot.superset_group}</Badge>
                       )}

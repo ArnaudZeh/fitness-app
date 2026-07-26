@@ -53,6 +53,7 @@ function makeSet(overrides: Partial<LocalSessionLogSet> = {}): LocalSessionLogSe
     session_log_id: 'log-1',
     session_template_exercise_id: 'slot-1',
     set_number: 1,
+    side: 'both',
     actual_reps: 8,
     actual_weight_kg: 60,
     actual_rpe: null,

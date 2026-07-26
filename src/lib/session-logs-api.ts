@@ -11,6 +11,12 @@ import { syncPendingChanges } from '@/lib/offline-sync'
 import type { ProgramFocus } from '@/lib/programs-api'
 
 export type SessionLogStatus = 'in_progress' | 'completed'
+// 'both' for a regular (bilateral) set — a real tri-state rather than a
+// nullable column, so the DB's uniqueness constraint on (log, slot,
+// set_number, side) still guarantees exactly one row per set_number for
+// non-unilateral exercises (two NULLs never collide in Postgres, 'both'
+// does).
+export type SetSide = 'left' | 'right' | 'both'
 
 export interface SessionLog {
   id: string
@@ -28,6 +34,7 @@ export interface SessionLogSet {
   session_log_id: string
   session_template_exercise_id: string
   set_number: number
+  side: SetSide
   actual_reps: number
   actual_weight_kg: number
   actual_rpe: number | null
@@ -36,6 +43,7 @@ export interface SessionLogSet {
 export interface SessionLogSetInput {
   session_template_exercise_id: string
   set_number: number
+  side: SetSide
   actual_reps: number
   actual_weight_kg: number
   actual_rpe: number | null
@@ -101,6 +109,7 @@ export async function cacheSessionPlan(
       target_rpe: slot.target_rpe,
       target_rest_seconds: slot.target_rest_seconds,
       superset_group: slot.superset_group,
+      is_unilateral: slot.is_unilateral,
     }))
 
     const plan: CachedSessionPlan = {

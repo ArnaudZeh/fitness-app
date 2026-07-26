@@ -77,6 +77,7 @@ export async function applySessionAdaptation(
       target_rest_seconds: restSeconds,
       notes: null,
       superset_group: null,
+      is_unilateral: false,
     })
   }
 }

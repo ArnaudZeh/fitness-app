@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { offlineDb } from '@/lib/offline-db'
-import type { SessionLogStatus } from '@/lib/session-logs-api'
+import type { SessionLogStatus, SetSide } from '@/lib/session-logs-api'
 
 let syncing = false
 
@@ -91,6 +91,7 @@ async function syncDirtySets(): Promise<void> {
         session_log_id: set.session_log_id,
         session_template_exercise_id: set.session_template_exercise_id,
         set_number: set.set_number,
+        side: set.side,
         actual_reps: set.actual_reps,
         actual_weight_kg: set.actual_weight_kg,
         actual_rpe: set.actual_rpe,
@@ -155,6 +156,7 @@ export async function refreshSessionLogSetsCache(sessionLogId: string): Promise<
         session_log_id: row.session_log_id,
         session_template_exercise_id: row.session_template_exercise_id,
         set_number: row.set_number,
+        side: row.side as SetSide,
         actual_reps: row.actual_reps,
         actual_weight_kg: row.actual_weight_kg,
         actual_rpe: row.actual_rpe,

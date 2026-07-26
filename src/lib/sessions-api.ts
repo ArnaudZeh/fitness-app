@@ -27,6 +27,7 @@ export interface SessionTemplateExerciseInput {
   target_rest_seconds: number | null
   notes: string | null
   superset_group: string | null
+  is_unilateral: boolean
 }
 
 // Rest interval defaults by training focus, since the same duration doesn't
