@@ -86,17 +86,23 @@ export function SessionTemplateCard({
                 key={slot.id}
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <ExerciseThumbnail
                     imageUrl={slot.exercise.image_url}
                     muscleGroup={slot.exercise.muscle_group}
                   />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{slot.exercise.name}</p>
-                      {slot.is_unilateral && <Badge variant="outline">Unilatéral</Badge>}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate font-medium">{slot.exercise.name}</p>
+                      {slot.is_unilateral && (
+                        <Badge variant="outline" className="shrink-0">
+                          Unilatéral
+                        </Badge>
+                      )}
                       {slot.superset_group && (
-                        <Badge variant="outline">Superset {slot.superset_group}</Badge>
+                        <Badge variant="outline" className="shrink-0">
+                          Superset {slot.superset_group}
+                        </Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">

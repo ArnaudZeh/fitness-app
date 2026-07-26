@@ -56,6 +56,29 @@ export function ExerciseSlotFormDialog({
   const [isUnilateral, setIsUnilateral] = useState(initialValue?.is_unilateral ?? false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // The dialog trigger for "add" (no initialValue) is a single long-lived
+  // component instance reused across every open — without this, its state
+  // stays stuck on whatever was last picked instead of starting blank the
+  // next time it's opened. "Edit" dialogs don't need this: each one is its
+  // own instance scoped to a specific slot (SessionTemplateCard.tsx maps
+  // one per slot), so there's no state to carry over between opens.
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen && !initialValue) {
+      setExerciseId('')
+      setNewExerciseName('')
+      setNewExerciseMuscleGroup('')
+      setTargetSets(3)
+      setTargetRepsMin(8)
+      setTargetRepsMax(12)
+      setTargetRpe('')
+      setTargetRestSeconds('')
+      setNotes('')
+      setSupersetGroup('')
+      setIsUnilateral(false)
+    }
+    setOpen(nextOpen)
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsSubmitting(true)
@@ -89,7 +112,7 @@ export function ExerciseSlotFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -223,8 +246,8 @@ export function ExerciseSlotFormDialog({
               <Label htmlFor="is-unilateral">Unilatéral</Label>
             </div>
             <p className="text-xs text-muted-foreground">
-              Un côté à la fois (ex : tirage vertical câble en unilatéral). Pendant la
-              séance, chaque série se logue séparément à gauche et à droite.
+              Un côté à la fois (ex : tirage vertical câble en unilatéral) — affiché comme
+              repère pendant la séance.
             </p>
           </div>
 
