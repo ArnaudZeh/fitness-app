@@ -1,6 +1,6 @@
 import { Suspense, useEffect } from 'react'
 import { Link, Outlet } from 'react-router'
-import { Bot, Dumbbell, Home, Sparkles, Trophy, UserRound } from 'lucide-react'
+import { Bot, Dumbbell, Home, Sparkles, Trophy } from 'lucide-react'
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
 import { useAuthStore } from '@/lib/auth-store'
 import { useFriendsData } from '@/hooks/useFriends'
@@ -24,7 +24,6 @@ export function AppLayout() {
     { name: 'Coach', url: '/coach', icon: Bot },
     { name: 'Feed', url: '/feed', icon: Trophy, badgeCount: feedBadgeCount },
     { name: 'Bien-être', url: '/bien-etre', icon: Sparkles },
-    { name: 'Profil', url: '/profile', icon: UserRound },
   ]
 
   // Best-effort — a failed sync just means the wellness reminder scheduler
