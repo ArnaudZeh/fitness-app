@@ -72,11 +72,21 @@ export function useDeleteSessionTemplateExercise(templateId: string) {
   })
 }
 
-export function useSwapSessionTemplateExerciseOrder(templateId: string) {
+export function useReorderSessionTemplateExercises(templateId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ a, b }: { a: SessionTemplateExercise; b: SessionTemplateExercise }) =>
-      api.swapSessionTemplateExerciseOrder(a, b),
+    mutationFn: (slots: SessionTemplateExercise[]) =>
+      api.reorderSessionTemplateExercises(slots),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
+  })
+}
+
+export function useSetGroupRestSeconds(templateId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slotIds, restSeconds }: { slotIds: string[]; restSeconds: number | null }) =>
+      api.setGroupRestSeconds(slotIds, restSeconds),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
   })

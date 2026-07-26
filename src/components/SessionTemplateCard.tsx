@@ -1,7 +1,26 @@
-import { ArrowDown, ArrowUp, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { GripVertical, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ExerciseSlotFormDialog } from '@/components/ExerciseSlotFormDialog'
@@ -11,13 +30,14 @@ import { useCreateExercise, useExercises } from '@/hooks/useExercises'
 import {
   useCreateSessionTemplateExercise,
   useDeleteSessionTemplateExercise,
+  useReorderSessionTemplateExercises,
   useSessionTemplateExercises,
-  useSwapSessionTemplateExerciseOrder,
+  useSetGroupRestSeconds,
   useUpdateSessionTemplateDayType,
   useUpdateSessionTemplateExercise,
 } from '@/hooks/useSessionTemplates'
 import { useStartSessionLog } from '@/hooks/useSessionLogs'
-import { getSwapPair } from '@/lib/ordering'
+import { inferGroupAfterMove } from '@/lib/ordering'
 import type { ProgramFocus } from '@/lib/programs-api'
 import {
   DAY_TYPE_LABELS,
@@ -25,9 +45,48 @@ import {
   WEEKDAY_LABELS,
   type DayType,
 } from '@/lib/sessions-api'
-import type { SessionTemplate } from '@/lib/sessions-api'
+import type {
+  SessionTemplate,
+  SessionTemplateExercise,
+  SessionTemplateExerciseInput,
+} from '@/lib/sessions-api'
+import type { Exercise } from '@/lib/exercises-api'
 
 const DAY_TYPE_OPTIONS: DayType[] = ['rest', 'training']
+
+// Groups are just consecutive runs sharing the same superset_group value —
+// not a real nested structure (see inferGroupAfterMove in ordering.ts). A
+// same-value run created any other way than dragging (e.g. two non-adjacent
+// exercises manually given the same free-text label) renders as separate
+// blocks until dragged together; a rare, harmless edge case rather than one
+// worth a real grouping data model for.
+type SlotBlock =
+  | { kind: 'group'; group: string; slots: SessionTemplateExercise[] }
+  | { kind: 'single'; slot: SessionTemplateExercise }
+
+function computeBlocks(slots: SessionTemplateExercise[]): SlotBlock[] {
+  const blocks: SlotBlock[] = []
+  let i = 0
+  while (i < slots.length) {
+    const slot = slots[i]
+    if (!slot) break
+    if (slot.superset_group) {
+      const group = slot.superset_group
+      const groupSlots = [slot]
+      let j = i + 1
+      while (slots[j]?.superset_group === group) {
+        groupSlots.push(slots[j]!)
+        j++
+      }
+      blocks.push({ kind: 'group', group, slots: groupSlots })
+      i = j
+    } else {
+      blocks.push({ kind: 'single', slot })
+      i++
+    }
+  }
+  return blocks
+}
 
 export function SessionTemplateCard({
   template,
@@ -43,12 +102,40 @@ export function SessionTemplateCard({
   const createSlot = useCreateSessionTemplateExercise(template.id)
   const updateSlot = useUpdateSessionTemplateExercise(template.id)
   const deleteSlot = useDeleteSessionTemplateExercise(template.id)
-  const swapSlotOrder = useSwapSessionTemplateExerciseOrder(template.id)
+  const reorderSlots = useReorderSessionTemplateExercises(template.id)
+  const setGroupRest = useSetGroupRestSeconds(template.id)
   const updateDayType = useUpdateSessionTemplateDayType(template.program_id)
   const startSessionLog = useStartSessionLog(template.program_id)
 
+  // A small activation distance keeps a plain tap (edit/delete buttons,
+  // opening the day-type toggle) from being mistaken for the start of a
+  // drag — matters most on touch, where every tap is technically a tiny
+  // pointer move. KeyboardSensor gives arrow-key reordering once a handle
+  // is focused, replacing the old dedicated up/down buttons with dnd-kit's
+  // own accessible fallback instead of maintaining both.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
   const sortedSlots = slots ?? []
   const isTrainingDay = template.day_type === 'training'
+  const blocks = computeBlocks(sortedSlots)
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = sortedSlots.findIndex((s) => s.id === active.id)
+    const newIndex = sortedSlots.findIndex((s) => s.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(sortedSlots, oldIndex, newIndex)
+    const newGroup = inferGroupAfterMove(reordered, active.id as string)
+    const withUpdatedGroup = reordered.map((slot) =>
+      slot.id === active.id ? { ...slot, superset_group: newGroup } : slot,
+    )
+    reorderSlots.mutate(withUpdatedGroup)
+  }
 
   return (
     <Card>
@@ -80,103 +167,44 @@ export function SessionTemplateCard({
               Aucun exercice pour l'instant.
             </p>
           )}
-          <ul className="flex flex-col gap-2">
-            {sortedSlots.map((slot, index) => (
-              <li
-                key={slot.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <ExerciseThumbnail
-                    imageUrl={slot.exercise.image_url}
-                    muscleGroup={slot.exercise.muscle_group}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="min-w-0 flex-1 truncate font-medium">{slot.exercise.name}</p>
-                      {slot.is_unilateral && (
-                        <Badge variant="outline" className="shrink-0">
-                          Unilatéral
-                        </Badge>
-                      )}
-                      {slot.superset_group && (
-                        <Badge variant="outline" className="shrink-0">
-                          Superset {slot.superset_group}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-                      {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
-                      {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]}s
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Monter cet exercice"
-                    disabled={index === 0}
-                    onClick={() => {
-                      const pair = getSwapPair(sortedSlots, slot.id, 'up')
-                      if (pair) void swapSlotOrder.mutateAsync({ a: pair[0], b: pair[1] })
-                    }}
-                  >
-                    <ArrowUp />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Descendre cet exercice"
-                    disabled={index === sortedSlots.length - 1}
-                    onClick={() => {
-                      const pair = getSwapPair(sortedSlots, slot.id, 'down')
-                      if (pair) void swapSlotOrder.mutateAsync({ a: pair[0], b: pair[1] })
-                    }}
-                  >
-                    <ArrowDown />
-                  </Button>
-                  <ExerciseSlotFormDialog
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Modifier cet exercice"
-                      >
-                        <Pencil />
-                      </Button>
-                    }
-                    exercises={exercises ?? []}
-                    focus={focus}
-                    initialValue={slot}
-                    submitLabel="Enregistrer"
-                    onCreateExercise={(input) => createExercise.mutateAsync(input)}
-                    onSubmit={async (input) => {
-                      await updateSlot.mutateAsync({ id: slot.id, input })
-                    }}
-                  />
-                  <ConfirmDialog
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Supprimer cet exercice"
-                      >
-                        <Trash2 />
-                      </Button>
-                    }
-                    title="Supprimer cet exercice ?"
-                    description="Cette action est irréversible."
-                    confirmLabel="Supprimer"
-                    onConfirm={async () => {
-                      await deleteSlot.mutateAsync(slot.id)
-                    }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={sortedSlots.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="flex flex-col gap-2">
+                {blocks.map((block) =>
+                  block.kind === 'group' ? (
+                    <li key={`group-${block.group}`}>
+                      <SupersetGroupBlock
+                        group={block.group}
+                        slots={block.slots}
+                        focus={focus}
+                        exercises={exercises ?? []}
+                        onSetGroupRest={(slotIds, restSeconds) =>
+                          setGroupRest.mutate({ slotIds, restSeconds })
+                        }
+                        settingGroupRest={setGroupRest.isPending}
+                        onCreateExercise={(input) => createExercise.mutateAsync(input)}
+                        onUpdate={(id, input) => updateSlot.mutateAsync({ id, input })}
+                        onDelete={(id) => deleteSlot.mutateAsync(id)}
+                      />
+                    </li>
+                  ) : (
+                    <SlotRow
+                      key={block.slot.id}
+                      slot={block.slot}
+                      focus={focus}
+                      exercises={exercises ?? []}
+                      onCreateExercise={(input) => createExercise.mutateAsync(input)}
+                      onUpdate={(id, input) => updateSlot.mutateAsync({ id, input })}
+                      onDelete={(id) => deleteSlot.mutateAsync(id)}
+                    />
+                  ),
+                )}
+              </ul>
+            </SortableContext>
+          </DndContext>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ExerciseSlotFormDialog
               trigger={
@@ -217,5 +245,150 @@ export function SessionTemplateCard({
         </CardContent>
       )}
     </Card>
+  )
+}
+
+interface SlotRowActions {
+  focus: ProgramFocus
+  exercises: Exercise[]
+  onCreateExercise: (input: { name: string; muscle_group: string | null }) => Promise<Exercise>
+  onUpdate: (id: string, input: SessionTemplateExerciseInput) => Promise<unknown>
+  onDelete: (id: string) => Promise<unknown>
+}
+
+function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotRowActions) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: slot.id,
+  })
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-center gap-1 rounded-md border border-border bg-card p-2 ${isDragging ? 'z-10 opacity-70' : ''}`}
+    >
+      <button
+        type="button"
+        aria-label="Réorganiser cet exercice"
+        className="flex shrink-0 cursor-grab touch-none items-center justify-center self-stretch px-1 text-muted-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <ExerciseThumbnail
+          imageUrl={slot.exercise.image_url}
+          muscleGroup={slot.exercise.muscle_group}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="min-w-0 flex-1 truncate font-medium">{slot.exercise.name}</p>
+            {slot.is_unilateral && (
+              <Badge variant="outline" className="shrink-0">
+                Unilatéral
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
+            {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
+            {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[actions.focus]}s
+          </p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <ExerciseSlotFormDialog
+          trigger={
+            <Button variant="ghost" size="icon-sm" aria-label="Modifier cet exercice">
+              <Pencil />
+            </Button>
+          }
+          exercises={actions.exercises}
+          focus={actions.focus}
+          initialValue={slot}
+          submitLabel="Enregistrer"
+          onCreateExercise={actions.onCreateExercise}
+          onSubmit={async (input) => {
+            await actions.onUpdate(slot.id, input)
+          }}
+        />
+        <ConfirmDialog
+          trigger={
+            <Button variant="ghost" size="icon-sm" aria-label="Supprimer cet exercice">
+              <Trash2 />
+            </Button>
+          }
+          title="Supprimer cet exercice ?"
+          description="Cette action est irréversible."
+          confirmLabel="Supprimer"
+          onConfirm={async () => {
+            await actions.onDelete(slot.id)
+          }}
+        />
+      </div>
+    </li>
+  )
+}
+
+function SupersetGroupBlock({
+  group,
+  slots,
+  focus,
+  onSetGroupRest,
+  settingGroupRest,
+  ...actions
+}: {
+  group: string
+  slots: SessionTemplateExercise[]
+  onSetGroupRest: (slotIds: string[], restSeconds: number) => void
+  settingGroupRest: boolean
+} & SlotRowActions) {
+  const [restInput, setRestInput] = useState('')
+  const restValues = new Set(
+    slots.map((s) => s.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]),
+  )
+  const sharedRestLabel =
+    restValues.size === 1 ? `${[...restValues][0]}s pour tout le groupe` : 'Repos par exercice'
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-2">
+          <Badge>Superset {group}</Badge>
+          <span className="text-xs text-muted-foreground">{sharedRestLabel}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            min={1}
+            placeholder="Repos (s)"
+            className="h-7 w-24 text-xs"
+            value={restInput}
+            onChange={(event) => setRestInput(event.target.value)}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={restInput.trim() === '' || settingGroupRest}
+            onClick={() => {
+              onSetGroupRest(
+                slots.map((s) => s.id),
+                Number(restInput),
+              )
+              setRestInput('')
+            }}
+          >
+            Appliquer au groupe
+          </Button>
+        </div>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {slots.map((slot) => (
+          <SlotRow key={slot.id} slot={slot} focus={focus} {...actions} />
+        ))}
+      </ul>
+    </div>
   )
 }

@@ -187,19 +187,47 @@ export async function deleteSessionTemplateExercise(id: string): Promise<void> {
   if (error) throw error
 }
 
-export async function swapSessionTemplateExerciseOrder(
-  a: SessionTemplateExercise,
-  b: SessionTemplateExercise,
+// Called after a drag-and-drop reorder with the *entire* new order (small
+// lists — a training day rarely has more than a handful of exercises — so a
+// full renumbering upsert is simpler and safer than diffing which rows
+// actually moved). `slots` already carries the moved item's updated
+// superset_group (see inferGroupAfterMove in ordering.ts), so this single
+// call persists both the new order and any group-membership change together.
+export async function reorderSessionTemplateExercises(
+  slots: SessionTemplateExercise[],
 ): Promise<void> {
-  const { error: errorA } = await supabase
-    .from('session_template_exercises')
-    .update({ order_index: b.order_index })
-    .eq('id', a.id)
-  if (errorA) throw errorA
+  const rows = slots.map((slot, index) => ({
+    id: slot.id,
+    user_id: slot.user_id,
+    session_template_id: slot.session_template_id,
+    exercise_id: slot.exercise_id,
+    order_index: index,
+    target_sets: slot.target_sets,
+    target_reps_min: slot.target_reps_min,
+    target_reps_max: slot.target_reps_max,
+    target_rpe: slot.target_rpe,
+    target_rest_seconds: slot.target_rest_seconds,
+    notes: slot.notes,
+    superset_group: slot.superset_group,
+    is_unilateral: slot.is_unilateral,
+  }))
+  const { error } = await supabase.from('session_template_exercises').upsert(rows)
+  if (error) throw error
+}
 
-  const { error: errorB } = await supabase
+// Bulk-sets the same rest time across every exercise in a superset group —
+// the "repos unique pour le groupe" convenience. Just a batch write to the
+// same target_rest_seconds column each exercise already has individually
+// ("repos par exercice" is simply never using this and editing each slot on
+// its own, as today) — no separate group-level column or live-session
+// behavior change.
+export async function setGroupRestSeconds(
+  slotIds: string[],
+  restSeconds: number | null,
+): Promise<void> {
+  const { error } = await supabase
     .from('session_template_exercises')
-    .update({ order_index: a.order_index })
-    .eq('id', b.id)
-  if (errorB) throw errorB
+    .update({ target_rest_seconds: restSeconds })
+    .in('id', slotIds)
+  if (error) throw error
 }
