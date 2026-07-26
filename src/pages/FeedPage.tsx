@@ -43,12 +43,13 @@ function MentionedText({ text, mentions }: { text: string; mentions: MentionCand
   matches.forEach((match, index) => {
     if (match.start > cursor) parts.push(text.slice(cursor, match.start))
     parts.push(
-      <span
+      <Link
         key={index}
-        className="rounded-md bg-secondary/15 px-1 py-0.5 font-medium text-secondary"
+        to={`/friends/${match.userId}`}
+        className="rounded-md bg-secondary/15 px-1 py-0.5 font-medium text-secondary hover:underline"
       >
         @{match.displayName}
-      </span>,
+      </Link>,
     )
     cursor = match.end
   })

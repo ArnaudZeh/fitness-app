@@ -23,8 +23,8 @@ export function FriendProfilePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/friends" className="text-sm text-primary hover:underline">
-        ← Retour à mes amis
+      <Link to="/feed" className="text-sm text-primary hover:underline">
+        ← Retour au feed
       </Link>
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
