@@ -23,8 +23,7 @@ import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
 import type { ProgramFocus } from '@/lib/programs-api'
 import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { CachedPlanExercise } from '@/lib/offline-db'
-import type { SessionLog, SessionLogSet, SetSide } from '@/lib/session-logs-api'
-import { computeNextTarget, SIDE_LABELS } from '@/lib/unilateral-sets'
+import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 
 export function SessionLogPage() {
   const { id } = useParams<{ id: string }>()
@@ -143,7 +142,6 @@ function SessionLogExerciseCard({
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState(slot.target_reps_min.toString())
   const [rpe, setRpe] = useState('')
-  const [manualSide, setManualSide] = useState<SetSide | null>(null)
   const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
     null,
   )
@@ -153,16 +151,8 @@ function SessionLogExerciseCard({
     if (parsed.rpe !== null) setRpe(parsed.rpe.toString())
   })
 
-  const sideOrder: Record<SetSide, number> = { left: 0, right: 1, both: 0 }
-  const sortedSets = [...sets].sort(
-    (a, b) => a.set_number - b.set_number || sideOrder[a.side] - sideOrder[b.side],
-  )
-  const nextTarget = computeNextTarget(sets, slot.is_unilateral)
-  const nextSetNumber = nextTarget.setNumber
-  // A manual override (user picked "Droite" ahead of the computed default)
-  // only applies to the very next submission — cleared right after, so the
-  // following one falls back to whatever the actual logged sets now imply.
-  const nextSide = manualSide ?? nextTarget.side
+  const sortedSets = [...sets].sort((a, b) => a.set_number - b.set_number)
+  const nextSetNumber = sortedSets.length + 1
   const restSeconds = slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]
 
   function startRest(afterSetId: string) {
@@ -174,14 +164,12 @@ function SessionLogExerciseCard({
     const created = await createSet.mutateAsync({
       session_template_exercise_id: slot.id,
       set_number: nextSetNumber,
-      side: nextSide,
       actual_reps: Number(reps),
       actual_weight_kg: Number(weight),
       actual_rpe: rpe.trim() === '' ? null : Number(rpe),
     })
     setWeight('')
     setRpe('')
-    setManualSide(null)
     startRest(created.id)
   }
 
@@ -189,12 +177,10 @@ function SessionLogExerciseCard({
     const created = await createSet.mutateAsync({
       session_template_exercise_id: slot.id,
       set_number: nextSetNumber,
-      side: nextSide,
       actual_reps: set.actual_reps,
       actual_weight_kg: set.actual_weight_kg,
       actual_rpe: set.actual_rpe,
     })
-    setManualSide(null)
     startRest(created.id)
   }
 
@@ -224,9 +210,7 @@ function SessionLogExerciseCard({
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
                 <p className="font-mono tabular-nums">
-                  Série {set.set_number}
-                  {set.side !== 'both' ? ` · ${SIDE_LABELS[set.side]}` : ''} ·{' '}
-                  {set.actual_weight_kg} kg x {set.actual_reps}
+                  Série {set.set_number} · {set.actual_weight_kg} kg x {set.actual_reps}
                   {set.actual_rpe !== null ? ` @ RPE ${set.actual_rpe}` : ''}
                 </p>
                 {!disabled && (
@@ -303,25 +287,6 @@ function SessionLogExerciseCard({
           </p>
         )}
 
-        {!disabled && slot.is_unilateral && (
-          <div className="flex items-center gap-2">
-            <Label>Côté</Label>
-            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-              {(['left', 'right'] as const).map((side) => (
-                <Button
-                  key={side}
-                  type="button"
-                  size="sm"
-                  variant={nextSide === side ? 'default' : 'ghost'}
-                  onClick={() => setManualSide(side)}
-                >
-                  {SIDE_LABELS[side]}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {!disabled && (
           <form
             onSubmit={(event) => void handleAddSet(event)}
@@ -374,7 +339,6 @@ function SessionLogExerciseCard({
                 className="h-12! w-full"
               >
                 <Plus /> Série {nextSetNumber}
-                {slot.is_unilateral ? ` · ${SIDE_LABELS[nextSide]}` : ''}
               </Button>
             </div>
           </form>

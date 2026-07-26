@@ -521,7 +521,6 @@ export type Database = {
           session_log_id: string
           session_template_exercise_id: string
           set_number: number
-          side: string
           updated_at: string
           user_id: string
         }
@@ -534,7 +533,6 @@ export type Database = {
           session_log_id: string
           session_template_exercise_id: string
           set_number: number
-          side?: string
           updated_at?: string
           user_id: string
         }
@@ -547,7 +545,6 @@ export type Database = {
           session_log_id?: string
           session_template_exercise_id?: string
           set_number?: number
-          side?: string
           updated_at?: string
           user_id?: string
         }
