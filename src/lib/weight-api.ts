@@ -12,9 +12,15 @@ async function requireUserId(): Promise<string> {
 }
 
 export async function fetchWeightEntries(): Promise<WeightEntry[]> {
+  const userId = await requireUserId()
+  // Explicit filter, not just RLS: the friend-profile feature widened the
+  // SELECT policy to also allow reading a friend's weight entries, so
+  // relying on RLS alone here would mix a friend's weigh-ins into "my"
+  // history/analytics.
   const { data, error } = await supabase
     .from('weight_entries')
     .select('*')
+    .eq('user_id', userId)
     .order('recorded_at', { ascending: false })
   if (error) throw error
   return data

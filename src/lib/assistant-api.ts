@@ -115,9 +115,15 @@ export async function clearAssistantConversation(): Promise<void> {
 // week's structure up front so adapter_seance can resolve "mardi" to a
 // concrete session_template_id and its current exercises server-side.
 export async function fetchActiveProgramSnapshot(): Promise<ProgramDaySnapshot[]> {
+  const userId = await requireUserId()
+  // Explicit filter, not just RLS: the friend-profile feature widened the
+  // SELECT policy to also allow reading a friend's active program, so
+  // relying on RLS alone here would let the coach read (and act on) a
+  // friend's program instead of the caller's own.
   const { data: activePrograms, error: programsError } = await supabase
     .from('programs')
     .select('id, focus')
+    .eq('user_id', userId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(1)

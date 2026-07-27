@@ -44,9 +44,16 @@ async function requireUserId(): Promise<string> {
 }
 
 export async function fetchPrograms(): Promise<Program[]> {
+  const userId = await requireUserId()
+  // Explicit filter, not just RLS: since the friend-profile feature widened
+  // the SELECT policy to also allow reading a friend's active program,
+  // relying on RLS alone here would leak a friend's program into "my
+  // programs" (it would even win the most-recent-active sort on the
+  // dashboard). fetchFriendProfile() is the intended path for that data.
   const { data, error } = await supabase
     .from('programs')
     .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data.map(toProgram)
