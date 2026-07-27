@@ -1,7 +1,6 @@
 import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { Heart, MessageCircle, MessageSquare, Trash2, Trophy } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Heart, MessageCircle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/Avatar'
@@ -21,8 +20,8 @@ import {
   useSocialFeed,
   useToggleLike,
 } from '@/hooks/useSocialFeed'
-import { formatMilestoneValue, MILESTONE_TYPE_LABELS } from '@/lib/social-display'
-import type { FeedEntry, FeedTargetType } from '@/lib/social-display'
+import { formatLikedBy, formatMilestoneValue, MILESTONE_TYPE_LABELS } from '@/lib/social-display'
+import type { FeedEntry, FeedTargetType, LikerSummary } from '@/lib/social-display'
 import { extractMentions } from '@/lib/mentions'
 import type { MentionCandidate } from '@/lib/mentions'
 
@@ -132,7 +131,6 @@ export function FeedPage() {
 }
 
 function FeedCardHeader({
-  icon: Icon,
   userId,
   displayName,
   avatarUrl,
@@ -140,7 +138,6 @@ function FeedCardHeader({
   onDelete,
   deleteLabel,
 }: {
-  icon: LucideIcon
   userId: string
   displayName: string
   avatarUrl: string | null
@@ -156,10 +153,7 @@ function FeedCardHeader({
           className="flex items-center gap-2 hover:underline"
         >
           <Avatar url={avatarUrl} displayName={displayName} size="sm" />
-          <span className="flex items-center gap-2">
-            <Icon className="size-4 text-primary" />
-            {displayName}
-          </span>
+          {displayName}
         </Link>
         {isOwn && (
           <ConfirmDialog
@@ -184,16 +178,19 @@ function ReactionBar({
   targetId,
   likeCount,
   likedByMe,
+  likedBy,
   commentCount,
 }: {
   targetType: FeedTargetType
   targetId: string
   likeCount: number
   likedByMe: boolean
+  likedBy: LikerSummary[]
   commentCount: number
 }) {
   const toggleLike = useToggleLike()
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const likedByLabel = formatLikedBy(likedBy, likeCount)
 
   return (
     <div className="flex flex-col gap-2">
@@ -219,6 +216,7 @@ function ReactionBar({
           {commentCount > 0 && commentCount}
         </Button>
       </div>
+      {likedByLabel && <p className="text-xs text-muted-foreground">{likedByLabel}</p>}
       {commentsOpen && <CommentsSection targetType={targetType} targetId={targetId} />}
     </div>
   )
@@ -305,7 +303,6 @@ function MilestoneCard({
   return (
     <Card>
       <FeedCardHeader
-        icon={Trophy}
         userId={entry.userId}
         displayName={entry.displayName}
         avatarUrl={entry.avatarUrl}
@@ -332,6 +329,7 @@ function MilestoneCard({
           targetId={milestone.id}
           likeCount={entry.likeCount}
           likedByMe={entry.likedByMe}
+          likedBy={entry.likedBy}
           commentCount={entry.commentCount}
         />
       </CardContent>
@@ -352,7 +350,6 @@ function PostCard({
   return (
     <Card>
       <FeedCardHeader
-        icon={MessageSquare}
         userId={entry.userId}
         displayName={entry.displayName}
         avatarUrl={entry.avatarUrl}
@@ -379,6 +376,7 @@ function PostCard({
           targetId={post.id}
           likeCount={entry.likeCount}
           likedByMe={entry.likedByMe}
+          likedBy={entry.likedBy}
           commentCount={entry.commentCount}
         />
       </CardContent>

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Input } from '@/components/ui/input'
@@ -73,6 +73,32 @@ export function MentionField({
     updateActiveQuery(event.currentTarget, value)
   }
 
+  // Re-measure while the dropdown is open: on mobile, focusing the field
+  // opens the on-screen keyboard, which triggers a scroll/resize without
+  // any change/select event firing. `position: fixed` at a one-shot
+  // getBoundingClientRect() would then render pinned to where the field
+  // *was* before the keyboard pushed the page around (the well-known
+  // mobile-Safari "fixed dropdown ends up pinned near the top" bug) — this
+  // keeps the position in sync with whatever actually caused the reflow.
+  useEffect(() => {
+    if (!activeQuery) return
+    const target = multiline ? textareaRef.current : inputRef.current
+    if (!target) return
+
+    function reposition() {
+      if (!target) return
+      setActiveQuery((prev) => (prev ? { ...prev, fieldRect: target.getBoundingClientRect() } : prev))
+    }
+
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only needs to (re)watch while a dropdown is open
+  }, [!!activeQuery, multiline])
+
   function handleBlur() {
     // Delayed so a click on a suggestion (see onMouseDown below) still
     // registers before the dropdown disappears.
@@ -129,10 +155,10 @@ export function MentionField({
         activeQuery &&
         createPortal(
           <ul
-            className="fixed z-50 mt-1 max-w-64 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
+            className="absolute z-50 mt-1 max-w-64 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
             style={{
-              top: activeQuery.fieldRect.bottom,
-              left: activeQuery.fieldRect.left,
+              top: activeQuery.fieldRect.bottom + window.scrollY,
+              left: activeQuery.fieldRect.left + window.scrollX,
               width: activeQuery.fieldRect.width,
             }}
           >

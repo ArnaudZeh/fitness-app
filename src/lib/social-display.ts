@@ -14,10 +14,35 @@ export function formatMilestoneValue(item: Pick<Milestone, 'milestone_type' | 'v
   return `${item.value} kg`
 }
 
+export interface LikerSummary {
+  userId: string
+  displayName: string
+}
+
 export interface FeedReactions {
   likeCount: number
   likedByMe: boolean
   commentCount: number
+  // Most-recent likers first, capped upstream — enough to render "Aimé par
+  // X, Y et Z autres" without shipping every liker for a heavily-liked post.
+  likedBy: LikerSummary[]
+}
+
+export const LIKED_BY_DISPLAY_LIMIT = 3
+
+// "Aimé par Alice" / "Aimé par Alice et Bob" / "Aimé par Alice, Bob et Chloé"
+// / "Aimé par Alice, Bob, Chloé et 4 autres" — likedBy is already capped to
+// LIKED_BY_DISPLAY_LIMIT, so totalCount (the real like count) is what
+// decides whether an "et N autres" tail is needed.
+export function formatLikedBy(likedBy: LikerSummary[], totalCount: number): string | null {
+  if (likedBy.length === 0) return null
+  const names = likedBy.map((l) => l.displayName)
+  const remaining = totalCount - names.length
+  if (remaining <= 0) {
+    if (names.length === 1) return `Aimé par ${names[0]}`
+    return `Aimé par ${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}`
+  }
+  return `Aimé par ${names.join(', ')} et ${remaining} autre${remaining > 1 ? 's' : ''}`
 }
 
 interface FeedEntryCommon extends FeedReactions {

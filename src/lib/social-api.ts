@@ -67,7 +67,7 @@ export async function fetchFeed(): Promise<FeedEntry[]> {
       posts.map((p) => p.id),
     ),
   ])
-  const emptyReactions = { likeCount: 0, likedByMe: false, commentCount: 0 }
+  const emptyReactions = { likeCount: 0, likedByMe: false, commentCount: 0, likedBy: [] }
 
   const milestoneEntries: MilestoneFeedEntry[] = milestones.map((milestone) => ({
     kind: 'milestone',

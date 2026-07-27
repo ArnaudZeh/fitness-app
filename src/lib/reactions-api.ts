@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
-import type { FeedReactions, FeedTargetType } from '@/lib/social-display'
+import { LIKED_BY_DISPLAY_LIMIT } from '@/lib/social-display'
+import type { FeedReactions, FeedTargetType, LikerSummary } from '@/lib/social-display'
 import { fetchMentionsByContentId } from '@/lib/mentions-api'
 import type { MentionCandidate } from '@/lib/mentions'
 
@@ -26,7 +27,7 @@ export async function fetchReactionSummary(
   currentUserId: string | null,
 ): Promise<Map<string, FeedReactions>> {
   const summary = new Map<string, FeedReactions>(
-    targetIds.map((id) => [id, { likeCount: 0, likedByMe: false, commentCount: 0 }]),
+    targetIds.map((id) => [id, { likeCount: 0, likedByMe: false, commentCount: 0, likedBy: [] }]),
   )
   if (targetIds.length === 0) return summary
 
@@ -34,9 +35,10 @@ export async function fetchReactionSummary(
     await Promise.all([
       supabase
         .from('feed_likes')
-        .select('target_id, user_id')
+        .select('target_id, user_id, created_at')
         .eq('target_type', targetType)
-        .in('target_id', targetIds),
+        .in('target_id', targetIds)
+        .order('created_at', { ascending: false }),
       supabase
         .from('feed_comments')
         .select('target_id')
@@ -46,15 +48,43 @@ export async function fetchReactionSummary(
   if (likesError) throw likesError
   if (commentsError) throw commentsError
 
+  // Most-recent-first ordering above means the first LIKED_BY_DISPLAY_LIMIT
+  // likes seen per target while looping are already the ones to show.
+  const likerIdsByTarget = new Map<string, string[]>()
   for (const like of likes) {
     const entry = summary.get(like.target_id)
     if (!entry) continue
     entry.likeCount += 1
     if (like.user_id === currentUserId) entry.likedByMe = true
+
+    const likerIds = likerIdsByTarget.get(like.target_id) ?? []
+    if (likerIds.length < LIKED_BY_DISPLAY_LIMIT) likerIds.push(like.user_id)
+    likerIdsByTarget.set(like.target_id, likerIds)
   }
   for (const comment of comments) {
     const entry = summary.get(comment.target_id)
     if (entry) entry.commentCount += 1
+  }
+
+  const allLikerIds = [...new Set([...likerIdsByTarget.values()].flat())]
+  if (allLikerIds.length > 0) {
+    const { data: likerProfiles, error: likerProfilesError } = await supabase
+      .from('public_profiles')
+      .select('id, display_name')
+      .in('id', allLikerIds)
+    if (likerProfilesError) throw likerProfilesError
+    const nameByLikerId = new Map(
+      (likerProfiles ?? []).map((p) => [p.id, p.display_name ?? 'Utilisateur']),
+    )
+    for (const [targetId, likerIds] of likerIdsByTarget) {
+      const entry = summary.get(targetId)
+      if (!entry) continue
+      const likedBy: LikerSummary[] = likerIds.map((userId) => ({
+        userId,
+        displayName: nameByLikerId.get(userId) ?? 'Utilisateur',
+      }))
+      entry.likedBy = likedBy
+    }
   }
   return summary
 }
