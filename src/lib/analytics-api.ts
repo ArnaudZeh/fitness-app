@@ -1,5 +1,13 @@
 import { supabase } from '@/lib/supabase'
 
+async function requireUserId(): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
 export interface SetHistoryRecord {
   id: string
   exerciseId: string
@@ -30,7 +38,17 @@ interface SetHistoryRow {
 // so unlike SessionLogPage this stays online-only (same bucket as
 // Programs/Profile) rather than routing through the Dexie offline layer.
 export async function fetchSetHistory(): Promise<SetHistoryRecord[]> {
-  const { data, error } = await supabase.from('session_log_sets').select(`
+  const userId = await requireUserId()
+  // Explicit filter, not just RLS: session_log_sets' RLS is currently
+  // strict self-only (no friend carve-out, unlike programs/weight_entries),
+  // but training history is exactly the kind of data a future "compare
+  // with a friend" feature would want to widen visibility on. Filtering
+  // here up front means that widening can never silently leak into this
+  // "my history" read.
+  const { data, error } = await supabase
+    .from('session_log_sets')
+    .select(
+      `
       id,
       actual_weight_kg,
       actual_reps,
@@ -39,7 +57,9 @@ export async function fetchSetHistory(): Promise<SetHistoryRecord[]> {
         exercise:exercises ( id, name, muscle_group, image_url )
       ),
       session_log:session_logs ( started_at )
-    `)
+    `,
+    )
+    .eq('user_id', userId)
   if (error) throw error
 
   const rows = data as unknown as SetHistoryRow[]
