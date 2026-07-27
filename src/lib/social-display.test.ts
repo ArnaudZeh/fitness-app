@@ -14,7 +14,7 @@ describe('formatMilestoneValue', () => {
   })
 })
 
-const noReactions = { likeCount: 0, likedByMe: false, commentCount: 0 }
+const noReactions = { likeCount: 0, likedByMe: false, commentCount: 0, likedBy: [] }
 
 function fakeMilestoneEntry(id: string, occurredAt: string): MilestoneFeedEntry {
   const milestone: MilestoneWithImage = {
