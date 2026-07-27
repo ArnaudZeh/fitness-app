@@ -5,18 +5,24 @@ import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
 import { useAuthStore } from '@/lib/auth-store'
 import { useFriendsData } from '@/hooks/useFriends'
 import { useUnreadMentionsCount } from '@/hooks/useMentions'
+import { useUnreadActivityNotificationsCount } from '@/hooks/useActivityNotifications'
 import { syncTimezone } from '@/lib/profile-api'
 
 export function AppLayout() {
   const session = useAuthStore((state) => state.session)
   const userId = session?.user.id
-  // Both are only reachable from inside the Feed page (no dedicated nav tab
-  // for either), so a corner badge on the Feed icon is the only way either
-  // is ever noticed without opening it first. Friend requests only clear on
-  // accept/decline; mentions clear just by viewing the Feed — see FeedPage.
+  // All three are only reachable from inside the Feed page (no dedicated
+  // nav tab for any), so a corner badge on the Feed icon is the only way
+  // any of them is ever noticed without opening it first. Friend requests
+  // only clear on accept/decline; mentions and activity (likes/comments on
+  // your content) clear just by viewing the Feed — see FeedPage.
   const { data: friends } = useFriendsData()
   const { data: unreadMentionsCount } = useUnreadMentionsCount()
-  const feedBadgeCount = (friends?.incomingRequests.length ?? 0) + (unreadMentionsCount ?? 0)
+  const { data: unreadActivityCount } = useUnreadActivityNotificationsCount()
+  const feedBadgeCount =
+    (friends?.incomingRequests.length ?? 0) +
+    (unreadMentionsCount ?? 0) +
+    (unreadActivityCount ?? 0)
 
   const navItems: NavItem[] = [
     { name: 'Accueil', url: '/', icon: Home },

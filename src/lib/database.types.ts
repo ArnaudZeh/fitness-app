@@ -227,6 +227,39 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_activity_notifications: {
+        Row: {
+          actor_id: string
+          content_id: string
+          content_type: string
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_id: string
+          type: string
+        }
+        Insert: {
+          actor_id: string
+          content_id: string
+          content_type: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id: string
+          type: string
+        }
+        Update: {
+          actor_id?: string
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id?: string
+          type?: string
+        }
+        Relationships: []
+      }
       feed_comments: {
         Row: {
           content: string
@@ -904,6 +937,14 @@ export type Database = {
       can_view_feed_target: {
         Args: { p_target_id: string; p_target_type: string }
         Returns: boolean
+      }
+      can_view_mention: {
+        Args: { p_content_id: string; p_content_type: string }
+        Returns: boolean
+      }
+      feed_target_owner: {
+        Args: { p_content_id: string; p_content_type: string }
+        Returns: string
       }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
     }

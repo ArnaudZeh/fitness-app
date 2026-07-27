@@ -10,6 +10,7 @@ import { MentionField } from '@/components/MentionField'
 import { useAuthStore } from '@/lib/auth-store'
 import { useFriendsData } from '@/hooks/useFriends'
 import { useMarkMentionsRead } from '@/hooks/useMentions'
+import { useMarkActivityNotificationsRead } from '@/hooks/useActivityNotifications'
 import {
   useAddComment,
   useComments,
@@ -64,12 +65,15 @@ export function FeedPage() {
   const { data: friends } = useFriendsData()
   const incomingRequestsCount = friends?.incomingRequests.length ?? 0
   const { mutate: markMentionsRead } = useMarkMentionsRead()
+  const { mutate: markActivityNotificationsRead } = useMarkActivityNotificationsRead()
 
-  // The mention notification badge is meant to clear just by opening the
-  // Feed, unlike friend requests which need an explicit accept/decline.
+  // The mention/activity notification badges are meant to clear just by
+  // opening the Feed, unlike friend requests which need an explicit
+  // accept/decline.
   useEffect(() => {
     markMentionsRead()
-  }, [markMentionsRead])
+    markActivityNotificationsRead()
+  }, [markMentionsRead, markActivityNotificationsRead])
 
   return (
     <div className="flex flex-col gap-6">
@@ -176,6 +180,7 @@ function FeedCardHeader({
 function ReactionBar({
   targetType,
   targetId,
+  contentOwnerId,
   likeCount,
   likedByMe,
   likedBy,
@@ -183,6 +188,7 @@ function ReactionBar({
 }: {
   targetType: FeedTargetType
   targetId: string
+  contentOwnerId: string
   likeCount: number
   likedByMe: boolean
   likedBy: LikerSummary[]
@@ -201,7 +207,7 @@ function ReactionBar({
           size="sm"
           disabled={toggleLike.isPending}
           className={likedByMe ? 'text-primary' : ''}
-          onClick={() => toggleLike.mutate({ targetType, targetId, likedByMe })}
+          onClick={() => toggleLike.mutate({ targetType, targetId, likedByMe, contentOwnerId })}
         >
           <Heart className={likedByMe ? 'fill-current' : ''} />
           {likeCount > 0 && likeCount}
@@ -217,7 +223,9 @@ function ReactionBar({
         </Button>
       </div>
       {likedByLabel && <p className="text-xs text-muted-foreground">{likedByLabel}</p>}
-      {commentsOpen && <CommentsSection targetType={targetType} targetId={targetId} />}
+      {commentsOpen && (
+        <CommentsSection targetType={targetType} targetId={targetId} contentOwnerId={contentOwnerId} />
+      )}
     </div>
   )
 }
@@ -225,12 +233,14 @@ function ReactionBar({
 function CommentsSection({
   targetType,
   targetId,
+  contentOwnerId,
 }: {
   targetType: FeedTargetType
   targetId: string
+  contentOwnerId: string
 }) {
   const { data: comments, isLoading } = useComments(targetType, targetId, true)
-  const addComment = useAddComment(targetType, targetId)
+  const addComment = useAddComment(targetType, targetId, contentOwnerId)
   const deleteComment = useDeleteComment(targetType, targetId)
   const currentUserId = useAuthStore((state) => state.session?.user.id)
   const { data: friends } = useFriendsData()
@@ -327,6 +337,7 @@ function MilestoneCard({
         <ReactionBar
           targetType="milestone"
           targetId={milestone.id}
+          contentOwnerId={entry.userId}
           likeCount={entry.likeCount}
           likedByMe={entry.likedByMe}
           likedBy={entry.likedBy}
@@ -374,6 +385,7 @@ function PostCard({
         <ReactionBar
           targetType="post"
           targetId={post.id}
+          contentOwnerId={entry.userId}
           likeCount={entry.likeCount}
           likedByMe={entry.likedByMe}
           likedBy={entry.likedBy}

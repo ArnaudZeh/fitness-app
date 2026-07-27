@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { invokeEdgeFunction } from '@/lib/edge-function'
 import type { MentionCandidate } from '@/lib/mentions'
 
 export type MentionContentType = 'post' | 'comment'
@@ -29,8 +30,17 @@ export async function createMentionNotifications(
       mentioned_user_id: mentionedUserId,
     }))
   if (rows.length === 0) return
-  const { error } = await supabase.from('feed_mentions').insert(rows)
+  const { data, error } = await supabase.from('feed_mentions').insert(rows).select('id')
   if (error) throw error
+
+  // Push on top of the in-app badge (already live from the insert above) —
+  // best-effort per row, a missing/expired subscription is a normal,
+  // silent no-op, not a failure worth surfacing to the person posting.
+  await Promise.all(
+    data.map((row) =>
+      invokeEdgeFunction('send-social-push', { source: 'mention', id: row.id }).catch(() => {}),
+    ),
+  )
 }
 
 export async function fetchUnreadMentionsCount(): Promise<number> {

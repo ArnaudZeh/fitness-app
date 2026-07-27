@@ -3,6 +3,7 @@ import * as api from '@/lib/social-api'
 import * as postsApi from '@/lib/posts-api'
 import * as reactionsApi from '@/lib/reactions-api'
 import * as mentionsApi from '@/lib/mentions-api'
+import { notifyActivity } from '@/lib/activity-notifications-api'
 import { extractMentions, uniqueMentionedUserIds } from '@/lib/mentions'
 import { useFriendsData } from '@/hooks/useFriends'
 import type { FeedTargetType } from '@/lib/social-display'
@@ -54,15 +55,24 @@ export function useDeletePost() {
 export function useToggleLike() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       targetType,
       targetId,
       likedByMe,
+      contentOwnerId,
     }: {
       targetType: FeedTargetType
       targetId: string
       likedByMe: boolean
-    }) => reactionsApi.toggleLike(targetType, targetId, likedByMe),
+      contentOwnerId: string
+    }) => {
+      await reactionsApi.toggleLike(targetType, targetId, likedByMe)
+      // Only the like transition notifies — unliking is not an event the
+      // owner needs to hear about.
+      if (!likedByMe) {
+        await notifyActivity('like', targetType, targetId, contentOwnerId).catch(() => {})
+      }
+    },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: feedKey }),
   })
 }
@@ -75,12 +85,17 @@ export function useComments(targetType: FeedTargetType, targetId: string, enable
   })
 }
 
-export function useAddComment(targetType: FeedTargetType, targetId: string) {
+export function useAddComment(
+  targetType: FeedTargetType,
+  targetId: string,
+  contentOwnerId: string,
+) {
   const queryClient = useQueryClient()
   const { data: friends } = useFriendsData()
   return useMutation({
     mutationFn: async (content: string) => {
       const comment = await reactionsApi.addComment(targetType, targetId, content)
+      await notifyActivity('comment', targetType, targetId, contentOwnerId).catch(() => {})
       if (friends) {
         const candidates = friends.friends.map((f) => ({ userId: f.userId, displayName: f.displayName }))
         const mentionedIds = uniqueMentionedUserIds(extractMentions(content, candidates))
