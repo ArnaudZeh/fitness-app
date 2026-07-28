@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SessionTemplateCard } from '@/components/SessionTemplateCard'
 import {
@@ -36,6 +40,10 @@ export function ProgramDetailPage() {
   const deleteLog = useDeleteSessionLog()
   const updateProgram = useUpdateProgram(id)
 
+  const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+
   if (isLoading) return <p className="text-muted-foreground">Chargement…</p>
   if (isError || !program)
     return (
@@ -48,13 +56,87 @@ export function ProgramDetailPage() {
   const sortedLogs = logs ?? []
   const templateById = new Map(sortedTemplates.map((template) => [template.id, template]))
 
+  function startEditingDetails() {
+    if (!program) return
+    setEditName(program.name)
+    setEditDescription(program.description ?? '')
+    setIsEditingDetails(true)
+  }
+
+  function saveDetails() {
+    const name = editName.trim()
+    if (name === '') return
+    updateProgram.mutate(
+      { name, description: editDescription.trim() || null },
+      { onSuccess: () => setIsEditingDetails(false) },
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">{program.name}</h1>
-          {program.description && (
-            <p className="mt-1 text-muted-foreground">{program.description}</p>
+        <div className="min-w-0 flex-1">
+          {isEditingDetails ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="program-name">Nom du programme</Label>
+                <Input
+                  id="program-name"
+                  value={editName}
+                  onChange={(event) => setEditName(event.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="program-description">
+                  Note explicative <span className="text-muted-foreground">(optionnel)</span>
+                </Label>
+                <Textarea
+                  id="program-description"
+                  value={editDescription}
+                  onChange={(event) => setEditDescription(event.target.value)}
+                  placeholder="Contexte, objectif, ce qui différencie ce programme… utilisé par le Coach IA pour mieux te conseiller."
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={updateProgram.isPending || editName.trim() === ''}
+                  onClick={saveDetails}
+                >
+                  {updateProgram.isPending ? 'Enregistrement…' : 'Enregistrer'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={updateProgram.isPending}
+                  onClick={() => setIsEditingDetails(false)}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <div className="min-w-0">
+                <h1 className="text-xl font-semibold">{program.name}</h1>
+                {program.description && (
+                  <p className="mt-1 text-muted-foreground">{program.description}</p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Modifier le nom et la note du programme"
+                onClick={startEditingDetails}
+              >
+                <Pencil />
+              </Button>
+            </div>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge>{PROGRAM_FOCUS_LABELS[program.focus]}</Badge>
