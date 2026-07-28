@@ -52,7 +52,9 @@ async function callOpenAi(apiKey: string, userMessage: string): Promise<string> 
     },
     body: JSON.stringify({
       model: 'gpt-5.6',
-      max_tokens: 1024,
+      // gpt-5.6 rejects the legacy max_tokens param (400 invalid_request_error) —
+      // OpenAI requires max_completion_tokens on newer models.
+      max_completion_tokens: 1024,
       messages: [
         { role: 'system', content: TREND_ANALYSIS_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
