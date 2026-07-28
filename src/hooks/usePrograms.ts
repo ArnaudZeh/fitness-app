@@ -53,3 +53,12 @@ export function useDuplicateProgram() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: programsKey }),
   })
 }
+
+export function useCopyProgramToMyAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ programId, sourceLabel }: { programId: string; sourceLabel: string }) =>
+      api.copyProgramToMyAccount(programId, sourceLabel),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: programsKey }),
+  })
+}

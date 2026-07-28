@@ -26,7 +26,7 @@ function fakeProfile(overrides: Partial<Profile> = {}): Profile {
     goal: null,
     target_weight_kg: null,
     cycle_module_enabled: false,
-    social_sharing_enabled: false,
+    is_public: false,
     timezone: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',

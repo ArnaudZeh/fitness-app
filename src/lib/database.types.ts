@@ -446,8 +446,8 @@ export type Database = {
           goal: string | null
           height_cm: number | null
           id: string
+          is_public: boolean
           sex: string | null
-          social_sharing_enabled: boolean
           target_weight_kg: number | null
           timezone: string | null
           updated_at: string
@@ -461,8 +461,8 @@ export type Database = {
           goal?: string | null
           height_cm?: number | null
           id: string
+          is_public?: boolean
           sex?: string | null
-          social_sharing_enabled?: boolean
           target_weight_kg?: number | null
           timezone?: string | null
           updated_at?: string
@@ -476,8 +476,8 @@ export type Database = {
           goal?: string | null
           height_cm?: number | null
           id?: string
+          is_public?: boolean
           sex?: string | null
-          social_sharing_enabled?: boolean
           target_weight_kg?: number | null
           timezone?: string | null
           updated_at?: string
@@ -945,11 +945,20 @@ export type Database = {
         Args: { p_content_id: string; p_content_type: string }
         Returns: boolean
       }
+      can_view_program_details: {
+        Args: { p_program_id: string }
+        Returns: boolean
+      }
+      can_view_session_template: {
+        Args: { p_session_template_id: string }
+        Returns: boolean
+      }
       feed_target_owner: {
         Args: { p_content_id: string; p_content_type: string }
         Returns: string
       }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
+      is_profile_public: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

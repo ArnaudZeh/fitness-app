@@ -92,7 +92,12 @@ function SearchCard({ friends }: { friends: FriendsData | undefined }) {
                   key={result.id}
                   className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
                 >
-                  <span className="text-sm font-medium">{result.displayName}</span>
+                  <Link
+                    to={`/friends/${result.id}`}
+                    className="text-sm font-medium hover:underline"
+                  >
+                    {result.displayName}
+                  </Link>
                   {state.kind === 'none' && (
                     <Button
                       type="button"

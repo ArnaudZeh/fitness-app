@@ -1,10 +1,14 @@
 import { Link, useParams } from 'react-router'
+import { Copy } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useFriendProfile } from '@/hooks/useFriendProfile'
+import { useCopyProgramToMyAccount } from '@/hooks/usePrograms'
+import { ProfileNotVisibleError } from '@/lib/friend-profile-api'
 import { GOAL_LABELS } from '@/lib/profile-api'
-import { PROGRAM_FOCUS_LABELS } from '@/lib/programs-api'
+import { PROGRAM_FOCUS_LABELS, type ProgramFocus } from '@/lib/programs-api'
 
 function formatWeightDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -19,7 +23,8 @@ function formatWeightDate(iso: string): string {
 
 export function FriendProfilePage() {
   const { userId } = useParams<{ userId: string }>()
-  const { data: profile, isLoading, isError } = useFriendProfile(userId ?? '')
+  const { data: profile, isLoading, isError, error } = useFriendProfile(userId ?? '')
+  const isPrivate = error instanceof ProfileNotVisibleError
 
   return (
     <div className="flex flex-col gap-4">
@@ -28,7 +33,12 @@ export function FriendProfilePage() {
       </Link>
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
-      {isError && (
+      {isError && isPrivate && (
+        <p className="text-muted-foreground">
+          Ce profil est privé — seuls ses amis peuvent le consulter.
+        </p>
+      )}
+      {isError && !isPrivate && (
         <p role="alert" className="text-destructive">
           Impossible de charger ce profil.
         </p>
@@ -67,12 +77,10 @@ export function FriendProfilePage() {
             </CardHeader>
             <CardContent>
               {profile.activeProgram ? (
-                <div className="flex items-center gap-2">
-                  <p className="font-medium">{profile.activeProgram.name}</p>
-                  <Badge variant="outline">
-                    {PROGRAM_FOCUS_LABELS[profile.activeProgram.focus]}
-                  </Badge>
-                </div>
+                <CopyProgramSection
+                  activeProgram={profile.activeProgram}
+                  authorName={profile.displayName}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">Aucun programme actif pour l'instant.</p>
               )}
@@ -106,6 +114,51 @@ export function FriendProfilePage() {
             </CardContent>
           </Card>
         </>
+      )}
+    </div>
+  )
+}
+
+function CopyProgramSection({
+  activeProgram,
+  authorName,
+}: {
+  activeProgram: { id: string; name: string; focus: ProgramFocus }
+  authorName: string
+}) {
+  const copyProgram = useCopyProgramToMyAccount()
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <p className="font-medium">{activeProgram.name}</p>
+        <Badge variant="outline">{PROGRAM_FOCUS_LABELS[activeProgram.focus]}</Badge>
+      </div>
+      {copyProgram.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          Impossible de copier ce programme.
+        </p>
+      )}
+      {copyProgram.isSuccess ? (
+        <p className="text-sm text-muted-foreground">
+          Copié dans tes programmes sous « {copyProgram.data.name} ».
+        </p>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          disabled={copyProgram.isPending}
+          onClick={() =>
+            copyProgram.mutate({
+              programId: activeProgram.id,
+              sourceLabel: `copié de ${authorName}`,
+            })
+          }
+        >
+          <Copy /> {copyProgram.isPending ? 'Copie…' : 'Copier dans mes programmes'}
+        </Button>
       )}
     </div>
   )

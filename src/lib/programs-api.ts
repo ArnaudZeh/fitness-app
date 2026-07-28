@@ -99,13 +99,18 @@ export async function deleteProgram(id: string): Promise<void> {
   if (error) throw error
 }
 
-export async function duplicateProgram(program: Program): Promise<Program> {
+// Shared by duplicateProgram() (same owner) and copyProgramToMyAccount()
+// (source owned by someone else, entirely) — the source's session_templates/
+// session_template_exercises reads below carry no owner filter, relying on
+// RLS alone to decide what's readable, so this works unchanged for a
+// friend's or public user's active program once RLS allows the read.
+async function copyProgramInternal(program: Program, newName: string): Promise<Program> {
   const userId = await requireUserId()
   const { data: newProgram, error: programError } = await supabase
     .from('programs')
     .insert({
       user_id: userId,
-      name: `${program.name} (copie)`,
+      name: newName,
       description: program.description,
       focus: program.focus,
     })
@@ -173,4 +178,20 @@ export async function duplicateProgram(program: Program): Promise<Program> {
   }
 
   return createdProgram
+}
+
+export async function duplicateProgram(program: Program): Promise<Program> {
+  return copyProgramInternal(program, `${program.name} (copie)`)
+}
+
+// Copies someone else's active program (friend or public profile — RLS on
+// programs/session_templates/session_template_exercises decides which,
+// this function doesn't need to know) into the caller's own account as a
+// fully independent copy, same one-shot semantics as duplicateProgram().
+export async function copyProgramToMyAccount(
+  programId: string,
+  sourceLabel: string,
+): Promise<Program> {
+  const source = await fetchProgram(programId)
+  return copyProgramInternal(source, `${source.name} (${sourceLabel})`)
 }

@@ -68,6 +68,7 @@ export function ProfilePage() {
       <AvatarSection profile={profile} />
       <ProfileForm profile={profile} />
       <WeightSection />
+      <PrivacySection profile={profile} />
       <CycleModuleSection profile={profile} />
       <AiSettingsSection />
       <DataOwnershipSection />
@@ -146,6 +147,50 @@ function AvatarSection({ profile }: { profile: Profile }) {
             </Button>
           )}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PrivacySection({ profile }: { profile: Profile }) {
+  const updateProfile = useUpdateProfile()
+  const isPublic = profile.is_public
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Visibilité du profil</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          {isPublic ? (
+            <>
+              Public : ton programme actif et tes 5 dernières pesées sont visibles par tout
+              utilisateur de l'app, pas seulement tes amis. N'importe qui peut aussi copier ton
+              programme actif dans son propre compte.
+            </>
+          ) : (
+            <>
+              Privé : seuls tes amis voient ton programme actif et tes pesées, comme aujourd'hui.
+              Personne d'autre ne peut consulter ou copier ton programme.
+            </>
+          )}
+        </p>
+        {updateProfile.isError && (
+          <p role="alert" className="text-sm text-destructive">
+            Impossible d'enregistrer ce changement.
+          </p>
+        )}
+        <Button
+          type="button"
+          variant={isPublic ? 'outline' : 'default'}
+          size="sm"
+          className="self-start"
+          disabled={updateProfile.isPending}
+          onClick={() => updateProfile.mutate({ is_public: !isPublic })}
+        >
+          {isPublic ? 'Rendre privé' : 'Rendre public'}
+        </Button>
       </CardContent>
     </Card>
   )
