@@ -100,6 +100,7 @@ export async function cacheSessionPlan(
       target_reps_max: slot.target_reps_max,
       target_rpe: slot.target_rpe,
       target_rest_seconds: slot.target_rest_seconds,
+      target_weight_kg: slot.target_weight_kg,
       superset_group: slot.superset_group,
       is_unilateral: slot.is_unilateral,
     }))

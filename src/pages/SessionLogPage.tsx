@@ -65,46 +65,44 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
         <ChevronLeft className="size-4" /> Retour au programme
       </Link>
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {plan ? WEEKDAY_LABELS[plan.day_of_week] : 'Séance'}
-          </h1>
-          {plan && <p className="mt-1 text-muted-foreground">{plan.program_name}</p>}
-          <Badge variant={isInProgress ? 'outline' : 'default'} className="mt-2">
-            {isInProgress ? 'En cours' : 'Terminée'}
-          </Badge>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Link to="/bien-etre">
-            <Button variant="outline" size="sm">
-              <Wind /> Respiration
+      <div>
+        <h1 className="text-xl font-semibold">
+          {plan ? WEEKDAY_LABELS[plan.day_of_week] : 'Séance'}
+        </h1>
+        {plan && <p className="mt-1 text-muted-foreground">{plan.program_name}</p>}
+        <Badge variant={isInProgress ? 'outline' : 'default'} className="mt-2">
+          {isInProgress ? 'En cours' : 'Terminée'}
+        </Badge>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/bien-etre">
+          <Button variant="outline" size="sm">
+            <Wind /> Respiration
+          </Button>
+        </Link>
+        {isInProgress && (
+          <Button
+            size="sm"
+            disabled={completeLog.isPending}
+            onClick={() => completeLog.mutate()}
+          >
+            Terminer la séance
+          </Button>
+        )}
+        <ConfirmDialog
+          trigger={
+            <Button variant="destructive" size="sm">
+              Supprimer
             </Button>
-          </Link>
-          {isInProgress && (
-            <Button
-              size="sm"
-              disabled={completeLog.isPending}
-              onClick={() => completeLog.mutate()}
-            >
-              Terminer la séance
-            </Button>
-          )}
-          <ConfirmDialog
-            trigger={
-              <Button variant="destructive" size="sm">
-                Supprimer
-              </Button>
-            }
-            title="Supprimer cette séance ?"
-            description="Cette action est irréversible et supprimera les séries enregistrées."
-            confirmLabel="Supprimer définitivement"
-            onConfirm={async () => {
-              await deleteLog.mutateAsync(log.id)
-              void navigate(`/programs/${log.program_id}`)
-            }}
-          />
-        </div>
+          }
+          title="Supprimer cette séance ?"
+          description="Cette action est irréversible et supprimera les séries enregistrées."
+          confirmLabel="Supprimer définitivement"
+          onConfirm={async () => {
+            await deleteLog.mutateAsync(log.id)
+            void navigate(`/programs/${log.program_id}`)
+          }}
+        />
       </div>
 
       <ul className="flex flex-col gap-3">
@@ -139,7 +137,7 @@ function SessionLogExerciseCard({
 }) {
   const createSet = useCreateSessionLogSet(sessionLogId)
   const deleteSet = useDeleteSessionLogSet()
-  const [weight, setWeight] = useState('')
+  const [weight, setWeight] = useState(slot.target_weight_kg?.toString() ?? '')
   const [reps, setReps] = useState(slot.target_reps_min.toString())
   const [rpe, setRpe] = useState('')
   const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
@@ -168,8 +166,9 @@ function SessionLogExerciseCard({
       actual_weight_kg: Number(weight),
       actual_rpe: rpe.trim() === '' ? null : Number(rpe),
     })
-    setWeight('')
-    setRpe('')
+    // Charge/reps/RPE restent affichés tels quels après l'ajout : ils servent
+    // de base pour la série suivante (surcharge progressive), plutôt que de
+    // forcer à retaper la même charge à chaque série.
     startRest(created.id)
   }
 
@@ -181,6 +180,9 @@ function SessionLogExerciseCard({
       actual_weight_kg: set.actual_weight_kg,
       actual_rpe: set.actual_rpe,
     })
+    setWeight(set.actual_weight_kg.toString())
+    setReps(set.actual_reps.toString())
+    setRpe(set.actual_rpe !== null ? set.actual_rpe.toString() : '')
     startRest(created.id)
   }
 
@@ -197,7 +199,8 @@ function SessionLogExerciseCard({
         </div>
         <p className="text-sm text-muted-foreground">
           Cible : {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-          {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
+          {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
+          {slot.target_weight_kg !== null ? ` · ${slot.target_weight_kg} kg` : ''} · repos{' '}
           {restSeconds}s
         </p>
       </CardHeader>

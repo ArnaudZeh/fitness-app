@@ -42,7 +42,15 @@ function ExerciseList({
   exercises,
   thumbnailByExerciseId,
 }: {
-  exercises: { exerciseId: string; exerciseName: string; targetSets: number; targetRepsMin: number; targetRepsMax: number; targetRpe: number | null }[]
+  exercises: {
+    exerciseId: string
+    exerciseName: string
+    targetSets: number
+    targetRepsMin: number
+    targetRepsMax: number
+    targetRpe: number | null
+    targetWeightKg: number | null
+  }[]
   thumbnailByExerciseId: Map<string, ExerciseThumbnailInfo>
 }) {
   return (
@@ -57,6 +65,7 @@ function ExerciseList({
             {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}-
             {exercise.targetRepsMax} reps
             {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+            {exercise.targetWeightKg !== null && ` · ${exercise.targetWeightKg} kg`}
           </span>
         </li>
       ))}

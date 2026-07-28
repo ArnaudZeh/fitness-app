@@ -156,6 +156,7 @@ export function ProgramGeneratePage() {
                             {exercise.exerciseName} · {exercise.targetSets} ×{' '}
                             {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
                             {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+                            {exercise.targetWeightKg !== null && ` · ${exercise.targetWeightKg} kg`}
                           </span>
                         </li>
                       ))}

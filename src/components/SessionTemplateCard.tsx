@@ -292,7 +292,8 @@ function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotR
           </div>
           <p className="text-sm text-muted-foreground">
             {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-            {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''} · repos{' '}
+            {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
+            {slot.target_weight_kg !== null ? ` · ${slot.target_weight_kg} kg` : ''} · repos{' '}
             {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[actions.focus]}s
           </p>
         </div>

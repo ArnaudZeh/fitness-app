@@ -9,6 +9,7 @@ export interface ProgramProposalExercise {
   targetRepsMin: number
   targetRepsMax: number
   targetRpe: number | null
+  targetWeightKg: number | null
 }
 
 export interface ProgramProposalDay {
@@ -44,6 +45,7 @@ export const EXERCISE_SCHEMA = {
     targetRepsMin: { type: 'integer', minimum: 1 },
     targetRepsMax: { type: 'integer', minimum: 1 },
     targetRpe: { type: ['number', 'null'], minimum: 0, maximum: 10 },
+    targetWeightKg: { type: ['number', 'null'], minimum: 0 },
   },
   required: [
     'exerciseId',
@@ -52,6 +54,7 @@ export const EXERCISE_SCHEMA = {
     'targetRepsMin',
     'targetRepsMax',
     'targetRpe',
+    'targetWeightKg',
   ],
   additionalProperties: false,
 }

@@ -664,6 +664,7 @@ export type Database = {
           target_rest_seconds: number | null
           target_rpe: number | null
           target_sets: number
+          target_weight_kg: number | null
           updated_at: string
           user_id: string
         }
@@ -681,6 +682,7 @@ export type Database = {
           target_rest_seconds?: number | null
           target_rpe?: number | null
           target_sets: number
+          target_weight_kg?: number | null
           updated_at?: string
           user_id: string
         }
@@ -698,6 +700,7 @@ export type Database = {
           target_rest_seconds?: number | null
           target_rpe?: number | null
           target_sets?: number
+          target_weight_kg?: number | null
           updated_at?: string
           user_id?: string
         }

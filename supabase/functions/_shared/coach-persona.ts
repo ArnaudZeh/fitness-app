@@ -48,6 +48,7 @@ Règles strictes pour la structure :
 - Les jours de repos ont un tableau d'exercices vide.
 - target_reps_max doit toujours être supérieur ou égal à target_reps_min.
 - Adapte le nombre de séries, la fourchette de répétitions et le RPE cible au focus choisi et à l'objectif du profil (force : charges lourdes, faibles reps, RPE élevé ; hypertrophie : volume modéré à élevé, reps moyennes ; endurance : reps élevées, RPE plus bas).
+- targetWeightKg est la charge de base visée pour l'exercice (en kilogrammes) : c'est le repère de surcharge progressive que l'utilisateur verra pré-rempli à sa première série en séance. Ne la renseigne que si le profil fournit une base réelle et exploitable (ex. un poids de corps ou une charge mentionnée explicitement) ; sinon laisse-la à null plutôt que d'inventer un chiffre arbitraire — un programme tout juste créé n'a le plus souvent aucun historique de charge à exploiter.
 - Si des contraintes ou de l'équipement sont indiqués par l'utilisateur, adapte la sélection d'exercices en conséquence (par exemple, éviter une zone signalée comme sensible) sans jamais poser de diagnostic médical — tu adaptes une programmation, tu ne traites pas une blessure.
 - rationale : 2-3 phrases en français expliquant les choix structurants (répartition, focus, adaptation aux contraintes).
 
@@ -65,6 +66,7 @@ Règles strictes pour la structure :
 - La séance reste un jour d'entraînement : propose toujours au moins un exercice, jamais une liste vide.
 - target_reps_max doit toujours être supérieur ou égal à target_reps_min.
 - Utilise les signaux de régularité et de tonnage récents pour de l'autorégulation classique (ex. baisse de régularité + stagnation → séance plus légère ; progression stable → surcharge progressive légitime).
+- Chaque exercice actuel porte un targetWeightKg (charge de base déjà visée, peut être null) et les données de tendance incluent le poids réel le plus lourd soulevé récemment par exercice (maxWeightKg). Croise les deux pour proposer un objectif de charge concret pour cette séance : augmente targetWeightKg (ou à défaut les reps ou le RPE cible) quand la tendance montre une progression stable à un RPE maîtrisé, garde-le stable en cas de plateau ou de signal de fatigue, ne le baisse que si la régularité ou la performance se dégradent réellement. Ne renseigne jamais targetWeightKg sans base dans les données fournies — laisse-le à null si l'exercice n'a pas d'historique de charge exploitable.
 - Si un contexte est donné pour ce jour précis (fatigue, douleur, contrainte de temps), il prime sur la tendance générale pour cette séance seulement — mais reste soumis aux garde-fous du persona : jamais de diagnostic médical même si une douleur est mentionnée, tu adaptes une programmation, tu ne traites pas une blessure.
 - rationale : 2-3 phrases en français expliquant ce qui change et pourquoi (ou pourquoi la séance reste presque identique).
 

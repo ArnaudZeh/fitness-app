@@ -137,6 +137,7 @@ export async function fetchActiveProgramSnapshot(): Promise<ProgramDaySnapshot[]
       `id, day_of_week, day_type,
        session_template_exercises (
          exercise_id, target_sets, target_reps_min, target_reps_max, target_rpe,
+         target_weight_kg,
          exercise:exercises ( name )
        )`,
     )
@@ -157,6 +158,7 @@ export async function fetchActiveProgramSnapshot(): Promise<ProgramDaySnapshot[]
       targetRepsMin: slot.target_reps_min,
       targetRepsMax: slot.target_reps_max,
       targetRpe: slot.target_rpe,
+      targetWeightKg: slot.target_weight_kg,
     })),
   }))
 }

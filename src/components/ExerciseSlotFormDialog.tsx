@@ -51,6 +51,9 @@ export function ExerciseSlotFormDialog({
   const [targetRestSeconds, setTargetRestSeconds] = useState(
     initialValue?.target_rest_seconds?.toString() ?? '',
   )
+  const [targetWeightKg, setTargetWeightKg] = useState(
+    initialValue?.target_weight_kg?.toString() ?? '',
+  )
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [supersetGroup, setSupersetGroup] = useState(initialValue?.superset_group ?? '')
   const [isUnilateral, setIsUnilateral] = useState(initialValue?.is_unilateral ?? false)
@@ -72,6 +75,7 @@ export function ExerciseSlotFormDialog({
       setTargetRepsMax(12)
       setTargetRpe('')
       setTargetRestSeconds('')
+      setTargetWeightKg('')
       setNotes('')
       setSupersetGroup('')
       setIsUnilateral(false)
@@ -101,6 +105,7 @@ export function ExerciseSlotFormDialog({
         target_rpe: targetRpe.trim() === '' ? null : Number(targetRpe),
         target_rest_seconds:
           targetRestSeconds.trim() === '' ? null : Number(targetRestSeconds),
+        target_weight_kg: targetWeightKg.trim() === '' ? null : Number(targetWeightKg),
         notes: notes.trim() === '' ? null : notes,
         superset_group: supersetGroup.trim() === '' ? null : supersetGroup.trim(),
         is_unilateral: isUnilateral,
@@ -188,6 +193,23 @@ export function ExerciseSlotFormDialog({
                 onChange={(event) => setTargetRepsMax(Number(event.target.value))}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="target-weight-kg">Charge de base visée (kg)</Label>
+            <Input
+              id="target-weight-kg"
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="Optionnel"
+              value={targetWeightKg}
+              onChange={(event) => setTargetWeightKg(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Poids de référence à atteindre sur cet exercice — pré-remplit la première série en
+              séance et sert de repère de surcharge progressive (aussi utilisé par le Coach IA).
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

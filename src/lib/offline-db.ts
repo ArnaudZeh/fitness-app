@@ -21,6 +21,7 @@ export interface CachedPlanExercise {
   target_reps_max: number
   target_rpe: number | null
   target_rest_seconds: number | null
+  target_weight_kg: number | null
   superset_group: string | null
   is_unilateral: boolean
 }

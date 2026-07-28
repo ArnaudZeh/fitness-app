@@ -90,6 +90,7 @@ export function SessionAdaptationDialog({
         targetRepsMin: slot.target_reps_min,
         targetRepsMax: slot.target_reps_max,
         targetRpe: slot.target_rpe,
+        targetWeightKg: slot.target_weight_kg,
       })),
       availableExercises,
       dayContext,
@@ -204,6 +205,7 @@ export function SessionAdaptationDialog({
                     <p className="text-sm text-muted-foreground">
                       {exercise.targetSets} × {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
                       {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
+                      {exercise.targetWeightKg !== null && ` · ${exercise.targetWeightKg} kg`}
                     </p>
                   </div>
                 </li>

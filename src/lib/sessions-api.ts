@@ -25,6 +25,7 @@ export interface SessionTemplateExerciseInput {
   target_reps_max: number
   target_rpe: number | null
   target_rest_seconds: number | null
+  target_weight_kg: number | null
   notes: string | null
   superset_group: string | null
   is_unilateral: boolean
@@ -207,6 +208,7 @@ export async function reorderSessionTemplateExercises(
     target_reps_max: slot.target_reps_max,
     target_rpe: slot.target_rpe,
     target_rest_seconds: slot.target_rest_seconds,
+    target_weight_kg: slot.target_weight_kg,
     notes: slot.notes,
     superset_group: slot.superset_group,
     is_unilateral: slot.is_unilateral,

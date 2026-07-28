@@ -74,8 +74,8 @@ export function ProgramDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-col gap-4">
+        <div>
           {isEditingDetails ? (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
@@ -159,7 +159,7 @@ export function ProgramDetailPage() {
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"

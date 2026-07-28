@@ -16,6 +16,7 @@ export interface ProgramProposalExercise {
   targetRepsMin: number
   targetRepsMax: number
   targetRpe: number | null
+  targetWeightKg: number | null
 }
 
 export interface ProgramProposalDay {
@@ -92,6 +93,7 @@ export async function applyProgramProposal(proposal: ProgramProposal): Promise<P
         target_reps_max: exercise.targetRepsMax,
         target_rpe: exercise.targetRpe,
         target_rest_seconds: restSeconds,
+        target_weight_kg: exercise.targetWeightKg,
         notes: null,
         superset_group: null,
         is_unilateral: false,

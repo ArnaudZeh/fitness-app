@@ -15,6 +15,7 @@ export interface CurrentExercise {
   targetRepsMin: number
   targetRepsMax: number
   targetRpe: number | null
+  targetWeightKg: number | null
 }
 
 export interface AdaptSessionInput {
