@@ -55,11 +55,18 @@ const CoachPage = lazy(() =>
 function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      {/* min-h-dvh column with the banner in normal flow (not fixed) — it
-          takes its own height and pushes the route content down instead of
-          overlaying AppLayout's header/nav, which assume they own the full
-          viewport. */}
-      <div className="flex min-h-dvh flex-col">
+      {/* h-dvh (not min-h-dvh) column with the banner in normal flow (not
+          fixed) — it takes its own height and pushes the route content down
+          instead of overlaying AppLayout's header/nav, which assume they
+          own the full viewport. A *minimum* height here would let this
+          column grow taller than the viewport whenever a page's content is
+          long, which pushes scrolling up to the whole document instead of
+          staying inside AppLayout's <main> — the exact thing that made the
+          bottom nav drift out of view instead of staying glued to the
+          screen edge. A hard h-dvh forces the overflow to stay contained in
+          <main> by construction, the same reasoning as AppLayout's own
+          h-full shell. */}
+      <div className="flex h-dvh flex-col">
         <UpdatePrompt />
         <div className="min-h-0 flex-1">
           <Routes>
