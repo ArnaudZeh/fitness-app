@@ -29,6 +29,25 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
+// registerType: 'prompt' means a newly-installed worker sits in "waiting"
+// until told otherwise — virtual:pwa-register/react's updateServiceWorker()
+// (wired to the UpdatePrompt banner's "Mettre à jour" button) sends this
+// exact message (workbox-window's messageSkipWaiting convention) once the
+// user taps it.
+self.addEventListener('message', (event) => {
+  if ((event.data as { type?: string } | undefined)?.type === 'SKIP_WAITING') {
+    void self.skipWaiting()
+  }
+})
+
+// Without this, a freshly-activated worker only controls the *next*
+// navigation — clients.claim() hands it control of the already-open page
+// immediately, so the reload that follows skipWaiting() serves the new
+// assets instead of the ones the old worker was still serving.
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 interface PushPayload {
   title: string
   body: string

@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppLayout } from '@/components/AppLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { UpdatePrompt } from '@/components/UpdatePrompt'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
@@ -54,6 +55,7 @@ const CoachPage = lazy(() =>
 function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <UpdatePrompt />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />

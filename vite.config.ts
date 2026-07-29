@@ -36,7 +36,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' + injectRegister: false — the app registers the SW itself
+      // (src/components/UpdatePrompt.tsx) via virtual:pwa-register/react so
+      // it can show a "Mettre à jour" banner instead of silently swapping
+      // the app under the user mid-session (updates ship several times a
+      // day; iOS home-screen PWAs otherwise only pick up a new SW on a full
+      // force-quit + reopen).
+      registerType: 'prompt',
+      injectRegister: false,
       // injectManifest (a custom src/sw.ts), not the default generateSW —
       // generateSW's auto-generated worker has no room for custom push /
       // notificationclick listeners, needed for P6b's wellness reminders.
