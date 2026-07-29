@@ -58,8 +58,8 @@ export default defineConfig({
         type: 'module',
       },
       manifest: {
-        name: 'Fitness',
-        short_name: 'Fitness',
+        name: 'My Gym Bro',
+        short_name: 'My Gym Bro',
         description: 'Suivi de musculation, hypoxie intermittente et bien-être',
         lang: 'fr',
         theme_color: '#0b0f14',

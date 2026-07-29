@@ -55,7 +55,7 @@ interface PushPayload {
 }
 
 self.addEventListener('push', (event) => {
-  let payload: PushPayload = { title: 'Fitness', body: '' }
+  let payload: PushPayload = { title: 'My Gym Bro', body: '' }
   try {
     if (event.data) payload = event.data.json() as PushPayload
   } catch {

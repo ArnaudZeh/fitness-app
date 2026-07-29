@@ -55,33 +55,41 @@ const CoachPage = lazy(() =>
 function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <UpdatePrompt />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<HomePage />} />
-          <Route path="/programs" element={<ProgramsListPage />} />
-          <Route path="/programs/new" element={<ProgramNewPage />} />
-          <Route path="/programs/generate" element={<ProgramGeneratePage />} />
-          <Route path="/programs/:id" element={<ProgramDetailPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/sessions/:id" element={<SessionLogPage />} />
-          <Route path="/bien-etre" element={<WellnessPage />} />
-          <Route path="/cycle" element={<CyclePage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/feed" element={<FeedPage />} />
-          <Route path="/friends" element={<FriendsPage />} />
-          <Route path="/friends/:userId" element={<FriendProfilePage />} />
-          <Route path="/coach" element={<CoachPage />} />
-        </Route>
-      </Routes>
+      {/* min-h-dvh column with the banner in normal flow (not fixed) — it
+          takes its own height and pushes the route content down instead of
+          overlaying AppLayout's header/nav, which assume they own the full
+          viewport. */}
+      <div className="flex min-h-dvh flex-col">
+        <UpdatePrompt />
+        <div className="min-h-0 flex-1">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/" element={<HomePage />} />
+              <Route path="/programs" element={<ProgramsListPage />} />
+              <Route path="/programs/new" element={<ProgramNewPage />} />
+              <Route path="/programs/generate" element={<ProgramGeneratePage />} />
+              <Route path="/programs/:id" element={<ProgramDetailPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/sessions/:id" element={<SessionLogPage />} />
+              <Route path="/bien-etre" element={<WellnessPage />} />
+              <Route path="/cycle" element={<CyclePage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/feed" element={<FeedPage />} />
+              <Route path="/friends" element={<FriendsPage />} />
+              <Route path="/friends/:userId" element={<FriendProfilePage />} />
+              <Route path="/coach" element={<CoachPage />} />
+            </Route>
+          </Routes>
+        </div>
+      </div>
     </BrowserRouter>
   )
 }

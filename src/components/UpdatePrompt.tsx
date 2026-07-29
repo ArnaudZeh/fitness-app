@@ -26,7 +26,12 @@ export function UpdatePrompt() {
   if (!needRefresh) return null
 
   return (
-    <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 border-b border-border bg-primary px-4 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] text-sm text-primary-foreground">
+    // Deliberately in normal flow, not `fixed` — App.tsx stacks this above
+    // a `flex-1 min-h-0` route container in a shared column, so this takes
+    // its own height and pushes AppLayout's header down instead of
+    // overlaying it (AppLayout/LoginPage/SignupPage all assume they own
+    // whatever height their parent hands them, not the full viewport).
+    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-primary px-4 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] text-sm text-primary-foreground">
       <span>Nouvelle version disponible</span>
       <Button size="sm" variant="secondary" onClick={() => void updateServiceWorker(true)}>
         Mettre à jour

@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     }
     recipientId = mention.mentioned_user_id
     actorId = mention.author_id
-    title = 'Fitness'
+    title = 'My Gym Bro'
     notificationBody =
       mention.content_type === 'comment'
         ? "t'a mentionné dans un commentaire."
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     }
     recipientId = activity.recipient_id
     actorId = activity.actor_id
-    title = 'Fitness'
+    title = 'My Gym Bro'
     const targetLabel = CONTENT_TYPE_LABEL[activity.content_type] ?? 'ta publication'
     notificationBody =
       activity.type === 'like' ? `a aimé ${targetLabel}.` : `a commenté ${targetLabel}.`

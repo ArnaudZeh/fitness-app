@@ -7,6 +7,7 @@ import { useFriendsData } from '@/hooks/useFriends'
 import { useUnreadMentionsCount } from '@/hooks/useMentions'
 import { useUnreadActivityNotificationsCount } from '@/hooks/useActivityNotifications'
 import { syncTimezone } from '@/lib/profile-api'
+import logoMark from '@/assets/logo-mark.png'
 
 export function AppLayout() {
   const session = useAuthStore((state) => state.session)
@@ -39,17 +40,20 @@ export function AppLayout() {
   }, [userId])
 
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground">
+    <div className="flex h-full flex-col bg-background text-foreground">
       <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3">
         <Link to="/" className="font-heading text-lg font-semibold">
-          Fitness
+          My Gym Bro
         </Link>
         <div className="hidden sm:block">
           <NavBar items={navItems} />
         </div>
-        <span className="hidden justify-self-end text-sm text-muted-foreground sm:inline">
-          {session?.user.email}
-        </span>
+        <div className="flex items-center justify-self-end gap-2">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            {session?.user.email}
+          </span>
+          <img src={logoMark} alt="My Gym Bro" className="h-7 w-auto" />
+        </div>
       </header>
 
       <main className="mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto p-4">
