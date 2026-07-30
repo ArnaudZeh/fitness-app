@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { ExerciseSlotFormDialog } from '@/components/ExerciseSlotFormDialog'
+import { ExerciseSlotFlow } from '@/components/ExerciseSlotFlow'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { SessionAdaptationDialog } from '@/components/SessionAdaptationDialog'
 import { useCreateExercise, useExercises } from '@/hooks/useExercises'
@@ -206,7 +206,7 @@ export function SessionTemplateCard({
             </SortableContext>
           </DndContext>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ExerciseSlotFormDialog
+            <ExerciseSlotFlow
               trigger={
                 <Button variant="outline" size="sm">
                   <Plus /> Ajouter un exercice
@@ -299,7 +299,7 @@ function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotR
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <ExerciseSlotFormDialog
+        <ExerciseSlotFlow
           trigger={
             <Button variant="ghost" size="icon-sm" aria-label="Modifier cet exercice">
               <Pencil />

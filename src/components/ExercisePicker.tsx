@@ -82,23 +82,9 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
     }
   }
 
-  const selectedExercise = exercises.find((exercise) => exercise.id === value)
-
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {selectedExercise && (
-          <ExerciseThumbnail
-            imageUrl={selectedExercise.image_url}
-            muscleGroup={selectedExercise.muscle_group}
-          />
-        )}
-        <p>
-          Sélection :{' '}
-          <span className="text-foreground">{selectedExercise?.name ?? 'aucune'}</span>
-        </p>
-      </div>
-      <Command shouldFilter={false} className="rounded-lg border border-border">
+    <div className="flex h-full min-h-0 flex-col">
+      <Command shouldFilter={false}>
         <CommandInput
           value={search}
           onValueChange={setSearch}
@@ -139,7 +125,7 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
             )
           })}
         </div>
-        <CommandList className="max-h-[420px]">
+        <CommandList className="max-h-none flex-1">
           {filtered.length === 0 && <CommandEmpty>Aucun exercice trouvé.</CommandEmpty>}
           {frequentExercises.length > 0 && (
             <>

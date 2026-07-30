@@ -19,6 +19,7 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
   await mondayCard.getByRole('button', { name: 'Ajouter un exercice' }).click()
   await page.getByPlaceholder('Rechercher un exercice…').fill('Squat')
   await page.getByRole('option', { name: 'Squat', exact: true }).click()
+  await page.getByText('Options avancées').click()
   await page.getByLabel('Superset').fill('A')
   await page.getByRole('button', { name: "Ajouter l'exercice" }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 })
