@@ -195,7 +195,11 @@ export function ProgramDetailPage() {
         <ul className="flex flex-col gap-3">
           {sortedTemplates.map((template) => (
             <li key={template.id} id={`day-${template.day_of_week}`}>
-              <SessionTemplateCard template={template} focus={program.focus} />
+              <SessionTemplateCard
+                template={template}
+                focus={program.focus}
+                allTemplates={sortedTemplates}
+              />
             </li>
           ))}
         </ul>

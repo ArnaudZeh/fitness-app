@@ -217,6 +217,54 @@ export async function reorderSessionTemplateExercises(
   if (error) throw error
 }
 
+// Replaces the target day's exercises with a copy of the source day's —
+// used for "duplicate this day onto another" (e.g. copy Monday onto
+// Friday). Mirrors the per-day copy loop in programs-api.ts's
+// copyProgramInternal, minus the "create a new program" part: the 7
+// session_templates already exist for every program (on_program_created
+// trigger), so this only ever touches session_template_exercises + the
+// target's day_type.
+export async function duplicateSessionTemplateExercises(
+  sourceTemplateId: string,
+  targetTemplateId: string,
+): Promise<void> {
+  const userId = await requireUserId()
+  const sourceSlots = await fetchSessionTemplateExercises(sourceTemplateId)
+
+  const { error: deleteError } = await supabase
+    .from('session_template_exercises')
+    .delete()
+    .eq('session_template_id', targetTemplateId)
+  if (deleteError) throw deleteError
+
+  const { error: dayTypeError } = await supabase
+    .from('session_templates')
+    .update({ day_type: 'training' })
+    .eq('id', targetTemplateId)
+  if (dayTypeError) throw dayTypeError
+
+  if (sourceSlots.length === 0) return
+
+  const { error: insertError } = await supabase.from('session_template_exercises').insert(
+    sourceSlots.map((slot) => ({
+      user_id: userId,
+      session_template_id: targetTemplateId,
+      exercise_id: slot.exercise_id,
+      order_index: slot.order_index,
+      target_sets: slot.target_sets,
+      target_reps_min: slot.target_reps_min,
+      target_reps_max: slot.target_reps_max,
+      target_rpe: slot.target_rpe,
+      target_rest_seconds: slot.target_rest_seconds,
+      target_weight_kg: slot.target_weight_kg,
+      notes: slot.notes,
+      superset_group: slot.superset_group,
+      is_unilateral: slot.is_unilateral,
+    })),
+  )
+  if (insertError) throw insertError
+}
+
 // Bulk-sets the same rest time across every exercise in a superset group —
 // the "repos unique pour le groupe" convenience. Just a batch write to the
 // same target_rest_seconds column each exercise already has individually

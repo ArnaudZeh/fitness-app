@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GripVertical, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { Copy, GripVertical, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import {
   DndContext,
@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DuplicateDayDialog } from '@/components/DuplicateDayDialog'
 import { ExerciseSlotFlow } from '@/components/ExerciseSlotFlow'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { SessionAdaptationDialog } from '@/components/SessionAdaptationDialog'
@@ -30,6 +31,7 @@ import { useCreateExercise, useExercises } from '@/hooks/useExercises'
 import {
   useCreateSessionTemplateExercise,
   useDeleteSessionTemplateExercise,
+  useDuplicateSessionTemplateExercises,
   useReorderSessionTemplateExercises,
   useSessionTemplateExercises,
   useSetGroupRestSeconds,
@@ -91,9 +93,11 @@ function computeBlocks(slots: SessionTemplateExercise[]): SlotBlock[] {
 export function SessionTemplateCard({
   template,
   focus,
+  allTemplates,
 }: {
   template: SessionTemplate
   focus: ProgramFocus
+  allTemplates: SessionTemplate[]
 }) {
   const navigate = useNavigate()
   const { data: exercises } = useExercises()
@@ -105,6 +109,7 @@ export function SessionTemplateCard({
   const reorderSlots = useReorderSessionTemplateExercises(template.id)
   const setGroupRest = useSetGroupRestSeconds(template.id)
   const updateDayType = useUpdateSessionTemplateDayType(template.program_id)
+  const duplicateExercises = useDuplicateSessionTemplateExercises(template.program_id)
   const startSessionLog = useStartSessionLog(template.program_id)
 
   // A small activation distance keeps a plain tap (edit/delete buttons,
@@ -141,23 +146,47 @@ export function SessionTemplateCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h3">{WEEKDAY_LABELS[template.day_of_week]}</CardTitle>
-        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-          {DAY_TYPE_OPTIONS.map((option) => (
-            <Button
-              key={option}
-              type="button"
-              size="sm"
-              variant={template.day_type === option ? 'default' : 'ghost'}
-              disabled={updateDayType.isPending}
-              onClick={() => {
-                if (template.day_type !== option) {
-                  updateDayType.mutate({ id: template.id, dayType: option })
-                }
-              }}
-            >
-              {DAY_TYPE_LABELS[option]}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+            {DAY_TYPE_OPTIONS.map((option) => (
+              <Button
+                key={option}
+                type="button"
+                size="sm"
+                variant={template.day_type === option ? 'default' : 'ghost'}
+                disabled={updateDayType.isPending}
+                onClick={() => {
+                  if (template.day_type !== option) {
+                    updateDayType.mutate({ id: template.id, dayType: option })
+                  }
+                }}
+              >
+                {DAY_TYPE_LABELS[option]}
+              </Button>
+            ))}
+          </div>
+          {sortedSlots.length > 0 && (
+            <DuplicateDayDialog
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Dupliquer ${WEEKDAY_LABELS[template.day_of_week]} vers un autre jour`}
+                >
+                  <Copy />
+                </Button>
+              }
+              sourceTemplate={template}
+              otherTemplates={allTemplates.filter((t) => t.id !== template.id)}
+              onDuplicate={(targetTemplateId) =>
+                duplicateExercises.mutateAsync({
+                  sourceTemplateId: template.id,
+                  targetTemplateId,
+                })
+              }
+            />
+          )}
         </div>
       </CardHeader>
       {isTrainingDay && (

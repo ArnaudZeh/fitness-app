@@ -82,6 +82,23 @@ export function useReorderSessionTemplateExercises(templateId: string) {
   })
 }
 
+export function useDuplicateSessionTemplateExercises(programId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      sourceTemplateId,
+      targetTemplateId,
+    }: {
+      sourceTemplateId: string
+      targetTemplateId: string
+    }) => api.duplicateSessionTemplateExercises(sourceTemplateId, targetTemplateId),
+    onSuccess: (_data, { targetTemplateId }) => {
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(targetTemplateId) })
+      void queryClient.invalidateQueries({ queryKey: templatesKey(programId) })
+    },
+  })
+}
+
 export function useSetGroupRestSeconds(templateId: string) {
   const queryClient = useQueryClient()
   return useMutation({
