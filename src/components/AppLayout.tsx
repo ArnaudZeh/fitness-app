@@ -100,7 +100,7 @@ export function AppLayout() {
           reflowing <main> underneath it. <main>'s pb-24 reserves the space
           this used to claim by sitting in flow. */}
       <motion.div
-        className="fixed inset-x-0 bottom-0 z-40 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:hidden"
         animate={{ y: isNavVisible ? '0%' : '150%' }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
       >
