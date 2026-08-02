@@ -1,10 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ExercisePicker, NEW_EXERCISE_VALUE } from '@/components/ExercisePicker'
+import { nextSupersetLabel } from '@/lib/ordering'
 import type { Exercise } from '@/lib/exercises-api'
 import type { ProgramFocus } from '@/lib/programs-api'
 import { DEFAULT_REST_SECONDS_BY_FOCUS } from '@/lib/sessions-api'
@@ -25,7 +26,16 @@ interface ExerciseSlotFlowProps {
     muscle_group: string | null
   }) => Promise<Exercise>
   onSubmit: (input: SessionTemplateExerciseInput) => Promise<void>
+  // Enables "select several exercises → configure each → create them all as
+  // one superset" on the picker step, in addition to the normal single-add
+  // path. Only meaningful for adding (never passed alongside initialValue).
+  existingSupersetGroups?: (string | null)[]
+  onSubmitSuperset?: (inputs: SessionTemplateExerciseInput[]) => Promise<void>
 }
+
+const DEFAULT_TARGET_SETS = 3
+const DEFAULT_TARGET_REPS_MIN = 8
+const DEFAULT_TARGET_REPS_MAX = 12
 
 export function ExerciseSlotFlow({
   trigger,
@@ -35,6 +45,8 @@ export function ExerciseSlotFlow({
   submitLabel,
   onCreateExercise,
   onSubmit,
+  existingSupersetGroups,
+  onSubmitSuperset,
 }: ExerciseSlotFlowProps) {
   const defaultRestSeconds = DEFAULT_REST_SECONDS_BY_FOCUS[focus]
   // Editing an existing slot skips straight to the settings screen — no
@@ -42,15 +54,20 @@ export function ExerciseSlotFlow({
   // always starts on the picker. Either way, this is the step the back
   // button returns to before closing the whole flow.
   const entryStep: Step = initialValue ? 'configure' : 'pick'
+  const canCreateSuperset = Boolean(onSubmitSuperset) && !initialValue
 
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>(entryStep)
   const [exerciseId, setExerciseId] = useState(initialValue?.exercise_id ?? '')
   const [newExerciseName, setNewExerciseName] = useState('')
   const [newExerciseMuscleGroup, setNewExerciseMuscleGroup] = useState('')
-  const [targetSets, setTargetSets] = useState(initialValue?.target_sets ?? 3)
-  const [targetRepsMin, setTargetRepsMin] = useState(initialValue?.target_reps_min ?? 8)
-  const [targetRepsMax, setTargetRepsMax] = useState(initialValue?.target_reps_max ?? 12)
+  const [targetSets, setTargetSets] = useState(initialValue?.target_sets ?? DEFAULT_TARGET_SETS)
+  const [targetRepsMin, setTargetRepsMin] = useState(
+    initialValue?.target_reps_min ?? DEFAULT_TARGET_REPS_MIN,
+  )
+  const [targetRepsMax, setTargetRepsMax] = useState(
+    initialValue?.target_reps_max ?? DEFAULT_TARGET_REPS_MAX,
+  )
   const [targetRpe, setTargetRpe] = useState(initialValue?.target_rpe?.toString() ?? '')
   const [targetRestSeconds, setTargetRestSeconds] = useState(
     initialValue?.target_rest_seconds?.toString() ?? '',
@@ -59,9 +76,17 @@ export function ExerciseSlotFlow({
     initialValue?.target_weight_kg?.toString() ?? '',
   )
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
-  const [supersetGroup, setSupersetGroup] = useState(initialValue?.superset_group ?? '')
   const [isUnilateral, setIsUnilateral] = useState(initialValue?.is_unilateral ?? false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Multi-exercise "create a superset" path — only reachable from the
+  // picker step when canCreateSuperset is true.
+  const [multiMode, setMultiMode] = useState(false)
+  const [multiSelectedIds, setMultiSelectedIds] = useState<string[]>([])
+  const [supersetLabel, setSupersetLabel] = useState('')
+  const [supersetIndex, setSupersetIndex] = useState(0)
+  const [supersetQueue, setSupersetQueue] = useState<SessionTemplateExerciseInput[]>([])
+  const isMultiConfigure = step === 'configure' && multiSelectedIds.length > 0
 
   useEffect(() => {
     if (!open) return
@@ -73,24 +98,31 @@ export function ExerciseSlotFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step])
 
+  function resetConfigureFields() {
+    setExerciseId('')
+    setNewExerciseName('')
+    setNewExerciseMuscleGroup('')
+    setTargetSets(DEFAULT_TARGET_SETS)
+    setTargetRepsMin(DEFAULT_TARGET_REPS_MIN)
+    setTargetRepsMax(DEFAULT_TARGET_REPS_MAX)
+    setTargetRpe('')
+    setTargetRestSeconds('')
+    setTargetWeightKg('')
+    setNotes('')
+    setIsUnilateral(false)
+  }
+
   function openFlow() {
     // Only the "add" instance is a single long-lived component reused
     // across every open — without this reset, its fields stay stuck on
     // whatever was last entered instead of starting blank next time.
     // "Edit" instances are scoped to one slot each, so no reset needed.
     if (!initialValue) {
-      setExerciseId('')
-      setNewExerciseName('')
-      setNewExerciseMuscleGroup('')
-      setTargetSets(3)
-      setTargetRepsMin(8)
-      setTargetRepsMax(12)
-      setTargetRpe('')
-      setTargetRestSeconds('')
-      setTargetWeightKg('')
-      setNotes('')
-      setSupersetGroup('')
-      setIsUnilateral(false)
+      resetConfigureFields()
+      setMultiMode(false)
+      setMultiSelectedIds([])
+      setSupersetQueue([])
+      setSupersetIndex(0)
     }
     setStep(entryStep)
     setOpen(true)
@@ -103,9 +135,33 @@ export function ExerciseSlotFlow({
   function handleBack() {
     if (step === entryStep) {
       close()
-    } else {
-      setStep(entryStep)
+      return
     }
+    // Mid-superset-configuration back goes to the picker rather than
+    // stepping through each already-configured exercise in reverse — a
+    // deliberate simplification. Selections stay intact, so continuing is
+    // one tap away; only the per-exercise fields already filled in are lost.
+    if (isMultiConfigure) {
+      setSupersetQueue([])
+      setSupersetIndex(0)
+    }
+    setStep(entryStep)
+  }
+
+  function toggleMultiSelected(id: string) {
+    setMultiSelectedIds((current) =>
+      current.includes(id) ? current.filter((existing) => existing !== id) : [...current, id],
+    )
+  }
+
+  function continueToSupersetConfigure() {
+    if (multiSelectedIds.length < 2) return
+    setSupersetLabel(nextSupersetLabel(existingSupersetGroups ?? []))
+    setSupersetQueue([])
+    setSupersetIndex(0)
+    resetConfigureFields()
+    setExerciseId(multiSelectedIds[0]!)
+    setStep('configure')
   }
 
   function handlePick(id: string) {
@@ -127,7 +183,7 @@ export function ExerciseSlotFlow({
         resolvedExerciseId = created.id
       }
 
-      await onSubmit({
+      const input: SessionTemplateExerciseInput = {
         exercise_id: resolvedExerciseId,
         target_sets: targetSets,
         target_reps_min: targetRepsMin,
@@ -137,10 +193,31 @@ export function ExerciseSlotFlow({
           targetRestSeconds.trim() === '' ? null : Number(targetRestSeconds),
         target_weight_kg: targetWeightKg.trim() === '' ? null : Number(targetWeightKg),
         notes: notes.trim() === '' ? null : notes,
-        superset_group: supersetGroup.trim() === '' ? null : supersetGroup.trim(),
+        // The manual free-text field this used to be is gone (typo-prone,
+        // easy to silently break a grouping) — a plain add/edit always
+        // preserves whatever group the slot already belonged to, and the
+        // only ways to change membership now are the superset picker below
+        // and the dedicated link/unlink actions on each slot.
+        superset_group: isMultiConfigure ? supersetLabel : (initialValue?.superset_group ?? null),
         is_unilateral: isUnilateral,
-      })
-      close()
+      }
+
+      if (isMultiConfigure) {
+        const queue = [...supersetQueue, input]
+        const nextIndex = supersetIndex + 1
+        if (nextIndex < multiSelectedIds.length) {
+          setSupersetQueue(queue)
+          setSupersetIndex(nextIndex)
+          resetConfigureFields()
+          setExerciseId(multiSelectedIds[nextIndex]!)
+        } else {
+          await onSubmitSuperset!(queue)
+          close()
+        }
+      } else {
+        await onSubmit(input)
+        close()
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -150,9 +227,18 @@ export function ExerciseSlotFlow({
   const isNewExercise = exerciseId === NEW_EXERCISE_VALUE
   const headerTitle =
     step === 'pick'
-      ? 'Choisir un exercice'
-      : (isNewExercise ? 'Nouvel exercice' : selectedExercise?.name) ?? submitLabel
+      ? multiMode
+        ? 'Choisir les exercices du superset'
+        : 'Choisir un exercice'
+      : isMultiConfigure
+        ? `Superset ${supersetLabel} · ${supersetIndex + 1}/${multiSelectedIds.length} · ${selectedExercise?.name ?? ''}`
+        : ((isNewExercise ? 'Nouvel exercice' : selectedExercise?.name) ?? submitLabel)
   const canChangeExercise = Boolean(initialValue) && step === 'configure'
+  const configureSubmitLabel = isMultiConfigure
+    ? supersetIndex + 1 < multiSelectedIds.length
+      ? 'Exercice suivant'
+      : `Créer le superset (${multiSelectedIds.length} exercices)`
+    : submitLabel
 
   return (
     <>
@@ -181,7 +267,35 @@ export function ExerciseSlotFlow({
 
           <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
             {step === 'pick' ? (
-              <ExercisePicker exercises={exercises} value={exerciseId} onSelect={handlePick} />
+              <div className="flex h-full min-h-0 flex-col gap-3">
+                {canCreateSuperset && (
+                  <Button
+                    type="button"
+                    variant={multiMode ? 'default' : 'outline'}
+                    size="sm"
+                    className="self-start"
+                    onClick={() => {
+                      setMultiMode(!multiMode)
+                      setMultiSelectedIds([])
+                    }}
+                  >
+                    <Layers />
+                    {multiMode ? 'Annuler la sélection multiple' : 'Créer un superset'}
+                  </Button>
+                )}
+                <div className="min-h-0 flex-1">
+                  <ExercisePicker
+                    exercises={exercises}
+                    value={exerciseId}
+                    onSelect={handlePick}
+                    multiSelect={
+                      multiMode
+                        ? { selectedIds: multiSelectedIds, onToggle: toggleMultiSelected }
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
             ) : (
               <form
                 id={FORM_ID}
@@ -343,25 +457,26 @@ export function ExerciseSlotFlow({
                         affiché comme repère pendant la séance.
                       </p>
                     </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="superset-group">Superset</Label>
-                      <Input
-                        id="superset-group"
-                        placeholder="Optionnel · ex: A"
-                        value={supersetGroup}
-                        onChange={(event) => setSupersetGroup(event.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Donne le même repère (ex : "A") à plusieurs exercices du même jour
-                        pour les enchaîner en superset.
-                      </p>
-                    </div>
                   </div>
                 </details>
               </form>
             )}
           </div>
+
+          {step === 'pick' && multiMode && (
+            <div className="shrink-0 border-t border-border bg-background p-3">
+              <Button
+                type="button"
+                className="w-full"
+                disabled={multiSelectedIds.length < 2}
+                onClick={continueToSupersetConfigure}
+              >
+                {multiSelectedIds.length < 2
+                  ? 'Sélectionne au moins 2 exercices'
+                  : `Continuer avec ${multiSelectedIds.length} exercices`}
+              </Button>
+            </div>
+          )}
 
           {step === 'configure' && (
             <div className="shrink-0 border-t border-border bg-background p-3">
@@ -375,7 +490,7 @@ export function ExerciseSlotFlow({
                   (isNewExercise && newExerciseName.trim() === '')
                 }
               >
-                {isSubmitting ? 'Enregistrement…' : submitLabel}
+                {isSubmitting ? 'Enregistrement…' : configureSubmitLabel}
               </Button>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CircleDot, Plus } from 'lucide-react'
+import { Check, CircleDot, Plus } from 'lucide-react'
 import {
   Command,
   CommandEmpty,
@@ -44,9 +44,32 @@ interface ExercisePickerProps {
   exercises: Exercise[]
   value: string
   onSelect: (exerciseId: string) => void
+  // Lets the caller pick several exercises before leaving the picker (used
+  // to create a superset in one pass) instead of the default "pick one,
+  // move on" behavior. "Créer un nouvel exercice" is left out of this mode:
+  // a brand new exercise has no usage/muscle-group data yet to sort it
+  // alongside the others being multi-picked, and it can still be added the
+  // normal single-pick way, then linked into the superset afterwards.
+  multiSelect?: {
+    selectedIds: string[]
+    onToggle: (exerciseId: string) => void
+  }
 }
 
-export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerProps) {
+function SelectionCheckbox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className={cn(
+        'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+        checked ? 'border-primary bg-primary text-primary-foreground' : 'border-input',
+      )}
+    >
+      {checked && <Check className="size-3" />}
+    </span>
+  )
+}
+
+export function ExercisePicker({ exercises, value, onSelect, multiSelect }: ExercisePickerProps) {
   const [search, setSearch] = useState('')
   const [muscleGroupFilter, setMuscleGroupFilter] = useState<string | null>(null)
   const { data: usageCounts } = useExerciseUsageCounts()
@@ -135,9 +158,14 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
                     key={exercise.id}
                     value={exercise.id}
                     data-checked={exercise.id === value}
-                    onSelect={() => onSelect(exercise.id)}
+                    onSelect={() =>
+                      multiSelect ? multiSelect.onToggle(exercise.id) : onSelect(exercise.id)
+                    }
                     className="gap-2"
                   >
+                    {multiSelect && (
+                      <SelectionCheckbox checked={multiSelect.selectedIds.includes(exercise.id)} />
+                    )}
                     <ExerciseThumbnail
                       imageUrl={exercise.image_url}
                       muscleGroup={exercise.muscle_group}
@@ -156,9 +184,14 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
                   key={exercise.id}
                   value={exercise.id}
                   data-checked={exercise.id === value}
-                  onSelect={() => onSelect(exercise.id)}
+                  onSelect={() =>
+                    multiSelect ? multiSelect.onToggle(exercise.id) : onSelect(exercise.id)
+                  }
                   className="gap-2"
                 >
+                  {multiSelect && (
+                    <SelectionCheckbox checked={multiSelect.selectedIds.includes(exercise.id)} />
+                  )}
                   <ExerciseThumbnail
                     imageUrl={exercise.image_url}
                     muscleGroup={exercise.muscle_group}
@@ -168,17 +201,21 @@ export function ExercisePicker({ exercises, value, onSelect }: ExercisePickerPro
               ))}
             </CommandGroup>
           ))}
-          <CommandSeparator />
-          <CommandGroup>
-            <CommandItem
-              value={NEW_EXERCISE_VALUE}
-              data-checked={value === NEW_EXERCISE_VALUE}
-              onSelect={() => onSelect(NEW_EXERCISE_VALUE)}
-            >
-              <Plus className="size-4" />
-              Créer un nouvel exercice
-            </CommandItem>
-          </CommandGroup>
+          {!multiSelect && (
+            <>
+              <CommandSeparator />
+              <CommandGroup>
+                <CommandItem
+                  value={NEW_EXERCISE_VALUE}
+                  data-checked={value === NEW_EXERCISE_VALUE}
+                  onSelect={() => onSelect(NEW_EXERCISE_VALUE)}
+                >
+                  <Plus className="size-4" />
+                  Créer un nouvel exercice
+                </CommandItem>
+              </CommandGroup>
+            </>
+          )}
         </CommandList>
       </Command>
     </div>

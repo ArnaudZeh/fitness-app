@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, GripVertical, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { Copy, GripVertical, Link2, Pencil, Play, Plus, Trash2, Unlink } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import {
   DndContext,
@@ -26,6 +26,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DuplicateDayDialog } from '@/components/DuplicateDayDialog'
 import { ExerciseSlotFlow } from '@/components/ExerciseSlotFlow'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
+import { LinkSupersetDialog } from '@/components/LinkSupersetDialog'
 import { SessionAdaptationDialog } from '@/components/SessionAdaptationDialog'
 import { useCreateExercise, useExercises } from '@/hooks/useExercises'
 import {
@@ -39,7 +40,8 @@ import {
   useUpdateSessionTemplateExercise,
 } from '@/hooks/useSessionTemplates'
 import { useStartSessionLog } from '@/hooks/useSessionLogs'
-import { inferGroupAfterMove } from '@/lib/ordering'
+import { computeBlocks, inferGroupAfterMove, linkIntoSuperset, unlinkFromSuperset } from '@/lib/ordering'
+import type { LinkTarget } from '@/lib/ordering'
 import type { ProgramFocus } from '@/lib/programs-api'
 import {
   DAY_TYPE_LABELS,
@@ -55,40 +57,6 @@ import type {
 import type { Exercise } from '@/lib/exercises-api'
 
 const DAY_TYPE_OPTIONS: DayType[] = ['rest', 'training']
-
-// Groups are just consecutive runs sharing the same superset_group value —
-// not a real nested structure (see inferGroupAfterMove in ordering.ts). A
-// same-value run created any other way than dragging (e.g. two non-adjacent
-// exercises manually given the same free-text label) renders as separate
-// blocks until dragged together; a rare, harmless edge case rather than one
-// worth a real grouping data model for.
-type SlotBlock =
-  | { kind: 'group'; group: string; slots: SessionTemplateExercise[] }
-  | { kind: 'single'; slot: SessionTemplateExercise }
-
-function computeBlocks(slots: SessionTemplateExercise[]): SlotBlock[] {
-  const blocks: SlotBlock[] = []
-  let i = 0
-  while (i < slots.length) {
-    const slot = slots[i]
-    if (!slot) break
-    if (slot.superset_group) {
-      const group = slot.superset_group
-      const groupSlots = [slot]
-      let j = i + 1
-      while (slots[j]?.superset_group === group) {
-        groupSlots.push(slots[j]!)
-        j++
-      }
-      blocks.push({ kind: 'group', group, slots: groupSlots })
-      i = j
-    } else {
-      blocks.push({ kind: 'single', slot })
-      i++
-    }
-  }
-  return blocks
-}
 
 export function SessionTemplateCard({
   template,
@@ -140,6 +108,14 @@ export function SessionTemplateCard({
       slot.id === active.id ? { ...slot, superset_group: newGroup } : slot,
     )
     reorderSlots.mutate(withUpdatedGroup)
+  }
+
+  async function handleLink(currentSlot: SessionTemplateExercise, target: LinkTarget<SessionTemplateExercise>) {
+    await reorderSlots.mutateAsync(linkIntoSuperset(sortedSlots, currentSlot, target))
+  }
+
+  function handleUnlink(slotId: string) {
+    reorderSlots.mutate(unlinkFromSuperset(sortedSlots, slotId))
   }
 
   return (
@@ -210,6 +186,7 @@ export function SessionTemplateCard({
                         slots={block.slots}
                         focus={focus}
                         exercises={exercises ?? []}
+                        daySlots={sortedSlots}
                         onSetGroupRest={(slotIds, restSeconds) =>
                           setGroupRest.mutate({ slotIds, restSeconds })
                         }
@@ -217,6 +194,8 @@ export function SessionTemplateCard({
                         onCreateExercise={(input) => createExercise.mutateAsync(input)}
                         onUpdate={(id, input) => updateSlot.mutateAsync({ id, input })}
                         onDelete={(id) => deleteSlot.mutateAsync(id)}
+                        onLink={handleLink}
+                        onUnlink={handleUnlink}
                       />
                     </li>
                   ) : (
@@ -225,9 +204,12 @@ export function SessionTemplateCard({
                       slot={block.slot}
                       focus={focus}
                       exercises={exercises ?? []}
+                      daySlots={sortedSlots}
                       onCreateExercise={(input) => createExercise.mutateAsync(input)}
                       onUpdate={(id, input) => updateSlot.mutateAsync({ id, input })}
                       onDelete={(id) => deleteSlot.mutateAsync(id)}
+                      onLink={handleLink}
+                      onUnlink={handleUnlink}
                     />
                   ),
                 )}
@@ -247,6 +229,16 @@ export function SessionTemplateCard({
               onCreateExercise={(input) => createExercise.mutateAsync(input)}
               onSubmit={async (input) => {
                 await createSlot.mutateAsync(input)
+              }}
+              existingSupersetGroups={sortedSlots.map((slot) => slot.superset_group)}
+              onSubmitSuperset={async (inputs) => {
+                // Sequential, not Promise.all: createSessionTemplateExercise
+                // computes each new order_index from a fresh fetch of
+                // existing slots, so concurrent inserts could race and land
+                // on the same order_index instead of ending up contiguous.
+                for (const input of inputs) {
+                  await createSlot.mutateAsync(input)
+                }
               }}
             />
             {sortedSlots.length > 0 && (
@@ -280,9 +272,12 @@ export function SessionTemplateCard({
 interface SlotRowActions {
   focus: ProgramFocus
   exercises: Exercise[]
+  daySlots: SessionTemplateExercise[]
   onCreateExercise: (input: { name: string; muscle_group: string | null }) => Promise<Exercise>
   onUpdate: (id: string, input: SessionTemplateExerciseInput) => Promise<unknown>
   onDelete: (id: string) => Promise<unknown>
+  onLink: (currentSlot: SessionTemplateExercise, target: LinkTarget<SessionTemplateExercise>) => Promise<void>
+  onUnlink: (slotId: string) => void
 }
 
 function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotRowActions) {
@@ -328,6 +323,28 @@ function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotR
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {slot.superset_group === null ? (
+          <LinkSupersetDialog
+            trigger={
+              <Button variant="ghost" size="icon-sm" aria-label="Lier cet exercice en superset">
+                <Link2 />
+              </Button>
+            }
+            currentSlot={slot}
+            daySlots={actions.daySlots}
+            onLink={(target) => actions.onLink(slot, target)}
+          />
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Retirer cet exercice du superset"
+            onClick={() => actions.onUnlink(slot.id)}
+          >
+            <Unlink />
+          </Button>
+        )}
         <ExerciseSlotFlow
           trigger={
             <Button variant="ghost" size="icon-sm" aria-label="Modifier cet exercice">

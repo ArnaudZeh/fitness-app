@@ -20,6 +20,7 @@ import {
   useSessionPlan,
 } from '@/hooks/useSessionLogs'
 import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
+import { computeBlocks } from '@/lib/ordering'
 import type { ProgramFocus } from '@/lib/programs-api'
 import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS } from '@/lib/sessions-api'
 import type { CachedPlanExercise } from '@/lib/offline-db'
@@ -106,17 +107,43 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
       </div>
 
       <ul className="flex flex-col gap-3">
-        {sortedSlots.map((slot) => (
-          <li key={slot.id}>
-            <SessionLogExerciseCard
-              slot={slot}
-              sets={allSets.filter((set) => set.session_template_exercise_id === slot.id)}
-              sessionLogId={log.id}
-              focus={focus}
-              disabled={!isInProgress}
-            />
-          </li>
-        ))}
+        {computeBlocks(sortedSlots).map((block) =>
+          block.kind === 'group' ? (
+            <li
+              key={`group-${block.group}`}
+              className="flex flex-col gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3"
+            >
+              <Badge className="self-start">Superset {block.group}</Badge>
+              <ul className="flex flex-col gap-3">
+                {block.slots.map((slot) => (
+                  <li key={slot.id}>
+                    <SessionLogExerciseCard
+                      slot={slot}
+                      sets={allSets.filter(
+                        (set) => set.session_template_exercise_id === slot.id,
+                      )}
+                      sessionLogId={log.id}
+                      focus={focus}
+                      disabled={!isInProgress}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ) : (
+            <li key={block.slot.id}>
+              <SessionLogExerciseCard
+                slot={block.slot}
+                sets={allSets.filter(
+                  (set) => set.session_template_exercise_id === block.slot.id,
+                )}
+                sessionLogId={log.id}
+                focus={focus}
+                disabled={!isInProgress}
+              />
+            </li>
+          ),
+        )}
       </ul>
     </div>
   )
@@ -193,9 +220,6 @@ function SessionLogExerciseCard({
           <ExerciseThumbnail imageUrl={slot.image_url} muscleGroup={slot.muscle_group} />
           <CardTitle as="h3">{slot.exercise_name}</CardTitle>
           {slot.is_unilateral && <Badge variant="outline">Unilatéral</Badge>}
-          {slot.superset_group && (
-            <Badge variant="outline">Superset {slot.superset_group}</Badge>
-          )}
         </div>
         <p className="text-sm text-muted-foreground">
           Cible : {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
