@@ -691,6 +691,7 @@ export type Database = {
           created_at: string
           exercise_id: string
           id: string
+          is_bodyweight: boolean
           is_unilateral: boolean
           notes: string | null
           order_index: number
@@ -709,6 +710,7 @@ export type Database = {
           created_at?: string
           exercise_id: string
           id?: string
+          is_bodyweight?: boolean
           is_unilateral?: boolean
           notes?: string | null
           order_index: number
@@ -727,6 +729,7 @@ export type Database = {
           created_at?: string
           exercise_id?: string
           id?: string
+          is_bodyweight?: boolean
           is_unilateral?: boolean
           notes?: string | null
           order_index?: number

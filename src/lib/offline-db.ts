@@ -24,6 +24,7 @@ export interface CachedPlanExercise {
   target_weight_kg: number | null
   superset_group: string | null
   is_unilateral: boolean
+  is_bodyweight: boolean
 }
 
 export interface CachedSessionPlan {

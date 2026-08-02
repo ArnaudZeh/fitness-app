@@ -77,6 +77,7 @@ export function ExerciseSlotFlow({
   )
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [isUnilateral, setIsUnilateral] = useState(initialValue?.is_unilateral ?? false)
+  const [isBodyweight, setIsBodyweight] = useState(initialValue?.is_bodyweight ?? false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Multi-exercise "create a superset" path — only reachable from the
@@ -110,6 +111,7 @@ export function ExerciseSlotFlow({
     setTargetWeightKg('')
     setNotes('')
     setIsUnilateral(false)
+    setIsBodyweight(false)
   }
 
   function openFlow() {
@@ -200,6 +202,7 @@ export function ExerciseSlotFlow({
         // and the dedicated link/unlink actions on each slot.
         superset_group: isMultiConfigure ? supersetLabel : (initialValue?.superset_group ?? null),
         is_unilateral: isUnilateral,
+        is_bodyweight: isBodyweight,
       }
 
       if (isMultiConfigure) {
@@ -378,20 +381,22 @@ export function ExerciseSlotFlow({
                   </summary>
                   <div className="mt-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label htmlFor="target-weight-kg">Charge de base visée (kg)</Label>
+                      <Label htmlFor="target-weight-kg">
+                        {isBodyweight ? 'Charge additionnelle (kg)' : 'Charge de base visée (kg)'}
+                      </Label>
                       <Input
                         id="target-weight-kg"
                         type="number"
-                        min={0}
+                        min={isBodyweight ? undefined : 0}
                         step={0.5}
                         placeholder="Optionnel"
                         value={targetWeightKg}
                         onChange={(event) => setTargetWeightKg(event.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Poids de référence à atteindre sur cet exercice — pré-remplit la
-                        première série en séance et sert de repère de surcharge progressive
-                        (aussi utilisé par le Coach IA).
+                        {isBodyweight
+                          ? 'Lest ajouté (ex : +5) ou assistance retirée (ex : -10) par rapport au poids du corps seul. Laisser vide pour poids du corps seul.'
+                          : 'Poids de référence à atteindre sur cet exercice — pré-remplit la première série en séance et sert de repère de surcharge progressive (aussi utilisé par le Coach IA).'}
                       </p>
                     </div>
 
@@ -455,6 +460,24 @@ export function ExerciseSlotFlow({
                       <p className="text-xs text-muted-foreground">
                         Un côté à la fois (ex : tirage vertical câble en unilatéral) —
                         affiché comme repère pendant la séance.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="is-bodyweight"
+                          type="checkbox"
+                          checked={isBodyweight}
+                          onChange={(event) => setIsBodyweight(event.target.checked)}
+                          className="size-4 rounded border-input accent-primary"
+                        />
+                        <Label htmlFor="is-bodyweight">Poids du corps</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Pas de charge externe requise (ex : abdos, pompes, tractions) — la
+                        saisie en séance devient une charge additionnelle facultative
+                        (lest ou assistance) plutôt qu'une charge totale.
                       </p>
                     </div>
                   </div>

@@ -47,6 +47,7 @@ import {
   DAY_TYPE_LABELS,
   DEFAULT_REST_SECONDS_BY_FOCUS,
   WEEKDAY_LABELS,
+  formatBodyweightLoad,
   type DayType,
 } from '@/lib/sessions-api'
 import type {
@@ -313,12 +314,21 @@ function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotR
                 Unilatéral
               </Badge>
             )}
+            {slot.is_bodyweight && (
+              <Badge variant="outline" className="shrink-0">
+                Poids du corps
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
             {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
-            {slot.target_weight_kg !== null ? ` · ${slot.target_weight_kg} kg` : ''} · repos{' '}
-            {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[actions.focus]}s
+            {slot.is_bodyweight
+              ? ` · ${formatBodyweightLoad(slot.target_weight_kg)}`
+              : slot.target_weight_kg !== null
+                ? ` · ${slot.target_weight_kg} kg`
+                : ''}{' '}
+            · repos {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[actions.focus]}s
           </p>
         </div>
       </div>

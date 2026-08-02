@@ -105,6 +105,7 @@ export async function cacheSessionPlan(
       target_weight_kg: slot.target_weight_kg,
       superset_group: slot.superset_group,
       is_unilateral: slot.is_unilateral,
+      is_bodyweight: slot.is_bodyweight,
     }))
 
     const plan: CachedSessionPlan = {

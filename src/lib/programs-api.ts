@@ -171,6 +171,7 @@ async function copyProgramInternal(program: Program, newName: string): Promise<P
             notes: slot.notes,
             superset_group: slot.superset_group,
             is_unilateral: slot.is_unilateral,
+            is_bodyweight: slot.is_bodyweight,
           })),
         )
       if (newSlotsError) throw newSlotsError

@@ -36,7 +36,12 @@ import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
 import { computeBlocks } from '@/lib/ordering'
 import type { Exercise } from '@/lib/exercises-api'
 import type { ProgramFocus } from '@/lib/programs-api'
-import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
+import {
+  DEFAULT_REST_SECONDS_BY_FOCUS,
+  WEEKDAY_LABELS,
+  formatBodyweightLoad,
+  getTodayIsoDayOfWeek,
+} from '@/lib/sessions-api'
 import type { CachedPlanExercise } from '@/lib/offline-db'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 
@@ -316,6 +321,7 @@ function SessionLogExerciseCard({
           <ExerciseThumbnail imageUrl={displayImage} muscleGroup={displayMuscleGroup} />
           <CardTitle as="h3">{displayName}</CardTitle>
           {slot.is_unilateral && <Badge variant="outline">Unilatéral</Badge>}
+          {slot.is_bodyweight && <Badge variant="outline">Poids du corps</Badge>}
         </div>
         {substituteExerciseId && (
           <p className="text-xs text-muted-foreground">
@@ -325,9 +331,11 @@ function SessionLogExerciseCard({
         <p className="text-sm text-muted-foreground">
           Cible : {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
           {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
-          {!substituteExerciseId && slot.target_weight_kg !== null
-            ? ` · ${slot.target_weight_kg} kg`
-            : ''}{' '}
+          {slot.is_bodyweight && !substituteExerciseId
+            ? ` · ${formatBodyweightLoad(slot.target_weight_kg)}`
+            : !substituteExerciseId && slot.target_weight_kg !== null
+              ? ` · ${slot.target_weight_kg} kg`
+              : ''}{' '}
           · repos {restSeconds}s
         </p>
         {!disabled && (
@@ -367,7 +375,11 @@ function SessionLogExerciseCard({
                 className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
               >
                 <p className="font-mono tabular-nums">
-                  Série {set.set_number} · {set.actual_weight_kg} kg x {set.actual_reps}
+                  Série {set.set_number} ·{' '}
+                  {slot.is_bodyweight
+                    ? formatBodyweightLoad(set.actual_weight_kg)
+                    : `${set.actual_weight_kg} kg`}{' '}
+                  x {set.actual_reps}
                   {set.actual_rpe !== null ? ` @ RPE ${set.actual_rpe}` : ''}
                   {showsDifferentExercise ? ` · ${setExerciseName}` : ''}
                 </p>
@@ -453,13 +465,16 @@ function SessionLogExerciseCard({
             className="grid grid-cols-3 items-end gap-2"
           >
             <div className="flex flex-col gap-1">
-              <Label htmlFor={`weight-${slot.id}`}>Charge (kg)</Label>
+              <Label htmlFor={`weight-${slot.id}`}>
+                {slot.is_bodyweight ? 'Charge additionnelle (kg)' : 'Charge (kg)'}
+              </Label>
               <Input
                 id={`weight-${slot.id}`}
                 type="number"
-                min={0}
+                min={slot.is_bodyweight ? undefined : 0}
                 step={0.5}
-                required
+                required={!slot.is_bodyweight}
+                placeholder={slot.is_bodyweight ? 'Poids du corps' : undefined}
                 className="h-12 text-lg!"
                 value={weight}
                 onChange={(event) => setWeight(event.target.value)}

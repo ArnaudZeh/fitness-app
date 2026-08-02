@@ -29,6 +29,7 @@ export interface SessionTemplateExerciseInput {
   notes: string | null
   superset_group: string | null
   is_unilateral: boolean
+  is_bodyweight: boolean
 }
 
 // Rest interval defaults by training focus, since the same duration doesn't
@@ -73,6 +74,16 @@ export const WEEKDAY_SHORT_LABELS: Record<number, string> = {
   5: 'Ven',
   6: 'Sam',
   7: 'Dim',
+}
+
+// Formats the additional-load part of a bodyweight exercise's target/actual
+// weight, which is signed (unlike a normal loaded exercise's weight): null
+// or 0 means bodyweight alone, positive is added load (weighted vest/belt/
+// plate), negative is assistance removed from an assisted machine.
+export function formatBodyweightLoad(weightKg: number | null): string {
+  if (weightKg === null || weightKg === 0) return 'poids du corps'
+  const sign = weightKg > 0 ? '+' : ''
+  return `poids du corps ${sign}${weightKg} kg`
 }
 
 // JS's Date.getDay() is 0=Sunday..6=Saturday — remapped to this app's
@@ -212,6 +223,7 @@ export async function reorderSessionTemplateExercises(
     notes: slot.notes,
     superset_group: slot.superset_group,
     is_unilateral: slot.is_unilateral,
+    is_bodyweight: slot.is_bodyweight,
   }))
   const { error } = await supabase.from('session_template_exercises').upsert(rows)
   if (error) throw error
@@ -260,6 +272,7 @@ export async function duplicateSessionTemplateExercises(
       notes: slot.notes,
       superset_group: slot.superset_group,
       is_unilateral: slot.is_unilateral,
+      is_bodyweight: slot.is_bodyweight,
     })),
   )
   if (insertError) throw insertError

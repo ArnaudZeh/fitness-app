@@ -97,6 +97,7 @@ export async function applyProgramProposal(proposal: ProgramProposal): Promise<P
         notes: null,
         superset_group: null,
         is_unilateral: false,
+        is_bodyweight: false,
       })
     }
   }
