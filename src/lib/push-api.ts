@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase'
 
+// Shared across every place that offers to subscribe to push (WellnessPage's
+// settings toggle, the first-launch prompt) so there's a single source of
+// truth instead of each call site re-reading and re-casting the env var.
+export const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
+
 async function requireUserId(): Promise<string> {
   const {
     data: { user },

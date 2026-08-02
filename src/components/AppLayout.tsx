@@ -3,6 +3,7 @@ import { Link, Outlet } from 'react-router'
 import { motion } from 'framer-motion'
 import { Bot, Dumbbell, Home, Sparkles, Trophy } from 'lucide-react'
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
+import { NotificationsPromptDialog } from '@/components/NotificationsPromptDialog'
 import { useAuthStore } from '@/lib/auth-store'
 import { useFriendsData } from '@/hooks/useFriends'
 import { useUnreadMentionsCount } from '@/hooks/useMentions'
@@ -72,6 +73,7 @@ export function AppLayout() {
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
+      <NotificationsPromptDialog />
       <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3">
         <Link to="/" className="font-heading text-lg font-semibold">
           My Gym Bro

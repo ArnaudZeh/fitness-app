@@ -24,11 +24,10 @@ import {
 } from '@/hooks/useBreathProtocols'
 import { useNotificationSupport, usePushSubscription } from '@/hooks/useNotifications'
 import { formatTime, playBeep, vibrate } from '@/lib/timer-feedback'
+import { VAPID_PUBLIC_KEY } from '@/lib/push-api'
 import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { WellnessActivity, WellnessActivityInput } from '@/lib/wellness-api'
 import type { BreathProtocol, BreathProtocolInput } from '@/lib/breath-api'
-
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
 
