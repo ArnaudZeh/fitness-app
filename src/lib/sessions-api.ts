@@ -265,6 +265,26 @@ export async function duplicateSessionTemplateExercises(
   if (insertError) throw insertError
 }
 
+// Swaps just the exercise on a slot (and clears its load target, which
+// won't transfer to a different exercise/machine) without touching any
+// other field — used when a mid-session substitution (SessionLogPage) is
+// also applied to the program for future weeks. A partial update rather
+// than routing through updateSessionTemplateExercise's full-row rewrite:
+// that needs a complete SessionTemplateExerciseInput including `notes`,
+// which isn't part of the offline session-plan cache this call is driven
+// from, and reconstructing it from stale/incomplete data risked silently
+// wiping any notes already on the slot.
+export async function substituteSessionTemplateExercise(
+  id: string,
+  exerciseId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('session_template_exercises')
+    .update({ exercise_id: exerciseId, target_weight_kg: null })
+    .eq('id', id)
+  if (error) throw error
+}
+
 // Bulk-sets the same rest time across every exercise in a superset group —
 // the "repos unique pour le groupe" convenience. Just a batch write to the
 // same target_rest_seconds column each exercise already has individually

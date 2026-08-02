@@ -577,6 +577,7 @@ export type Database = {
           actual_rpe: number | null
           actual_weight_kg: number
           created_at: string
+          exercise_id: string | null
           id: string
           session_log_id: string
           session_template_exercise_id: string
@@ -589,6 +590,7 @@ export type Database = {
           actual_rpe?: number | null
           actual_weight_kg: number
           created_at?: string
+          exercise_id?: string | null
           id?: string
           session_log_id: string
           session_template_exercise_id: string
@@ -601,6 +603,7 @@ export type Database = {
           actual_rpe?: number | null
           actual_weight_kg?: number
           created_at?: string
+          exercise_id?: string | null
           id?: string
           session_log_id?: string
           session_template_exercise_id?: string
@@ -609,6 +612,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "session_log_sets_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "session_log_sets_session_log_id_fkey"
             columns: ["session_log_id"]

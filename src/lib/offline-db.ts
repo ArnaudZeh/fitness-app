@@ -58,6 +58,11 @@ export interface LocalSessionLogSet {
   actual_reps: number
   actual_weight_kg: number
   actual_rpe: number | null
+  // Which exercise was actually performed for this set — null means "the
+  // one planned for this slot" (the common case). Set once, at creation
+  // time, when a set is logged after substituting the exercise mid-session
+  // (machine unavailable, etc.) — see SessionLogPage.
+  exercise_id: string | null
   dirty: 'create' | 'delete' | null
 }
 

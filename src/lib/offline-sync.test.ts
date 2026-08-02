@@ -56,6 +56,7 @@ function makeSet(overrides: Partial<LocalSessionLogSet> = {}): LocalSessionLogSe
     actual_reps: 8,
     actual_weight_kg: 60,
     actual_rpe: null,
+    exercise_id: null,
     dirty: 'create',
     ...overrides,
   }

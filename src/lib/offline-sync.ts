@@ -94,6 +94,7 @@ async function syncDirtySets(): Promise<void> {
         actual_reps: set.actual_reps,
         actual_weight_kg: set.actual_weight_kg,
         actual_rpe: set.actual_rpe,
+        exercise_id: set.exercise_id,
       })
       if (error) {
         if (isForeignKeyViolation(error)) await offlineDb.sessionLogSets.delete(set.id)
@@ -158,6 +159,7 @@ export async function refreshSessionLogSetsCache(sessionLogId: string): Promise<
         actual_reps: row.actual_reps,
         actual_weight_kg: row.actual_weight_kg,
         actual_rpe: row.actual_rpe,
+        exercise_id: row.exercise_id,
         dirty: null,
       })
     }

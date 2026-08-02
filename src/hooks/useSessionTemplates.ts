@@ -63,6 +63,16 @@ export function useUpdateSessionTemplateExercise(templateId: string) {
   })
 }
 
+export function useSubstituteSessionTemplateExercise(templateId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, exerciseId }: { id: string; exerciseId: string }) =>
+      api.substituteSessionTemplateExercise(id, exerciseId),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: exercisesKey(templateId) }),
+  })
+}
+
 export function useDeleteSessionTemplateExercise(templateId: string) {
   const queryClient = useQueryClient()
   return useMutation({

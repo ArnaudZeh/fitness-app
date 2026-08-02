@@ -31,6 +31,7 @@ export interface SessionLogSet {
   actual_reps: number
   actual_weight_kg: number
   actual_rpe: number | null
+  exercise_id: string | null
 }
 
 export interface SessionLogSetInput {
@@ -39,6 +40,7 @@ export interface SessionLogSetInput {
   actual_reps: number
   actual_weight_kg: number
   actual_rpe: number | null
+  exercise_id: string | null
 }
 
 function requireUserIdOffline(): string {
