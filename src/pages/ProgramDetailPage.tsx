@@ -21,7 +21,7 @@ import {
   PROGRAM_STATUS_LABELS,
   type ProgramStatus,
 } from '@/lib/programs-api'
-import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from '@/lib/sessions-api'
+import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { SessionTemplate } from '@/lib/sessions-api'
 import { cn } from '@/lib/utils'
 
@@ -211,6 +211,14 @@ export function ProgramDetailPage() {
           <ul className="flex flex-col gap-2">
             {sortedLogs.map((log) => {
               const dayOfWeek = templateById.get(log.session_template_id)?.day_of_week
+              const startedDate = new Date(log.started_at)
+              // Leads with the real calendar date rather than the
+              // template's planned day — labelling a session "Samedi" next
+              // to a date that's actually a Thursday (started ahead of
+              // schedule) read as a bug. The planned day still shows, but
+              // only as a secondary note, and only when it doesn't match.
+              const isOffPlanDay =
+                dayOfWeek !== undefined && dayOfWeek !== getTodayIsoDayOfWeek(startedDate)
               return (
                 <li
                   key={log.id}
@@ -218,18 +226,21 @@ export function ProgramDetailPage() {
                 >
                   <Link
                     to={`/sessions/${log.id}`}
-                    className="flex flex-1 items-center gap-2 hover:underline"
+                    className="flex flex-1 flex-wrap items-center gap-2 hover:underline"
                   >
-                    <span className="font-medium">
-                      {dayOfWeek ? WEEKDAY_LABELS[dayOfWeek] : 'Séance'}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(log.started_at).toLocaleDateString('fr-FR', {
+                    <span className="font-medium capitalize">
+                      {startedDate.toLocaleDateString('fr-FR', {
+                        weekday: 'long',
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',
                       })}
                     </span>
+                    {isOffPlanDay && dayOfWeek !== undefined && (
+                      <span className="text-sm text-muted-foreground">
+                        séance {WEEKDAY_LABELS[dayOfWeek]}
+                      </span>
+                    )}
                     <Badge variant={log.status === 'completed' ? 'default' : 'outline'}>
                       {log.status === 'completed' ? 'Terminée' : 'En cours'}
                     </Badge>

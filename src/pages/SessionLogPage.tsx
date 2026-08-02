@@ -36,7 +36,7 @@ import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
 import { computeBlocks } from '@/lib/ordering'
 import type { Exercise } from '@/lib/exercises-api'
 import type { ProgramFocus } from '@/lib/programs-api'
-import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS } from '@/lib/sessions-api'
+import { DEFAULT_REST_SECONDS_BY_FOCUS, WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { CachedPlanExercise } from '@/lib/offline-db'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 
@@ -77,6 +77,20 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
     () => new Map((exercises ?? []).map((exercise) => [exercise.id, exercise])),
     [exercises],
   )
+  // The template's day_of_week is what the plan was designed for, not
+  // necessarily the day the session actually happened (starting a session
+  // outside its planned day is allowed — e.g. running Saturday's plan on
+  // Thursday because the week started early). The title leads with the
+  // real calendar date so it's never self-contradictory; the plan's
+  // intended day only shows as a secondary note, and only when it differs.
+  const startedDate = new Date(log.started_at)
+  const formattedStartedDate = startedDate.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+  const isOffPlanDay =
+    plan !== undefined && plan.day_of_week !== getTodayIsoDayOfWeek(startedDate)
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,10 +102,13 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
       </Link>
 
       <div>
-        <h1 className="text-xl font-semibold">
-          {plan ? WEEKDAY_LABELS[plan.day_of_week] : 'Séance'}
-        </h1>
-        {plan && <p className="mt-1 text-muted-foreground">{plan.program_name}</p>}
+        <h1 className="text-xl font-semibold capitalize">{formattedStartedDate}</h1>
+        {plan && (
+          <p className="mt-1 text-muted-foreground">
+            {plan.program_name}
+            {isOffPlanDay && ` · séance ${WEEKDAY_LABELS[plan.day_of_week]}`}
+          </p>
+        )}
         <Badge variant={isInProgress ? 'outline' : 'default'} className="mt-2">
           {isInProgress ? 'En cours' : 'Terminée'}
         </Badge>

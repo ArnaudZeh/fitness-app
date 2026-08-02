@@ -157,11 +157,18 @@ function TodayCard({ program }: { program: Program | undefined }) {
   }
 
   const todayDateStr = toLocalDateString(new Date().toISOString())
+  // Any session actually started today, regardless of which day's template
+  // it used — matching strictly on templateId missed a session run ahead of
+  // schedule (e.g. Saturday's plan done on Thursday because the week
+  // started early), showing "Repos aujourd'hui" or a redundant "Démarrer"
+  // button right below a session the user had just finished.
   const todayLog = (logs ?? []).find(
-    (log) =>
-      log.session_template_id === templateId &&
-      toLocalDateString(log.started_at) === todayDateStr,
+    (log) => toLocalDateString(log.started_at) === todayDateStr,
   )
+  const todayLogTemplate = todayLog
+    ? (templates ?? []).find((t) => t.id === todayLog.session_template_id)
+    : undefined
+  const isOffPlanLog = todayLog !== undefined && todayLog.session_template_id !== templateId
 
   return (
     <DashboardCard>
@@ -173,13 +180,16 @@ function TodayCard({ program }: { program: Program | undefined }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {!todayTemplate || todayTemplate.day_type === 'rest' ? (
-            <p className="text-sm text-muted-foreground">Repos aujourd'hui.</p>
-          ) : todayLog ? (
+          {todayLog ? (
             <>
               <Badge variant={todayLog.status === 'completed' ? 'default' : 'outline'}>
                 {todayLog.status === 'completed' ? 'Séance terminée' : 'Séance en cours'}
               </Badge>
+              {isOffPlanLog && todayLogTemplate && (
+                <p className="text-sm text-muted-foreground">
+                  Séance {WEEKDAY_LABELS[todayLogTemplate.day_of_week]} faite aujourd'hui
+                </p>
+              )}
               <Button asChild size="sm" className="self-start">
                 <Link to={`/sessions/${todayLog.id}`}>
                   {todayLog.status === 'completed'
@@ -188,6 +198,8 @@ function TodayCard({ program }: { program: Program | undefined }) {
                 </Link>
               </Button>
             </>
+          ) : !todayTemplate || todayTemplate.day_type === 'rest' ? (
+            <p className="text-sm text-muted-foreground">Repos aujourd'hui.</p>
           ) : (
             <>
               {(exercises ?? []).length > 0 && (
