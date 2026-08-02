@@ -245,6 +245,7 @@ function SessionLogExerciseCard({
         {!disabled && activeRest && (
           <RestTimer
             key={activeRest.key}
+            setId={activeRest.key}
             initialSeconds={activeRest.seconds}
             onDismiss={() => setActiveRest(null)}
           />

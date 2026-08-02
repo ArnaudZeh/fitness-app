@@ -544,6 +544,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rest_timer_notifications: {
+        Row: {
+          created_at: string
+          fire_at: string
+          id: string
+          sent: boolean
+          session_log_set_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fire_at: string
+          id?: string
+          sent?: boolean
+          session_log_set_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fire_at?: string
+          id?: string
+          sent?: boolean
+          session_log_set_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       session_log_sets: {
         Row: {
           actual_reps: number
@@ -957,6 +984,7 @@ export type Database = {
         Args: { p_content_id: string; p_content_type: string }
         Returns: string
       }
+      invoke_send_rest_timer_notifications: { Args: never; Returns: undefined }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
       is_profile_public: { Args: { p_user_id: string }; Returns: boolean }
     }
