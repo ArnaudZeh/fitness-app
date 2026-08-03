@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { NotificationsCard } from '@/components/NotificationsCard'
 import {
   useCreateWellnessActivity,
   useDeleteWellnessActivity,
@@ -22,9 +23,7 @@ import {
   useLogBreathSession,
   useUpdateBreathProtocol,
 } from '@/hooks/useBreathProtocols'
-import { useNotificationSupport, usePushSubscription } from '@/hooks/useNotifications'
 import { formatTime, playBeep, vibrate } from '@/lib/timer-feedback'
-import { VAPID_PUBLIC_KEY } from '@/lib/push-api'
 import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
 import type { WellnessActivity, WellnessActivityInput } from '@/lib/wellness-api'
 import type { BreathProtocol, BreathProtocolInput } from '@/lib/breath-api'
@@ -135,60 +134,6 @@ export function WellnessPage() {
 
       {running && <BreathRunner protocol={running} onClose={() => setRunning(null)} />}
     </div>
-  )
-}
-
-function NotificationsCard() {
-  const support = useNotificationSupport()
-  const { isSubscribed, isPending, error, subscribe, unsubscribe } = usePushSubscription()
-
-  if (support === 'unsupported') return null
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h2">Notifications</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {support === 'ios-not-installed' ? (
-          <p className="text-sm text-muted-foreground">
-            Sur iPhone/iPad, ajoutez d'abord cette app à l'écran d'accueil (Partager →
-            « Sur l'écran d'accueil ») pour pouvoir activer les rappels.
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Recevez un rappel au moment prévu pour chaque activité programmée.
-            </p>
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <Button
-              type="button"
-              variant={isSubscribed ? 'outline' : 'default'}
-              size="sm"
-              className="self-start"
-              disabled={isPending || isSubscribed === null || !VAPID_PUBLIC_KEY}
-              onClick={() => {
-                if (isSubscribed) {
-                  void unsubscribe()
-                } else if (VAPID_PUBLIC_KEY) {
-                  void subscribe(VAPID_PUBLIC_KEY)
-                }
-              }}
-            >
-              {isPending
-                ? 'Chargement…'
-                : isSubscribed
-                  ? 'Désactiver les notifications'
-                  : 'Activer les notifications'}
-            </Button>
-          </>
-        )}
-      </CardContent>
-    </Card>
   )
 }
 

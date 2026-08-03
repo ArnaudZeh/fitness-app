@@ -16,6 +16,7 @@ import { AiSettingsSection } from '@/components/AiSettingsSection'
 import { Avatar } from '@/components/Avatar'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DataOwnershipSection } from '@/components/DataOwnershipSection'
+import { NotificationsCard } from '@/components/NotificationsCard'
 import { supabase } from '@/lib/supabase'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { useAvatarUrl, useRemoveAvatar, useUploadAvatar } from '@/hooks/useAvatar'
@@ -69,6 +70,7 @@ export function ProfilePage() {
       <ProfileForm profile={profile} />
       <WeightSection />
       <PrivacySection profile={profile} />
+      <NotificationsCard />
       <CycleModuleSection profile={profile} />
       <AiSettingsSection />
       <DataOwnershipSection />
