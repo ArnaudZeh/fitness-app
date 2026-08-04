@@ -362,11 +362,42 @@ function SessionLogExerciseCard({
     const lastTime = pickLastTimeSet(lastTimeSets, nextSetNumber)
     return lastTime ? lastTime.actual_reps.toString() : slot.target_reps_min.toString()
   })
-  const [rpe, setRpe] = useState('')
+  const [rpe, setRpe] = useState(() => {
+    const lastTime = pickLastTimeSet(lastTimeSets, nextSetNumber)
+    return lastTime && lastTime.actual_rpe !== null ? lastTime.actual_rpe.toString() : ''
+  })
+  // previousSets loads asynchronously (Dexie cache + network refresh) — on
+  // a cold cache it's still empty on this component's very first render
+  // even when real history exists, so the lazy initializers above can
+  // fall back to the program's target instead. Once the real lastTimeSets
+  // reference actually changes, re-apply it — but adjusted directly during
+  // render (React's documented pattern for syncing state to a value that
+  // resolves after mount) rather than in an effect, so it lands before the
+  // stale values ever paint instead of causing a visible flash + refetch.
+  const [hasUserEdited, setHasUserEdited] = useState(false)
+  const [appliedLastTimeSets, setAppliedLastTimeSets] = useState(lastTimeSets)
+  if (lastTimeSets !== appliedLastTimeSets && !hasUserEdited && sortedSets.length === 0) {
+    setAppliedLastTimeSets(lastTimeSets)
+    const lastTime = pickLastTimeSet(lastTimeSets, nextSetNumber)
+    if (lastTime) {
+      setWeight(lastTime.actual_weight_kg.toString())
+      setReps(lastTime.actual_reps.toString())
+      setRpe(lastTime.actual_rpe !== null ? lastTime.actual_rpe.toString() : '')
+    }
+  }
   const voiceInput = useVoiceSetInput((parsed) => {
-    if (parsed.weightKg !== null) setWeight(parsed.weightKg.toString())
-    if (parsed.reps !== null) setReps(parsed.reps.toString())
-    if (parsed.rpe !== null) setRpe(parsed.rpe.toString())
+    if (parsed.weightKg !== null) {
+      setHasUserEdited(true)
+      setWeight(parsed.weightKg.toString())
+    }
+    if (parsed.reps !== null) {
+      setHasUserEdited(true)
+      setReps(parsed.reps.toString())
+    }
+    if (parsed.rpe !== null) {
+      setHasUserEdited(true)
+      setRpe(parsed.rpe.toString())
+    }
   })
 
   async function handleSubstitute(exerciseId: string, alsoUpdateProgram: boolean) {
@@ -441,6 +472,7 @@ function SessionLogExerciseCard({
     if (upcoming) {
       setWeight(upcoming.actual_weight_kg.toString())
       setReps(upcoming.actual_reps.toString())
+      setRpe(upcoming.actual_rpe !== null ? upcoming.actual_rpe.toString() : '')
     }
     startRestAfter(nextSetNumber, created.id)
   }
@@ -625,7 +657,10 @@ function SessionLogExerciseCard({
                 placeholder={slot.is_bodyweight ? 'Poids du corps' : undefined}
                 className="h-12 text-lg!"
                 value={weight}
-                onChange={(event) => setWeight(event.target.value)}
+                onChange={(event) => {
+                  setHasUserEdited(true)
+                  setWeight(event.target.value)
+                }}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -637,7 +672,10 @@ function SessionLogExerciseCard({
                 required
                 className="h-12 text-lg!"
                 value={reps}
-                onChange={(event) => setReps(event.target.value)}
+                onChange={(event) => {
+                  setHasUserEdited(true)
+                  setReps(event.target.value)
+                }}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -651,7 +689,10 @@ function SessionLogExerciseCard({
                 placeholder="Optionnel"
                 className="h-12 text-lg!"
                 value={rpe}
-                onChange={(event) => setRpe(event.target.value)}
+                onChange={(event) => {
+                  setHasUserEdited(true)
+                  setRpe(event.target.value)
+                }}
               />
             </div>
             <div className="col-span-3">
