@@ -551,6 +551,7 @@ export type Database = {
           id: string
           sent: boolean
           session_log_set_id: string
+          stage: string
           user_id: string
         }
         Insert: {
@@ -559,6 +560,7 @@ export type Database = {
           id?: string
           sent?: boolean
           session_log_set_id: string
+          stage?: string
           user_id: string
         }
         Update: {
@@ -567,6 +569,7 @@ export type Database = {
           id?: string
           sent?: boolean
           session_log_set_id?: string
+          stage?: string
           user_id?: string
         }
         Relationships: []

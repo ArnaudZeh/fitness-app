@@ -8,6 +8,16 @@ function isAuthorizedCronCaller(req: Request, cronSecret: string): boolean {
   return req.headers.get('x-cron-secret') === cronSecret
 }
 
+// A true live countdown isn't reachable from a PWA push, so "halfway" and
+// "ending" are quiet progress pings (same tag, no renotify — they silently
+// replace each other and the eventual "done" alert on the lock screen)
+// rather than a separate alarm each.
+const STAGE_CONTENT: Record<string, { title: string; body: string; renotify: boolean }> = {
+  halfway: { title: 'Repos en cours', body: 'Mi-repos passée', renotify: false },
+  ending: { title: 'Repos bientôt fini', body: 'Encore 10 secondes…', renotify: false },
+  done: { title: 'Repos terminé', body: 'Prêt pour la série suivante 💪', renotify: true },
+}
+
 Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -31,7 +41,7 @@ Deno.serve(async (req) => {
 
   const { data: due, error: dueError } = await admin
     .from('rest_timer_notifications')
-    .select('id, user_id, fire_at')
+    .select('id, user_id, fire_at, session_log_set_id, stage')
     .eq('sent', false)
     .lte('fire_at', now.toISOString())
   if (dueError) {
@@ -68,10 +78,13 @@ Deno.serve(async (req) => {
       continue
     }
 
+    const content = STAGE_CONTENT[notification.stage] ?? STAGE_CONTENT.done
     const payload = JSON.stringify({
-      title: 'Repos terminé',
-      body: 'Prêt pour la série suivante 💪',
+      title: content.title,
+      body: content.body,
       url: '/',
+      tag: `rest-timer-${notification.session_log_set_id}`,
+      renotify: content.renotify,
     })
 
     for (const subscription of subscriptions) {

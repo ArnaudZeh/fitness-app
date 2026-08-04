@@ -25,7 +25,9 @@ const scopePath = new URL(self.registration.scope).pathname
 self.addEventListener('fetch', (event) => {
   if (event.request.mode !== 'navigate') return
   event.respondWith(
-    matchPrecache(`${scopePath}index.html`).then((cached) => cached ?? fetch(event.request)),
+    matchPrecache(`${scopePath}index.html`).then(
+      (cached) => cached ?? fetch(event.request),
+    ),
   )
 })
 
@@ -52,6 +54,21 @@ interface PushPayload {
   title: string
   body: string
   url?: string
+  // Same tag = later pushes silently replace the earlier one instead of
+  // piling up on the lock screen (used by the rest-timer checkpoints — see
+  // send-rest-timer-notifications). renotify forces a fresh alert/vibration
+  // even when replacing a same-tag notification; only meaningful (and only
+  // honored below) alongside a tag — the Notifications spec rejects
+  // renotify: true without one.
+  tag?: string
+  renotify?: boolean
+}
+
+// TS's bundled webworker lib doesn't declare `renotify` on NotificationOptions
+// even though every implementation supports it (it's standard) — widen
+// locally rather than casting the whole options object to `any`.
+interface NotificationOptionsWithRenotify extends NotificationOptions {
+  renotify?: boolean
 }
 
 self.addEventListener('push', (event) => {
@@ -62,14 +79,17 @@ self.addEventListener('push', (event) => {
     // Malformed or missing payload — show a generic notification rather
     // than silently dropping it.
   }
-  event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: `${scopePath}pwa-192x192.png`,
-      badge: `${scopePath}pwa-192x192.png`,
-      data: { url: payload.url ?? '/bien-etre' },
-    }),
-  )
+  const options: NotificationOptionsWithRenotify = {
+    body: payload.body,
+    icon: `${scopePath}pwa-192x192.png`,
+    badge: `${scopePath}pwa-192x192.png`,
+    data: { url: payload.url ?? '/bien-etre' },
+    tag: payload.tag,
+    // The spec rejects renotify: true without a tag — only ever set it
+    // (from the server payload) alongside one.
+    renotify: payload.tag ? payload.renotify : undefined,
+  }
+  event.waitUntil(self.registration.showNotification(payload.title, options))
 })
 
 self.addEventListener('notificationclick', (event) => {
@@ -82,14 +102,16 @@ self.addEventListener('notificationclick', (event) => {
   ).replace(/^\//, '')
   const url = `${scopePath}${relativePath}`
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          void client.navigate(url)
-          return client.focus()
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ('focus' in client) {
+            void client.navigate(url)
+            return client.focus()
+          }
         }
-      }
-      return self.clients.openWindow(url)
-    }),
+        return self.clients.openWindow(url)
+      }),
   )
 })

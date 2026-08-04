@@ -31,13 +31,56 @@ export function RestTimer({ setId, initialSeconds, onDismiss }: RestTimerProps) 
 
   // Server-side fallback for the case the local alert can't cover: while
   // the screen is locked, the interval below is throttled and the sound/
-  // vibration never fires. This schedules a push for endAt, re-scheduled
-  // whenever endAt moves (adjust) and cancelled when the local alert
-  // actually rings or the timer is dismissed/unmounted.
+  // vibration never fires. This schedules a push for endAt (plus a couple
+  // of earlier checkpoints, see rest-timer-push-api), re-scheduled whenever
+  // endAt moves (adjust) and cancelled when the local alert actually rings
+  // or the timer is dismissed/unmounted.
   useEffect(() => {
-    if (isSubscribed) void scheduleRestTimerPush(setId, new Date(endAt))
+    if (isSubscribed) {
+      const remainingSeconds = Math.max(Math.round((endAt - Date.now()) / 1000), 0)
+      void scheduleRestTimerPush(setId, new Date(endAt), remainingSeconds)
+    }
     return () => void cancelRestTimerPush(setId)
   }, [setId, isSubscribed, endAt])
+
+  // Keeps the screen from auto-locking while resting, so the countdown
+  // stays visible without the user having to keep tapping the screen —
+  // the closest a PWA can get to "visible on the lock screen", since it
+  // prevents the lock from happening in the first place. Does nothing for
+  // an explicit power-button lock (by design, the API can't override
+  // that), and browsers release the lock whenever the tab is hidden, so it
+  // re-acquires on every return to the foreground.
+  useEffect(() => {
+    if (!('wakeLock' in navigator)) return
+    let sentinel: WakeLockSentinel | null = null
+    let cancelled = false
+
+    async function acquire() {
+      try {
+        const lock = await navigator.wakeLock.request('screen')
+        if (cancelled) {
+          void lock.release()
+          return
+        }
+        sentinel = lock
+      } catch {
+        // Battery saver, permission policy, etc. — the countdown still
+        // works, it just won't keep the screen on.
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible' && sentinel === null) void acquire()
+    }
+
+    void acquire()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      void sentinel?.release()
+    }
+  }, [])
 
   useEffect(() => {
     function resync() {
@@ -85,10 +128,16 @@ export function RestTimer({ setId, initialSeconds, onDismiss }: RestTimerProps) 
           variant="ghost"
           size="icon-sm"
           className="size-6"
-          aria-label={soundEnabled ? "Désactiver l'alarme de repos" : "Activer l'alarme de repos"}
+          aria-label={
+            soundEnabled ? "Désactiver l'alarme de repos" : "Activer l'alarme de repos"
+          }
           onClick={() => setSoundEnabled(!soundEnabled)}
         >
-          {soundEnabled ? <Bell className="size-3.5" /> : <BellOff className="size-3.5" />}
+          {soundEnabled ? (
+            <Bell className="size-3.5" />
+          ) : (
+            <BellOff className="size-3.5" />
+          )}
         </Button>
       </div>
       <p className="font-mono text-5xl font-semibold tabular-nums">
