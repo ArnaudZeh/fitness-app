@@ -16,12 +16,18 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
     .filter({ has: page.getByRole('heading', { name: 'Lundi' }) })
   await mondayCard.getByRole('button', { name: 'Entraînement' }).click()
 
+  // Supersets are created by multi-selecting exercises in the picker (no
+  // manual "Superset" text field anymore) — pick two, then configure each
+  // in turn.
   await mondayCard.getByRole('button', { name: 'Ajouter un exercice' }).click()
+  await page.getByRole('button', { name: 'Créer un superset' }).click()
   await page.getByPlaceholder('Rechercher un exercice…').fill('Squat')
   await page.getByRole('option', { name: 'Squat', exact: true }).click()
-  await page.getByText('Options avancées').click()
-  await page.getByLabel('Superset').fill('A')
-  await page.getByRole('button', { name: "Ajouter l'exercice" }).click()
+  await page.getByPlaceholder('Rechercher un exercice…').fill('Développé couché')
+  await page.getByRole('option', { name: 'Développé couché', exact: true }).click()
+  await page.getByRole('button', { name: 'Continuer avec 2 exercices' }).click()
+  await page.getByRole('button', { name: 'Exercice suivant' }).click()
+  await page.getByRole('button', { name: 'Créer le superset (2 exercices)' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 })
   await expect(mondayCard.getByText('Superset A')).toBeVisible()
 
@@ -32,18 +38,24 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
   await expect(page.getByText('En cours')).toBeVisible()
   await expect(page.getByText('Superset A')).toBeVisible()
 
-  await page.getByLabel('Charge (kg)').fill('100')
-  await page.getByLabel('Reps').fill('5')
-  await page.getByRole('button', { name: 'Série 1' }).click()
-  await expect(page.getByText('Série 1 · 100 kg x 5')).toBeVisible()
+  // Two exercise cards are on screen now (the superset) — scope to Squat's
+  // card so the charge/reps locators aren't ambiguous between the two.
+  const squatCard = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByRole('heading', { name: 'Squat', exact: true }) })
+
+  await squatCard.getByLabel('Charge (kg)').fill('100')
+  await squatCard.getByLabel('Reps').fill('5')
+  await squatCard.getByRole('button', { name: 'Série 1' }).click()
+  await expect(squatCard.getByText('Série 1 · 100 kg x 5')).toBeVisible()
 
   // Logging a set auto-starts the rest timer.
   await expect(page.getByText('Repos', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Passer' })).toBeVisible()
 
   // Duplicate the set instead of retyping the same charge/reps.
-  await page.getByRole('button', { name: 'Dupliquer cette série' }).click()
-  await expect(page.getByText('Série 2 · 100 kg x 5')).toBeVisible()
+  await squatCard.getByRole('button', { name: 'Dupliquer cette série' }).click()
+  await expect(squatCard.getByText('Série 2 · 100 kg x 5')).toBeVisible()
 
   await page.getByRole('button', { name: 'Terminer la séance' }).click()
   await expect(page.getByText('Terminée')).toBeVisible()
@@ -53,7 +65,7 @@ test('starts a session, logs a set, completes it, then cleans up', async ({ page
   await expect(page.getByRole('heading', { name: 'Historique' })).toBeVisible()
   const historyEntry = page
     .locator('li')
-    .filter({ has: page.getByRole('link', { name: /Lundi/ }) })
+    .filter({ has: page.getByRole('link', { name: /lundi/i }) })
   await expect(historyEntry.getByText('Terminée')).toBeVisible()
 
   // Cleanup: deleting the program cascades its days/exercises/session logs.
