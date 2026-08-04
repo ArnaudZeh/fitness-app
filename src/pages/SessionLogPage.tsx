@@ -92,6 +92,14 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   const sortedSlots = plan?.exercises ?? []
   const allSets = sets ?? []
   const isInProgress = log.status === 'in_progress'
+  // Lifted out of each card so finishing the last set of one exercise can
+  // hand the countdown to the next exercise's card instead of staying
+  // stuck on the one that's already done — see startRestAfter below.
+  const [activeRest, setActiveRest] = useState<{
+    slotId: string
+    key: string
+    seconds: number
+  } | null>(null)
   // Falls back to the hypertrophie default if the plan hasn't been cached
   // on this device yet and there's no network to fetch it right now.
   const focus: ProgramFocus = plan?.focus ?? 'hypertrophie'
@@ -179,6 +187,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                   <li key={slot.id}>
                     <SessionLogExerciseCard
                       slot={slot}
+                      allSlots={sortedSlots}
                       sets={allSets.filter(
                         (set) => set.session_template_exercise_id === slot.id,
                       )}
@@ -188,6 +197,11 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                       disabled={!isInProgress}
                       exercises={exercises ?? []}
                       exerciseById={exerciseById}
+                      activeRest={activeRest}
+                      onStartRest={(slotId, key, seconds) =>
+                        setActiveRest({ slotId, key, seconds })
+                      }
+                      onDismissRest={() => setActiveRest(null)}
                       onCreateExercise={(input) => createExercise.mutateAsync(input)}
                       onSubstituteProgram={(id, exerciseId) =>
                         substituteProgramExercise.mutateAsync({ id, exerciseId })
@@ -201,6 +215,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
             <li key={block.slot.id}>
               <SessionLogExerciseCard
                 slot={block.slot}
+                allSlots={sortedSlots}
                 sets={allSets.filter(
                   (set) => set.session_template_exercise_id === block.slot.id,
                 )}
@@ -210,6 +225,11 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                 disabled={!isInProgress}
                 exercises={exercises ?? []}
                 exerciseById={exerciseById}
+                activeRest={activeRest}
+                onStartRest={(slotId, key, seconds) =>
+                  setActiveRest({ slotId, key, seconds })
+                }
+                onDismissRest={() => setActiveRest(null)}
                 onCreateExercise={(input) => createExercise.mutateAsync(input)}
                 onSubstituteProgram={(id, exerciseId) =>
                   substituteProgramExercise.mutateAsync({ id, exerciseId })
@@ -255,8 +275,21 @@ function pickLastTimeSet(
   )
 }
 
+// The next exercise in program order after this slot, if any — used so
+// finishing the last planned set of one exercise hands the rest countdown
+// to the next one instead of resting under the exercise that's now done.
+function nextSlotAfter(
+  slots: CachedPlanExercise[],
+  slotId: string,
+): CachedPlanExercise | undefined {
+  const index = slots.findIndex((candidate) => candidate.id === slotId)
+  if (index === -1) return undefined
+  return slots[index + 1]
+}
+
 function SessionLogExerciseCard({
   slot,
+  allSlots,
   sets,
   previousSets,
   sessionLogId,
@@ -264,10 +297,14 @@ function SessionLogExerciseCard({
   disabled,
   exercises,
   exerciseById,
+  activeRest,
+  onStartRest,
+  onDismissRest,
   onCreateExercise,
   onSubstituteProgram,
 }: {
   slot: CachedPlanExercise
+  allSlots: CachedPlanExercise[]
   sets: SessionLogSet[]
   previousSets: SessionLogSet[]
   sessionLogId: string
@@ -275,6 +312,9 @@ function SessionLogExerciseCard({
   disabled: boolean
   exercises: Exercise[]
   exerciseById: Map<string, Exercise>
+  activeRest: { slotId: string; key: string; seconds: number } | null
+  onStartRest: (slotId: string, key: string, seconds: number) => void
+  onDismissRest: () => void
   onCreateExercise: (input: {
     name: string
     muscle_group: string | null
@@ -323,9 +363,6 @@ function SessionLogExerciseCard({
     return lastTime ? lastTime.actual_reps.toString() : slot.target_reps_min.toString()
   })
   const [rpe, setRpe] = useState('')
-  const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
-    null,
-  )
   const voiceInput = useVoiceSetInput((parsed) => {
     if (parsed.weightKg !== null) setWeight(parsed.weightKg.toString())
     if (parsed.reps !== null) setReps(parsed.reps.toString())
@@ -368,8 +405,22 @@ function SessionLogExerciseCard({
     )
   }
 
-  function startRest(afterSetId: string) {
-    setActiveRest({ key: afterSetId, seconds: restSeconds })
+  // Once the set just logged reaches this exercise's target number of
+  // sets, there's nothing left to rest for here — the countdown moves to
+  // the next exercise's card, using its own configured rest time, rather
+  // than staying under an exercise that's already finished.
+  function startRestAfter(justLoggedSetNumber: number, afterSetId: string) {
+    const reachedTarget = justLoggedSetNumber >= slot.target_sets
+    const next = reachedTarget ? nextSlotAfter(allSlots, slot.id) : undefined
+    if (next) {
+      onStartRest(
+        next.id,
+        afterSetId,
+        next.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus],
+      )
+    } else {
+      onStartRest(slot.id, afterSetId, restSeconds)
+    }
   }
 
   async function handleAddSet(event: FormEvent<HTMLFormElement>) {
@@ -391,7 +442,7 @@ function SessionLogExerciseCard({
       setWeight(upcoming.actual_weight_kg.toString())
       setReps(upcoming.actual_reps.toString())
     }
-    startRest(created.id)
+    startRestAfter(nextSetNumber, created.id)
   }
 
   async function handleDuplicateSet(set: SessionLogSet) {
@@ -408,7 +459,7 @@ function SessionLogExerciseCard({
     setWeight(set.actual_weight_kg.toString())
     setReps(set.actual_reps.toString())
     setRpe(set.actual_rpe !== null ? set.actual_rpe.toString() : '')
-    startRest(created.id)
+    startRestAfter(nextSetNumber, created.id)
   }
 
   return (
@@ -507,12 +558,12 @@ function SessionLogExerciseCard({
           </ul>
         )}
 
-        {!disabled && activeRest && (
+        {!disabled && activeRest?.slotId === slot.id && (
           <RestTimer
             key={activeRest.key}
             setId={activeRest.key}
             initialSeconds={activeRest.seconds}
-            onDismiss={() => setActiveRest(null)}
+            onDismiss={onDismissRest}
           />
         )}
 
