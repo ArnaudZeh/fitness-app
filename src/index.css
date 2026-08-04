@@ -103,6 +103,9 @@
   }
   html {
     @apply font-sans;
+    /* Belt-and-suspenders alongside the viewport meta tag: some browsers
+       still allow double-tap-to-zoom even with user-scalable=no. */
+    touch-action: manipulation;
   }
   h1,
   h2,
