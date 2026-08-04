@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router'
-import { Copy } from 'lucide-react'
+import { Copy, Eye } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -48,7 +48,11 @@ export function FriendProfilePage() {
         <>
           <Card>
             <CardContent className="flex items-center gap-4 pt-6">
-              <Avatar url={profile.avatarUrl} displayName={profile.displayName} size="lg" />
+              <Avatar
+                url={profile.avatarUrl}
+                displayName={profile.displayName}
+                size="lg"
+              />
               <div>
                 <h1 className="text-xl font-semibold">{profile.displayName}</h1>
                 {profile.age !== null && (
@@ -80,9 +84,12 @@ export function FriendProfilePage() {
                 <CopyProgramSection
                   activeProgram={profile.activeProgram}
                   authorName={profile.displayName}
+                  isPublic={profile.isPublic}
                 />
               ) : (
-                <p className="text-sm text-muted-foreground">Aucun programme actif pour l'instant.</p>
+                <p className="text-sm text-muted-foreground">
+                  Aucun programme actif pour l'instant.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -122,9 +129,11 @@ export function FriendProfilePage() {
 function CopyProgramSection({
   activeProgram,
   authorName,
+  isPublic,
 }: {
   activeProgram: { id: string; name: string; focus: ProgramFocus }
   authorName: string
+  isPublic: boolean
 }) {
   const copyProgram = useCopyProgramToMyAccount()
 
@@ -139,27 +148,40 @@ function CopyProgramSection({
           Impossible de copier ce programme.
         </p>
       )}
-      {copyProgram.isSuccess ? (
+      {copyProgram.isSuccess && (
         <p className="text-sm text-muted-foreground">
           Copié dans tes programmes sous « {copyProgram.data.name} ».
         </p>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-start"
-          disabled={copyProgram.isPending}
-          onClick={() =>
-            copyProgram.mutate({
-              programId: activeProgram.id,
-              sourceLabel: `copié de ${authorName}`,
-            })
-          }
-        >
-          <Copy /> {copyProgram.isPending ? 'Copie…' : 'Copier dans mes programmes'}
-        </Button>
       )}
+      <div className="flex flex-wrap gap-2">
+        {isPublic && (
+          // can_view_program_details() only opens the day-by-day detail
+          // (session_templates/exercises) for the owner or a public
+          // profile — never a plain friend — so this link only makes
+          // sense to offer when isPublic is true, matching that gate.
+          <Link to={`/programs/${activeProgram.id}`}>
+            <Button type="button" variant="outline" size="sm">
+              <Eye /> Voir le programme en détail
+            </Button>
+          </Link>
+        )}
+        {!copyProgram.isSuccess && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={copyProgram.isPending}
+            onClick={() =>
+              copyProgram.mutate({
+                programId: activeProgram.id,
+                sourceLabel: `copié de ${authorName}`,
+              })
+            }
+          >
+            <Copy /> {copyProgram.isPending ? 'Copie…' : 'Copier dans mes programmes'}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,5 +1,14 @@
 import { useState } from 'react'
-import { Copy, GripVertical, Link2, Pencil, Play, Plus, Trash2, Unlink } from 'lucide-react'
+import {
+  Copy,
+  GripVertical,
+  Link2,
+  Pencil,
+  Play,
+  Plus,
+  Trash2,
+  Unlink,
+} from 'lucide-react'
 import { useNavigate } from 'react-router'
 import {
   DndContext,
@@ -40,7 +49,12 @@ import {
   useUpdateSessionTemplateExercise,
 } from '@/hooks/useSessionTemplates'
 import { useStartSessionLog } from '@/hooks/useSessionLogs'
-import { computeBlocks, inferGroupAfterMove, linkIntoSuperset, unlinkFromSuperset } from '@/lib/ordering'
+import {
+  computeBlocks,
+  inferGroupAfterMove,
+  linkIntoSuperset,
+  unlinkFromSuperset,
+} from '@/lib/ordering'
 import type { LinkTarget } from '@/lib/ordering'
 import type { ProgramFocus } from '@/lib/programs-api'
 import {
@@ -63,10 +77,16 @@ export function SessionTemplateCard({
   template,
   focus,
   allTemplates,
+  readOnly = false,
 }: {
   template: SessionTemplate
   focus: ProgramFocus
   allTemplates: SessionTemplate[]
+  // Viewing a friend's (or a public profile's) program via /programs/:id —
+  // every mutation hook below is still instantiated as normal (no harm in
+  // that), but nothing that would trigger one is rendered, since the write
+  // RLS policies are self-only and would just reject it anyway.
+  readOnly?: boolean
 }) {
   const navigate = useNavigate()
   const { data: exercises } = useExercises()
@@ -111,7 +131,10 @@ export function SessionTemplateCard({
     reorderSlots.mutate(withUpdatedGroup)
   }
 
-  async function handleLink(currentSlot: SessionTemplateExercise, target: LinkTarget<SessionTemplateExercise>) {
+  async function handleLink(
+    currentSlot: SessionTemplateExercise,
+    target: LinkTarget<SessionTemplateExercise>,
+  ) {
     await reorderSlots.mutateAsync(linkIntoSuperset(sortedSlots, currentSlot, target))
   }
 
@@ -124,25 +147,29 @@ export function SessionTemplateCard({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h3">{WEEKDAY_LABELS[template.day_of_week]}</CardTitle>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-            {DAY_TYPE_OPTIONS.map((option) => (
-              <Button
-                key={option}
-                type="button"
-                size="sm"
-                variant={template.day_type === option ? 'default' : 'ghost'}
-                disabled={updateDayType.isPending}
-                onClick={() => {
-                  if (template.day_type !== option) {
-                    updateDayType.mutate({ id: template.id, dayType: option })
-                  }
-                }}
-              >
-                {DAY_TYPE_LABELS[option]}
-              </Button>
-            ))}
-          </div>
-          {sortedSlots.length > 0 && (
+          {readOnly ? (
+            <Badge variant="outline">{DAY_TYPE_LABELS[template.day_type]}</Badge>
+          ) : (
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+              {DAY_TYPE_OPTIONS.map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  size="sm"
+                  variant={template.day_type === option ? 'default' : 'ghost'}
+                  disabled={updateDayType.isPending}
+                  onClick={() => {
+                    if (template.day_type !== option) {
+                      updateDayType.mutate({ id: template.id, dayType: option })
+                    }
+                  }}
+                >
+                  {DAY_TYPE_LABELS[option]}
+                </Button>
+              ))}
+            </div>
+          )}
+          {!readOnly && sortedSlots.length > 0 && (
             <DuplicateDayDialog
               trigger={
                 <Button
@@ -173,7 +200,11 @@ export function SessionTemplateCard({
               Aucun exercice pour l'instant.
             </p>
           )}
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext
               items={sortedSlots.map((s) => s.id)}
               strategy={verticalListSortingStrategy}
@@ -188,6 +219,7 @@ export function SessionTemplateCard({
                         focus={focus}
                         exercises={exercises ?? []}
                         daySlots={sortedSlots}
+                        readOnly={readOnly}
                         onSetGroupRest={(slotIds, restSeconds) =>
                           setGroupRest.mutate({ slotIds, restSeconds })
                         }
@@ -206,6 +238,7 @@ export function SessionTemplateCard({
                       focus={focus}
                       exercises={exercises ?? []}
                       daySlots={sortedSlots}
+                      readOnly={readOnly}
                       onCreateExercise={(input) => createExercise.mutateAsync(input)}
                       onUpdate={(id, input) => updateSlot.mutateAsync({ id, input })}
                       onDelete={(id) => deleteSlot.mutateAsync(id)}
@@ -217,53 +250,55 @@ export function SessionTemplateCard({
               </ul>
             </SortableContext>
           </DndContext>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ExerciseSlotFlow
-              trigger={
-                <Button variant="outline" size="sm">
-                  <Plus /> Ajouter un exercice
-                </Button>
-              }
-              exercises={exercises ?? []}
-              focus={focus}
-              submitLabel="Ajouter l'exercice"
-              onCreateExercise={(input) => createExercise.mutateAsync(input)}
-              onSubmit={async (input) => {
-                await createSlot.mutateAsync(input)
-              }}
-              existingSupersetGroups={sortedSlots.map((slot) => slot.superset_group)}
-              onSubmitSuperset={async (inputs) => {
-                // Sequential, not Promise.all: createSessionTemplateExercise
-                // computes each new order_index from a fresh fetch of
-                // existing slots, so concurrent inserts could race and land
-                // on the same order_index instead of ending up contiguous.
-                for (const input of inputs) {
-                  await createSlot.mutateAsync(input)
+          {!readOnly && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <ExerciseSlotFlow
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Plus /> Ajouter un exercice
+                  </Button>
                 }
-              }}
-            />
-            {sortedSlots.length > 0 && (
-              <>
-                <SessionAdaptationDialog
-                  sessionTemplateId={template.id}
-                  focus={focus}
-                  currentSlots={sortedSlots}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={startSessionLog.isPending}
-                  onClick={() =>
-                    startSessionLog.mutate(template.id, {
-                      onSuccess: (log) => void navigate(`/sessions/${log.id}`),
-                    })
+                exercises={exercises ?? []}
+                focus={focus}
+                submitLabel="Ajouter l'exercice"
+                onCreateExercise={(input) => createExercise.mutateAsync(input)}
+                onSubmit={async (input) => {
+                  await createSlot.mutateAsync(input)
+                }}
+                existingSupersetGroups={sortedSlots.map((slot) => slot.superset_group)}
+                onSubmitSuperset={async (inputs) => {
+                  // Sequential, not Promise.all: createSessionTemplateExercise
+                  // computes each new order_index from a fresh fetch of
+                  // existing slots, so concurrent inserts could race and land
+                  // on the same order_index instead of ending up contiguous.
+                  for (const input of inputs) {
+                    await createSlot.mutateAsync(input)
                   }
-                >
-                  <Play /> Démarrer la séance
-                </Button>
-              </>
-            )}
-          </div>
+                }}
+              />
+              {sortedSlots.length > 0 && (
+                <>
+                  <SessionAdaptationDialog
+                    sessionTemplateId={template.id}
+                    focus={focus}
+                    currentSlots={sortedSlots}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={startSessionLog.isPending}
+                    onClick={() =>
+                      startSessionLog.mutate(template.id, {
+                        onSuccess: (log) => void navigate(`/sessions/${log.id}`),
+                      })
+                    }
+                  >
+                    <Play /> Démarrer la séance
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </CardContent>
       )}
     </Card>
@@ -274,17 +309,28 @@ interface SlotRowActions {
   focus: ProgramFocus
   exercises: Exercise[]
   daySlots: SessionTemplateExercise[]
-  onCreateExercise: (input: { name: string; muscle_group: string | null }) => Promise<Exercise>
+  readOnly: boolean
+  onCreateExercise: (input: {
+    name: string
+    muscle_group: string | null
+  }) => Promise<Exercise>
   onUpdate: (id: string, input: SessionTemplateExerciseInput) => Promise<unknown>
   onDelete: (id: string) => Promise<unknown>
-  onLink: (currentSlot: SessionTemplateExercise, target: LinkTarget<SessionTemplateExercise>) => Promise<void>
+  onLink: (
+    currentSlot: SessionTemplateExercise,
+    target: LinkTarget<SessionTemplateExercise>,
+  ) => Promise<void>
   onUnlink: (slotId: string) => void
 }
 
-function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotRowActions) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: slot.id,
-  })
+function SlotRow({
+  slot,
+  ...actions
+}: { slot: SessionTemplateExercise } & SlotRowActions) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id: slot.id,
+    })
 
   return (
     <li
@@ -292,15 +338,17 @@ function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotR
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-1 rounded-md border border-border bg-card p-2 ${isDragging ? 'z-10 opacity-70' : ''}`}
     >
-      <button
-        type="button"
-        aria-label="Réorganiser cet exercice"
-        className="flex shrink-0 cursor-grab touch-none items-center justify-center self-stretch px-1 text-muted-foreground active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="size-4" />
-      </button>
+      {!actions.readOnly && (
+        <button
+          type="button"
+          aria-label="Réorganiser cet exercice"
+          className="flex shrink-0 cursor-grab touch-none items-center justify-center self-stretch px-1 text-muted-foreground active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
+        </button>
+      )}
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <ExerciseThumbnail
           imageUrl={slot.exercise.image_url}
@@ -328,62 +376,69 @@ function SlotRow({ slot, ...actions }: { slot: SessionTemplateExercise } & SlotR
               : slot.target_weight_kg !== null
                 ? ` · ${slot.target_weight_kg} kg`
                 : ''}{' '}
-            · repos {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[actions.focus]}s
+            · repos{' '}
+            {slot.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[actions.focus]}s
           </p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        {slot.superset_group === null ? (
-          <LinkSupersetDialog
+      {!actions.readOnly && (
+        <div className="flex shrink-0 items-center gap-1">
+          {slot.superset_group === null ? (
+            <LinkSupersetDialog
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Lier cet exercice en superset"
+                >
+                  <Link2 />
+                </Button>
+              }
+              currentSlot={slot}
+              daySlots={actions.daySlots}
+              onLink={(target) => actions.onLink(slot, target)}
+            />
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Retirer cet exercice du superset"
+              onClick={() => actions.onUnlink(slot.id)}
+            >
+              <Unlink />
+            </Button>
+          )}
+          <ExerciseSlotFlow
             trigger={
-              <Button variant="ghost" size="icon-sm" aria-label="Lier cet exercice en superset">
-                <Link2 />
+              <Button variant="ghost" size="icon-sm" aria-label="Modifier cet exercice">
+                <Pencil />
               </Button>
             }
-            currentSlot={slot}
-            daySlots={actions.daySlots}
-            onLink={(target) => actions.onLink(slot, target)}
+            exercises={actions.exercises}
+            focus={actions.focus}
+            initialValue={slot}
+            submitLabel="Enregistrer"
+            onCreateExercise={actions.onCreateExercise}
+            onSubmit={async (input) => {
+              await actions.onUpdate(slot.id, input)
+            }}
           />
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Retirer cet exercice du superset"
-            onClick={() => actions.onUnlink(slot.id)}
-          >
-            <Unlink />
-          </Button>
-        )}
-        <ExerciseSlotFlow
-          trigger={
-            <Button variant="ghost" size="icon-sm" aria-label="Modifier cet exercice">
-              <Pencil />
-            </Button>
-          }
-          exercises={actions.exercises}
-          focus={actions.focus}
-          initialValue={slot}
-          submitLabel="Enregistrer"
-          onCreateExercise={actions.onCreateExercise}
-          onSubmit={async (input) => {
-            await actions.onUpdate(slot.id, input)
-          }}
-        />
-        <ConfirmDialog
-          trigger={
-            <Button variant="ghost" size="icon-sm" aria-label="Supprimer cet exercice">
-              <Trash2 />
-            </Button>
-          }
-          title="Supprimer cet exercice ?"
-          description="Cette action est irréversible."
-          confirmLabel="Supprimer"
-          onConfirm={async () => {
-            await actions.onDelete(slot.id)
-          }}
-        />
-      </div>
+          <ConfirmDialog
+            trigger={
+              <Button variant="ghost" size="icon-sm" aria-label="Supprimer cet exercice">
+                <Trash2 />
+              </Button>
+            }
+            title="Supprimer cet exercice ?"
+            description="Cette action est irréversible."
+            confirmLabel="Supprimer"
+            onConfirm={async () => {
+              await actions.onDelete(slot.id)
+            }}
+          />
+        </div>
+      )}
     </li>
   )
 }
@@ -406,7 +461,9 @@ function SupersetGroupBlock({
     slots.map((s) => s.target_rest_seconds ?? DEFAULT_REST_SECONDS_BY_FOCUS[focus]),
   )
   const sharedRestLabel =
-    restValues.size === 1 ? `${[...restValues][0]}s pour tout le groupe` : 'Repos par exercice'
+    restValues.size === 1
+      ? `${[...restValues][0]}s pour tout le groupe`
+      : 'Repos par exercice'
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-2">
@@ -415,31 +472,33 @@ function SupersetGroupBlock({
           <Badge>Superset {group}</Badge>
           <span className="text-xs text-muted-foreground">{sharedRestLabel}</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            min={1}
-            placeholder="Repos (s)"
-            className="h-7 w-24 text-xs"
-            value={restInput}
-            onChange={(event) => setRestInput(event.target.value)}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={restInput.trim() === '' || settingGroupRest}
-            onClick={() => {
-              onSetGroupRest(
-                slots.map((s) => s.id),
-                Number(restInput),
-              )
-              setRestInput('')
-            }}
-          >
-            Appliquer au groupe
-          </Button>
-        </div>
+        {!actions.readOnly && (
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              min={1}
+              placeholder="Repos (s)"
+              className="h-7 w-24 text-xs"
+              value={restInput}
+              onChange={(event) => setRestInput(event.target.value)}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={restInput.trim() === '' || settingGroupRest}
+              onClick={() => {
+                onSetGroupRest(
+                  slots.map((s) => s.id),
+                  Number(restInput),
+                )
+                setRestInput('')
+              }}
+            >
+              Appliquer au groupe
+            </Button>
+          </div>
+        )}
       </div>
       <ul className="flex flex-col gap-2">
         {slots.map((slot) => (

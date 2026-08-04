@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Copy, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SessionTemplateCard } from '@/components/SessionTemplateCard'
+import { useAuthStore } from '@/lib/auth-store'
 import {
+  useCopyProgramToMyAccount,
   useDeleteProgram,
   useDuplicateProgram,
   useProgram,
@@ -21,7 +23,11 @@ import {
   PROGRAM_STATUS_LABELS,
   type ProgramStatus,
 } from '@/lib/programs-api'
-import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
+import {
+  WEEKDAY_LABELS,
+  WEEKDAY_SHORT_LABELS,
+  getTodayIsoDayOfWeek,
+} from '@/lib/sessions-api'
 import type { SessionTemplate } from '@/lib/sessions-api'
 import { cn } from '@/lib/utils'
 
@@ -39,6 +45,8 @@ export function ProgramDetailPage() {
   const duplicateProgram = useDuplicateProgram()
   const deleteLog = useDeleteSessionLog()
   const updateProgram = useUpdateProgram(id)
+  const copyProgram = useCopyProgramToMyAccount()
+  const currentUserId = useAuthStore((state) => state.session?.user.id)
 
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [editName, setEditName] = useState('')
@@ -52,6 +60,14 @@ export function ProgramDetailPage() {
       </p>
     )
 
+  // /programs/:id also serves a friend's (or a public profile's) active
+  // program — reachable from FriendProfilePage — with the RLS policies on
+  // programs/session_templates/session_template_exercises deciding what's
+  // readable, same as everywhere else in this app. Editing stays exclusive
+  // to the owner: the write policies are self-only, so any mutation here
+  // would just fail RLS-side for a non-owner — this hides that dead-end UI
+  // instead of letting someone tap it and hit an opaque error.
+  const isOwner = program.user_id === currentUserId
   const sortedTemplates = templates ?? []
   const sortedLogs = logs ?? []
   const templateById = new Map(sortedTemplates.map((template) => [template.id, template]))
@@ -74,6 +90,11 @@ export function ProgramDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {!isOwner && (
+        <p className="text-sm text-muted-foreground">
+          Vous consultez ce programme en lecture seule.
+        </p>
+      )}
       <div className="flex flex-col gap-4">
         <div>
           {isEditingDetails ? (
@@ -89,7 +110,8 @@ export function ProgramDetailPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="program-description">
-                  Note explicative <span className="text-muted-foreground">(optionnel)</span>
+                  Note explicative{' '}
+                  <span className="text-muted-foreground">(optionnel)</span>
                 </Label>
                 <Textarea
                   id="program-description"
@@ -127,82 +149,119 @@ export function ProgramDetailPage() {
                   <p className="mt-1 text-muted-foreground">{program.description}</p>
                 )}
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Modifier le nom et la note du programme"
-                onClick={startEditingDetails}
-              >
-                <Pencil />
-              </Button>
+              {isOwner && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Modifier le nom et la note du programme"
+                  onClick={startEditingDetails}
+                >
+                  <Pencil />
+                </Button>
+              )}
             </div>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge>{PROGRAM_FOCUS_LABELS[program.focus]}</Badge>
-            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-              {PROGRAM_STATUS_OPTIONS.map((option) => (
-                <Button
-                  key={option}
-                  type="button"
-                  size="sm"
-                  variant={program.status === option ? 'default' : 'ghost'}
-                  disabled={updateProgram.isPending}
-                  onClick={() => {
-                    if (program.status !== option)
-                      updateProgram.mutate({ status: option })
-                  }}
-                >
-                  {PROGRAM_STATUS_LABELS[option]}
-                </Button>
-              ))}
-            </div>
+            {isOwner ? (
+              <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+                {PROGRAM_STATUS_OPTIONS.map((option) => (
+                  <Button
+                    key={option}
+                    type="button"
+                    size="sm"
+                    variant={program.status === option ? 'default' : 'ghost'}
+                    disabled={updateProgram.isPending}
+                    onClick={() => {
+                      if (program.status !== option)
+                        updateProgram.mutate({ status: option })
+                    }}
+                  >
+                    {PROGRAM_STATUS_LABELS[option]}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <Badge variant="outline">{PROGRAM_STATUS_LABELS[program.status]}</Badge>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={duplicateProgram.isPending}
-            onClick={() =>
-              duplicateProgram.mutate(program, {
-                onSuccess: (newProgram) => void navigate(`/programs/${newProgram.id}`),
-              })
-            }
-          >
-            Dupliquer
-          </Button>
-          <ConfirmDialog
-            trigger={
-              <Button variant="destructive" size="sm">
-                Supprimer
+          {isOwner ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={duplicateProgram.isPending}
+                onClick={() =>
+                  duplicateProgram.mutate(program, {
+                    onSuccess: (newProgram) =>
+                      void navigate(`/programs/${newProgram.id}`),
+                  })
+                }
+              >
+                Dupliquer
               </Button>
-            }
-            title="Supprimer ce programme ?"
-            description="Cette action est irréversible et supprimera aussi ses jours et exercices."
-            confirmLabel="Supprimer définitivement"
-            onConfirm={async () => {
-              await deleteProgram.mutateAsync(program.id)
-              void navigate('/programs')
-            }}
-          />
+              <ConfirmDialog
+                trigger={
+                  <Button variant="destructive" size="sm">
+                    Supprimer
+                  </Button>
+                }
+                title="Supprimer ce programme ?"
+                description="Cette action est irréversible et supprimera aussi ses jours et exercices."
+                confirmLabel="Supprimer définitivement"
+                onConfirm={async () => {
+                  await deleteProgram.mutateAsync(program.id)
+                  void navigate('/programs')
+                }}
+              />
+            </>
+          ) : copyProgram.isSuccess ? (
+            <p className="text-sm text-muted-foreground">
+              Copié dans tes programmes sous « {copyProgram.data.name} ».
+            </p>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={copyProgram.isPending}
+              onClick={() =>
+                copyProgram.mutate({ programId: program.id, sourceLabel: 'copié' })
+              }
+            >
+              <Copy /> {copyProgram.isPending ? 'Copie…' : 'Copier dans mes programmes'}
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="flex flex-col gap-3">
         <h2 className="font-heading text-lg font-medium">Semaine type</h2>
-        {sortedTemplates.length > 1 && <WeekOverviewStrip templates={sortedTemplates} />}
-        <ul className="flex flex-col gap-3">
-          {sortedTemplates.map((template) => (
-            <li key={template.id} id={`day-${template.day_of_week}`}>
-              <SessionTemplateCard
-                template={template}
-                focus={program.focus}
-                allTemplates={sortedTemplates}
-              />
-            </li>
-          ))}
-        </ul>
+        {!isOwner && sortedTemplates.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Le détail de ce programme n'est pas visible.
+          </p>
+        ) : (
+          <>
+            {sortedTemplates.length > 1 && (
+              <WeekOverviewStrip templates={sortedTemplates} />
+            )}
+            <ul className="flex flex-col gap-3">
+              {sortedTemplates.map((template) => (
+                <li key={template.id} id={`day-${template.day_of_week}`}>
+                  <SessionTemplateCard
+                    template={template}
+                    focus={program.focus}
+                    allTemplates={sortedTemplates}
+                    readOnly={!isOwner}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
 
       {sortedLogs.length > 0 && (
@@ -295,7 +354,10 @@ function WeekOverviewStrip({ templates }: { templates: SessionTemplate[] }) {
               {WEEKDAY_SHORT_LABELS[template.day_of_week]}
             </span>
             <span
-              className={cn('size-1.5 rounded-full', isTraining ? 'bg-primary' : 'bg-current')}
+              className={cn(
+                'size-1.5 rounded-full',
+                isTraining ? 'bg-primary' : 'bg-current',
+              )}
             />
           </a>
         )

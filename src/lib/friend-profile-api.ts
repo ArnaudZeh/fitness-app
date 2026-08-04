@@ -11,6 +11,12 @@ export interface FriendProfile {
   goal: Goal | null
   recentWeights: { weightKg: number; recordedAt: string }[]
   activeProgram: { id: string; name: string; focus: ProgramFocus } | null
+  // Gates the "voir en détail" link on FriendProfilePage: can_view_program_details()
+  // only opens session_templates/session_template_exercises for the owner
+  // or a public profile — never a plain (non-public) friend — so a friend
+  // who isn't public would otherwise land on a program page with every
+  // day filtered out by RLS.
+  isPublic: boolean
 }
 
 // Thrown instead of a generic Postgrest error when `friend_profile_details`
@@ -57,7 +63,9 @@ export async function fetchFriendProfile(userId: string): Promise<FriendProfile>
   if (programsError) throw programsError
   if (!details) throw new ProfileNotVisibleError()
 
-  const avatarUrl = details.avatar_path ? await getSignedAvatarUrl(details.avatar_path) : null
+  const avatarUrl = details.avatar_path
+    ? await getSignedAvatarUrl(details.avatar_path)
+    : null
   const activeProgram = programs?.[0]
 
   return {
@@ -71,7 +79,12 @@ export async function fetchFriendProfile(userId: string): Promise<FriendProfile>
       recordedAt: w.recorded_at,
     })),
     activeProgram: activeProgram
-      ? { id: activeProgram.id, name: activeProgram.name, focus: activeProgram.focus as ProgramFocus }
+      ? {
+          id: activeProgram.id,
+          name: activeProgram.name,
+          focus: activeProgram.focus as ProgramFocus,
+        }
       : null,
+    isPublic: details.is_public ?? false,
   }
 }

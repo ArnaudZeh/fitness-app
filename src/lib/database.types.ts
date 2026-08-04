@@ -932,6 +932,7 @@ export type Database = {
           display_name: string | null
           goal: string | null
           id: string | null
+          is_public: boolean | null
         }
         Insert: {
           age?: never
@@ -939,6 +940,7 @@ export type Database = {
           display_name?: string | null
           goal?: string | null
           id?: string | null
+          is_public?: boolean | null
         }
         Update: {
           age?: never
@@ -946,6 +948,7 @@ export type Database = {
           display_name?: string | null
           goal?: string | null
           id?: string | null
+          is_public?: boolean | null
         }
         Relationships: []
       }
