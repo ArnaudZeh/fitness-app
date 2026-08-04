@@ -137,6 +137,33 @@ export async function refreshSessionLogsCache(programId: string): Promise<void> 
   }
 }
 
+// Same as refreshSessionLogsCache but across every program the user has,
+// not just one — used for dashboard stats ("séances réalisées") that must
+// count a session regardless of which program it belongs to.
+export async function refreshAllSessionLogsCache(): Promise<void> {
+  if (!isOnline()) return
+  try {
+    const { data, error } = await supabase.from('session_logs').select('*')
+    if (error || !data) return
+    for (const row of data) {
+      const existing = await offlineDb.sessionLogs.get(row.id)
+      if (existing?.dirty) continue
+      await offlineDb.sessionLogs.put({
+        id: row.id,
+        user_id: row.user_id,
+        program_id: row.program_id,
+        session_template_id: row.session_template_id,
+        status: row.status as SessionLogStatus,
+        started_at: row.started_at,
+        completed_at: row.completed_at,
+        dirty: null,
+      })
+    }
+  } catch {
+    // Offline — the existing Dexie cache (if any) stands as-is.
+  }
+}
+
 // Read-through cache refresh for one session's logged sets — covers viewing
 // a session created on another device, or before this cache existed.
 export async function refreshSessionLogSetsCache(sessionLogId: string): Promise<void> {

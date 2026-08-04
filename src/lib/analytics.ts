@@ -115,6 +115,45 @@ export function countTrainingDaysThisWeek(
   return uniqueDates.size
 }
 
+// Local calendar date (YYYY-MM-DD) for an ISO instant, in the viewer's own
+// timezone — as opposed to the UTC date baked into the instant's string
+// representation. A session started in the evening west of UTC (e.g.
+// Tahiti, UTC-10) would otherwise land on "tomorrow" by UTC while still
+// being "today" for the person who ran it.
+export function toLocalDateString(instant: string): string {
+  const date = new Date(instant)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export interface CompletedSessionRecord {
+  status: string
+  started_at: string
+}
+
+// Distinct calendar days within the current ISO week with at least one
+// completed session log, across every program — regardless of whether any
+// sets were actually logged inside it. A "séance réalisée" is the session
+// having been finished, not its data entry happening to be filled in;
+// countTrainingDaysThisWeek above is the set-based equivalent that feeds
+// the tonnage stat, where an empty session legitimately contributes
+// nothing since there's no weight×reps to sum.
+export function countCompletedSessionsThisWeek(
+  logs: CompletedSessionRecord[],
+  now: Date = new Date(),
+): number {
+  const currentWeekStart = getIsoWeekStart(toLocalDateString(now.toISOString()))
+  const uniqueDates = new Set(
+    logs
+      .filter((log) => log.status === 'completed')
+      .map((log) => toLocalDateString(log.started_at))
+      .filter((date) => getIsoWeekStart(date) === currentWeekStart),
+  )
+  return uniqueDates.size
+}
+
 export interface TrendSummaryExercise {
   exerciseName: string
   recentPoints: DailyExerciseBest[]

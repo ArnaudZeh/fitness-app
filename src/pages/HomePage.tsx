@@ -21,7 +21,7 @@ import {
   useSessionTemplateExercises,
   useSessionTemplates,
 } from '@/hooks/useSessionTemplates'
-import { useSessionLogs, useStartSessionLog } from '@/hooks/useSessionLogs'
+import { useAllSessionLogs, useSessionLogs, useStartSessionLog } from '@/hooks/useSessionLogs'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useSetHistory } from '@/hooks/useAnalytics'
@@ -31,9 +31,11 @@ import {
   buildTrendSummary,
   computeDailyVolume,
   computeWeeklyTonnage,
-  countTrainingDaysThisWeek,
+  countCompletedSessionsThisWeek,
   getIsoWeekStart,
+  toLocalDateString,
 } from '@/lib/analytics'
+import type { SessionLog } from '@/lib/session-logs-api'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
 import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
@@ -53,19 +55,12 @@ const cardVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 }
 
-function toLocalDateString(instant: string): string {
-  const date = new Date(instant)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 export function HomePage() {
   const { data: profile } = useProfile()
   const { data: programs } = usePrograms()
   const { data: weightEntries } = useWeightEntries()
   const { data: history } = useSetHistory()
+  const allLogs = useAllSessionLogs()
   const { data: avatarUrl } = useAvatarUrl(profile?.avatar_path ?? null)
 
   const activeProgram = (programs ?? [])
@@ -95,7 +90,7 @@ export function HomePage() {
 
         <TodayCard program={activeProgram} />
 
-        <ThisWeekCard history={history ?? []} />
+        <ThisWeekCard history={history ?? []} allLogs={allLogs ?? []} />
 
         <WeightCard
           entries={weightEntries ?? []}
@@ -241,10 +236,15 @@ function TodayCard({ program }: { program: Program | undefined }) {
 
 function ThisWeekCard({
   history,
+  allLogs,
 }: {
   history: NonNullable<ReturnType<typeof useSetHistory>['data']>
+  allLogs: SessionLog[]
 }) {
-  const sessionsThisWeek = countTrainingDaysThisWeek(history)
+  // Sessions completed this week, not "days with logged sets" — a session
+  // marked "Terminée" counts even if its sets never got filled in, since
+  // that's still a séance réalisée as far as the user is concerned.
+  const sessionsThisWeek = countCompletedSessionsThisWeek(allLogs)
   const dailyVolume = computeDailyVolume(history)
   const currentWeekStart = getIsoWeekStart(new Date().toISOString().slice(0, 10))
   const tonnageThisWeek =

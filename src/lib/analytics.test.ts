@@ -4,6 +4,7 @@ import {
   computeDailyVolume,
   computeOneRepMaxProgression,
   computeWeeklyTonnage,
+  countCompletedSessionsThisWeek,
   countTrainingDaysThisWeek,
   getLoggedExercises,
 } from '@/lib/analytics'
@@ -151,6 +152,38 @@ describe('countTrainingDaysThisWeek', () => {
     expect(countTrainingDaysThisWeek([makeRecord({ loggedAt: '2026-07-13' })], now)).toBe(
       0,
     )
+  })
+})
+
+describe('countCompletedSessionsThisWeek', () => {
+  // Built from local Date constructors (not UTC 'Z' strings) so the test
+  // stays correct regardless of which timezone it runs in — toISOString()
+  // round-trips back to the same local calendar day via toLocalDateString.
+  it('counts distinct local days with a completed session, ignoring status and previous weeks', () => {
+    const now = new Date(2026, 6, 22, 12, 0, 0) // Wednesday 2026-07-22, week of 2026-07-20
+    const logs = [
+      { status: 'completed', started_at: new Date(2026, 6, 20, 9, 0, 0).toISOString() },
+      { status: 'in_progress', started_at: new Date(2026, 6, 21, 9, 0, 0).toISOString() },
+      { status: 'completed', started_at: new Date(2026, 6, 22, 9, 0, 0).toISOString() },
+      { status: 'completed', started_at: new Date(2026, 6, 13, 9, 0, 0).toISOString() },
+    ]
+    expect(countCompletedSessionsThisWeek(logs, now)).toBe(2)
+  })
+
+  it('counts a completed session even with zero sets logged in it', () => {
+    const now = new Date(2026, 6, 22, 12, 0, 0)
+    const logs = [
+      { status: 'completed', started_at: new Date(2026, 6, 22, 9, 0, 0).toISOString() },
+    ]
+    expect(countCompletedSessionsThisWeek(logs, now)).toBe(1)
+  })
+
+  it('returns 0 when nothing was completed this week', () => {
+    const now = new Date(2026, 6, 22, 12, 0, 0)
+    const logs = [
+      { status: 'completed', started_at: new Date(2026, 6, 13, 9, 0, 0).toISOString() },
+    ]
+    expect(countCompletedSessionsThisWeek(logs, now)).toBe(0)
   })
 })
 

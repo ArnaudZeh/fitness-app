@@ -5,6 +5,7 @@ import { offlineDb, type LocalSessionLogSet } from '@/lib/offline-db'
 import * as api from '@/lib/session-logs-api'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 import {
+  refreshAllSessionLogsCache,
   refreshSessionLogCache,
   refreshSessionLogSetsCache,
   refreshSessionLogSetsCacheForLogs,
@@ -27,6 +28,24 @@ export function useSessionLogs(programId: string): SessionLog[] | undefined {
     () => offlineDb.sessionLogs.where('program_id').equals(programId).toArray(),
     [programId],
   )
+
+  return logs
+    ?.filter((log) => log.dirty !== 'delete')
+    .map(stripDirty)
+    .sort((a, b) => b.started_at.localeCompare(a.started_at))
+}
+
+// Every session log across every one of the user's programs — used for
+// dashboard-wide stats ("séances réalisées cette semaine") that must count
+// a session no matter which program it belongs to, unlike useSessionLogs
+// above which is scoped to a single program's history view.
+export function useAllSessionLogs(): SessionLog[] | undefined {
+  useEffect(() => {
+    void refreshAllSessionLogsCache()
+    void syncPendingChanges()
+  }, [])
+
+  const logs = useLiveQuery(() => offlineDb.sessionLogs.toArray())
 
   return logs
     ?.filter((log) => log.dirty !== 'delete')
