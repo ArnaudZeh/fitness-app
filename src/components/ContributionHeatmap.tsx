@@ -56,7 +56,18 @@ export function buildHeatmapDays(
     days.push({ date, volumeKg, level })
     cursor.setDate(cursor.getDate() + 1)
   }
-  return days
+
+  // Built oldest-to-newest above (simplest way to walk the date range), but
+  // rendered newest-first: the current week is what you actually came to
+  // check, and on a narrow phone screen the grid is wider than the viewport,
+  // so a scroll-to-the-right requirement would hide it by default. Reversed
+  // by whole week (not by day) so each week's Monday→Sunday order stays
+  // intact — only the left-to-right order of the weeks themselves flips.
+  const weeks: HeatmapDay[][] = []
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7))
+  }
+  return weeks.reverse().flat()
 }
 
 const LEVEL_CLASS: Record<HeatmapDay['level'], string> = {
