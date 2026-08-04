@@ -29,6 +29,7 @@ import {
   useDeleteSessionLogSet,
   useSessionLog,
   useSessionLogSets,
+  useSessionLogs,
   useSessionPlan,
 } from '@/hooks/useSessionLogs'
 import { useSubstituteSessionTemplateExercise } from '@/hooks/useSessionTemplates'
@@ -66,11 +67,27 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   const navigate = useNavigate()
   const plan = useSessionPlan(log.program_id, log.session_template_id)
   const sets = useSessionLogSets(log.id)
+  const programLogs = useSessionLogs(log.program_id)
+  // The last time this exact recurring slot (same session_template_id) was
+  // run — used to pre-fill charge/reps below with real history instead of
+  // just the program's target. Not "the last completed one": an unfinished
+  // attempt still has real sets worth reusing as a reference.
+  const previousLog = useMemo(
+    () =>
+      (programLogs ?? [])
+        .filter((other) => other.session_template_id === log.session_template_id)
+        .filter((other) => other.id !== log.id)
+        .sort((a, b) => b.started_at.localeCompare(a.started_at))[0],
+    [programLogs, log.session_template_id, log.id],
+  )
+  const previousSets = useSessionLogSets(previousLog?.id) ?? []
   const completeLog = useCompleteSessionLog(log.id)
   const deleteLog = useDeleteSessionLog()
   const { data: exercises } = useExercises()
   const createExercise = useCreateExercise()
-  const substituteProgramExercise = useSubstituteSessionTemplateExercise(log.session_template_id)
+  const substituteProgramExercise = useSubstituteSessionTemplateExercise(
+    log.session_template_id,
+  )
 
   const sortedSlots = plan?.exercises ?? []
   const allSets = sets ?? []
@@ -165,6 +182,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                       sets={allSets.filter(
                         (set) => set.session_template_exercise_id === slot.id,
                       )}
+                      previousSets={previousSets}
                       sessionLogId={log.id}
                       focus={focus}
                       disabled={!isInProgress}
@@ -186,6 +204,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                 sets={allSets.filter(
                   (set) => set.session_template_exercise_id === block.slot.id,
                 )}
+                previousSets={previousSets}
                 sessionLogId={log.id}
                 focus={focus}
                 disabled={!isInProgress}
@@ -204,9 +223,42 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   )
 }
 
+// Sets logged the last time this exact slot (session_template_exercise_id)
+// was run, for whichever exercise identity is currently active on it. A
+// logged set's own exercise_id (if any) wins — it means that specific set
+// was an ad-hoc substitution — otherwise it falls back to the slot's
+// current permanent exercise, since history doesn't track what the slot's
+// exercise was at the time.
+function resolveLastTimeSets(
+  previousSets: SessionLogSet[],
+  slotId: string,
+  slotExerciseId: string,
+  effectiveExerciseId: string,
+): SessionLogSet[] {
+  return previousSets
+    .filter((set) => set.session_template_exercise_id === slotId)
+    .filter((set) => (set.exercise_id ?? slotExerciseId) === effectiveExerciseId)
+    .sort((a, b) => a.set_number - b.set_number)
+}
+
+// The reference for a given upcoming set number — same set number last
+// time if it exists, otherwise the heaviest/last set logged (covers doing
+// more sets this time than last time).
+function pickLastTimeSet(
+  lastTimeSets: SessionLogSet[],
+  setNumber: number,
+): SessionLogSet | undefined {
+  if (lastTimeSets.length === 0) return undefined
+  return (
+    lastTimeSets.find((set) => set.set_number === setNumber) ??
+    lastTimeSets[lastTimeSets.length - 1]
+  )
+}
+
 function SessionLogExerciseCard({
   slot,
   sets,
+  previousSets,
   sessionLogId,
   focus,
   disabled,
@@ -217,27 +269,20 @@ function SessionLogExerciseCard({
 }: {
   slot: CachedPlanExercise
   sets: SessionLogSet[]
+  previousSets: SessionLogSet[]
   sessionLogId: string
   focus: ProgramFocus
   disabled: boolean
   exercises: Exercise[]
   exerciseById: Map<string, Exercise>
-  onCreateExercise: (input: { name: string; muscle_group: string | null }) => Promise<Exercise>
+  onCreateExercise: (input: {
+    name: string
+    muscle_group: string | null
+  }) => Promise<Exercise>
   onSubstituteProgram: (slotId: string, exerciseId: string) => Promise<void>
 }) {
   const createSet = useCreateSessionLogSet(sessionLogId)
   const deleteSet = useDeleteSessionLogSet()
-  const [weight, setWeight] = useState(slot.target_weight_kg?.toString() ?? '')
-  const [reps, setReps] = useState(slot.target_reps_min.toString())
-  const [rpe, setRpe] = useState('')
-  const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
-    null,
-  )
-  const voiceInput = useVoiceSetInput((parsed) => {
-    if (parsed.weightKg !== null) setWeight(parsed.weightKg.toString())
-    if (parsed.reps !== null) setReps(parsed.reps.toString())
-    if (parsed.rpe !== null) setRpe(parsed.rpe.toString())
-  })
 
   const sortedSets = [...sets].sort((a, b) => a.set_number - b.set_number)
   const nextSetNumber = sortedSets.length + 1
@@ -261,20 +306,66 @@ function SessionLogExerciseCard({
   const displayImage = substitutedExercise?.image_url ?? slot.image_url
   const displayMuscleGroup = substitutedExercise?.muscle_group ?? slot.muscle_group
 
+  const lastTimeSets = useMemo(
+    () =>
+      resolveLastTimeSets(previousSets, slot.id, slot.exercise_id, effectiveExerciseId),
+    [previousSets, slot.id, slot.exercise_id, effectiveExerciseId],
+  )
+
+  const [weight, setWeight] = useState(() => {
+    const lastTime = pickLastTimeSet(lastTimeSets, nextSetNumber)
+    return lastTime
+      ? lastTime.actual_weight_kg.toString()
+      : (slot.target_weight_kg?.toString() ?? '')
+  })
+  const [reps, setReps] = useState(() => {
+    const lastTime = pickLastTimeSet(lastTimeSets, nextSetNumber)
+    return lastTime ? lastTime.actual_reps.toString() : slot.target_reps_min.toString()
+  })
+  const [rpe, setRpe] = useState('')
+  const [activeRest, setActiveRest] = useState<{ key: string; seconds: number } | null>(
+    null,
+  )
+  const voiceInput = useVoiceSetInput((parsed) => {
+    if (parsed.weightKg !== null) setWeight(parsed.weightKg.toString())
+    if (parsed.reps !== null) setReps(parsed.reps.toString())
+    if (parsed.rpe !== null) setRpe(parsed.rpe.toString())
+  })
+
   async function handleSubstitute(exerciseId: string, alsoUpdateProgram: boolean) {
     // Picking the originally planned exercise back is a revert, not a
     // substitution — store null (″same as planned″) rather than an
     // explicit-but-redundant id.
-    setSubstituteExerciseId(exerciseId === slot.exercise_id ? null : exerciseId)
-    // The old target load doesn't transfer to a different exercise/machine
-    // — carrying it over as a prefill would be actively misleading.
-    setWeight('')
+    const nextSubstituteId = exerciseId === slot.exercise_id ? null : exerciseId
+    setSubstituteExerciseId(nextSubstituteId)
+    // If this exact substitute was already used last time in this slot,
+    // reuse that charge — otherwise the old target/charge doesn't transfer
+    // to a different exercise/machine, so clearing beats a misleading value.
+    const history = resolveLastTimeSets(
+      previousSets,
+      slot.id,
+      slot.exercise_id,
+      exerciseId,
+    )
+    const lastTime = pickLastTimeSet(history, nextSetNumber)
+    setWeight(lastTime ? lastTime.actual_weight_kg.toString() : '')
     if (alsoUpdateProgram) await onSubstituteProgram(slot.id, exerciseId)
   }
 
   function revertToPlanned() {
     setSubstituteExerciseId(null)
-    setWeight(slot.target_weight_kg?.toString() ?? '')
+    const history = resolveLastTimeSets(
+      previousSets,
+      slot.id,
+      slot.exercise_id,
+      slot.exercise_id,
+    )
+    const lastTime = pickLastTimeSet(history, nextSetNumber)
+    setWeight(
+      lastTime
+        ? lastTime.actual_weight_kg.toString()
+        : (slot.target_weight_kg?.toString() ?? ''),
+    )
   }
 
   function startRest(afterSetId: string) {
@@ -291,9 +382,15 @@ function SessionLogExerciseCard({
       actual_rpe: rpe.trim() === '' ? null : Number(rpe),
       exercise_id: substituteExerciseId,
     })
-    // Charge/reps/RPE restent affichés tels quels après l'ajout : ils servent
-    // de base pour la série suivante (surcharge progressive), plutôt que de
-    // forcer à retaper la même charge à chaque série.
+    // Prefill the next set from last time's matching set number when there
+    // is one (e.g. set 3 was heavier than set 1-2 last time too). Otherwise
+    // charge/reps/RPE stay displayed as-is — they serve as the base for the
+    // next set (progressive overload) rather than forcing a retype.
+    const upcoming = pickLastTimeSet(lastTimeSets, nextSetNumber + 1)
+    if (upcoming) {
+      setWeight(upcoming.actual_weight_kg.toString())
+      setReps(upcoming.actual_reps.toString())
+    }
     startRest(created.id)
   }
 
@@ -370,41 +467,41 @@ function SessionLogExerciseCard({
                   : (exerciseById.get(setExerciseId)?.name ?? slot.exercise_name)
               const showsDifferentExercise = setExerciseId !== effectiveExerciseId
               return (
-              <li
-                key={set.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
-              >
-                <p className="font-mono tabular-nums">
-                  Série {set.set_number} ·{' '}
-                  {slot.is_bodyweight
-                    ? formatBodyweightLoad(set.actual_weight_kg)
-                    : `${set.actual_weight_kg} kg`}{' '}
-                  x {set.actual_reps}
-                  {set.actual_rpe !== null ? ` @ RPE ${set.actual_rpe}` : ''}
-                  {showsDifferentExercise ? ` · ${setExerciseName}` : ''}
-                </p>
-                {!disabled && (
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Dupliquer cette série"
-                      disabled={createSet.isPending}
-                      onClick={() => void handleDuplicateSet(set)}
-                    >
-                      <Copy />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Supprimer cette série"
-                      onClick={() => deleteSet.mutate(set.id)}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                )}
-              </li>
+                <li
+                  key={set.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
+                >
+                  <p className="font-mono tabular-nums">
+                    Série {set.set_number} ·{' '}
+                    {slot.is_bodyweight
+                      ? formatBodyweightLoad(set.actual_weight_kg)
+                      : `${set.actual_weight_kg} kg`}{' '}
+                    x {set.actual_reps}
+                    {set.actual_rpe !== null ? ` @ RPE ${set.actual_rpe}` : ''}
+                    {showsDifferentExercise ? ` · ${setExerciseName}` : ''}
+                  </p>
+                  {!disabled && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Dupliquer cette série"
+                        disabled={createSet.isPending}
+                        onClick={() => void handleDuplicateSet(set)}
+                      >
+                        <Copy />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Supprimer cette série"
+                        onClick={() => deleteSet.mutate(set.id)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  )}
+                </li>
               )
             })}
           </ul>

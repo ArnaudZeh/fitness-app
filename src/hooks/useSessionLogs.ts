@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { offlineDb } from '@/lib/offline-db'
+import { offlineDb, type LocalSessionLogSet } from '@/lib/offline-db'
 import * as api from '@/lib/session-logs-api'
 import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 import {
@@ -90,16 +90,22 @@ export function useDeleteSessionLog() {
   })
 }
 
-export function useSessionLogSets(sessionLogId: string): SessionLogSet[] | undefined {
+// sessionLogId is optional so callers can look up an on-the-side log (e.g.
+// "whichever session happened last time for this slot") without having to
+// know it exists yet — undefined just means "nothing to fetch".
+export function useSessionLogSets(
+  sessionLogId: string | undefined,
+): SessionLogSet[] | undefined {
   useEffect(() => {
+    if (!sessionLogId) return
     void refreshSessionLogSetsCache(sessionLogId)
     void syncPendingChanges()
   }, [sessionLogId])
 
-  const sets = useLiveQuery(
-    () => offlineDb.sessionLogSets.where('session_log_id').equals(sessionLogId).toArray(),
-    [sessionLogId],
-  )
+  const sets = useLiveQuery(() => {
+    if (!sessionLogId) return Promise.resolve<LocalSessionLogSet[]>([])
+    return offlineDb.sessionLogSets.where('session_log_id').equals(sessionLogId).toArray()
+  }, [sessionLogId])
 
   return sets?.filter((set) => set.dirty !== 'delete').map(stripDirty)
 }
