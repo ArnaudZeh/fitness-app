@@ -32,9 +32,10 @@ import {
   computeDailyVolume,
   computeWeeklyTonnage,
   countCompletedSessionsThisWeek,
+  getCompletedSessionDates,
   getIsoWeekStart,
-  toLocalDateString,
 } from '@/lib/analytics'
+import { toLocalDateString } from '@/lib/dates'
 import type { SessionLog } from '@/lib/session-logs-api'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
@@ -246,7 +247,8 @@ function ThisWeekCard({
   // that's still a séance réalisée as far as the user is concerned.
   const sessionsThisWeek = countCompletedSessionsThisWeek(allLogs)
   const dailyVolume = computeDailyVolume(history)
-  const currentWeekStart = getIsoWeekStart(new Date().toISOString().slice(0, 10))
+  const activeDates = getCompletedSessionDates(allLogs)
+  const currentWeekStart = getIsoWeekStart(toLocalDateString(new Date().toISOString()))
   const tonnageThisWeek =
     computeWeeklyTonnage(history).find((w) => w.weekStart === currentWeekStart)?.tonnageKg ?? 0
 
@@ -265,7 +267,11 @@ function ThisWeekCard({
               {Math.round(tonnageThisWeek)} kg
             </p>
           </div>
-          <ContributionHeatmap dailyVolumeKg={dailyVolume} weeksToShow={8} />
+          <ContributionHeatmap
+            dailyVolumeKg={dailyVolume}
+            activeDates={activeDates}
+            weeksToShow={8}
+          />
           <Link to="/analytics" className="text-sm text-primary hover:underline">
             Voir les stats complètes →
           </Link>

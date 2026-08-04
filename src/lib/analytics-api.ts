@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { toLocalDateString } from '@/lib/dates'
 
 async function requireUserId(): Promise<string> {
   const {
@@ -77,7 +78,7 @@ export async function fetchSetHistory(): Promise<SetHistoryRecord[]> {
       weightKg: row.actual_weight_kg,
       reps: row.actual_reps,
       rpe: row.actual_rpe,
-      loggedAt: startedAt.slice(0, 10),
+      loggedAt: toLocalDateString(startedAt),
     })
   }
   return records

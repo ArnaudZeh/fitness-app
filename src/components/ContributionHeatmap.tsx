@@ -1,7 +1,13 @@
+import { toLocalDateString } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 
 interface ContributionHeatmapProps {
   dailyVolumeKg: Map<string, number>
+  // Local dates with a completed session but possibly no logged sets (see
+  // getCompletedSessionDates) — rendered as the lowest active tier even at
+  // 0 kg, so a séance réalisée without data entry still reads as activity
+  // rather than looking identical to a rest day.
+  activeDates?: Set<string>
   weeksToShow?: number
 }
 
@@ -11,41 +17,44 @@ interface HeatmapDay {
   level: 0 | 1 | 2 | 3
 }
 
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
-}
-
 export function buildHeatmapDays(
   dailyVolumeKg: Map<string, number>,
   weeksToShow: number,
   now: Date = new Date(),
+  activeDates: Set<string> = new Set(),
 ): HeatmapDay[] {
+  // Local-date math throughout: dailyVolumeKg's keys are already local
+  // calendar dates (see fetchSetHistory), so the grid must walk local days
+  // too, or a session logged in the evening west of UTC would land one
+  // column off from where it's keyed.
   const today = new Date(now)
-  today.setUTCHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
 
-  const todayIsoDayOfWeek = today.getUTCDay() === 0 ? 7 : today.getUTCDay()
+  const todayIsoDayOfWeek = today.getDay() === 0 ? 7 : today.getDay()
   const gridEnd = new Date(today)
-  gridEnd.setUTCDate(today.getUTCDate() + (7 - todayIsoDayOfWeek))
+  gridEnd.setDate(today.getDate() + (7 - todayIsoDayOfWeek))
 
   // gridEnd is always a Sunday, so stepping back a whole number of weeks
   // and one more day lands exactly on a Monday — every column is a full
   // calendar week, no separate alignment step needed.
   const gridStart = new Date(gridEnd)
-  gridStart.setUTCDate(gridEnd.getUTCDate() - weeksToShow * 7 + 1)
+  gridStart.setDate(gridEnd.getDate() - weeksToShow * 7 + 1)
 
   const maxVolume = Math.max(0, ...dailyVolumeKg.values())
   const days: HeatmapDay[] = []
   const cursor = new Date(gridStart)
   while (cursor <= gridEnd) {
-    const date = toIsoDate(cursor)
+    const date = toLocalDateString(cursor.toISOString())
     const volumeKg = dailyVolumeKg.get(date) ?? 0
     let level: HeatmapDay['level'] = 0
     if (volumeKg > 0 && maxVolume > 0) {
       const ratio = volumeKg / maxVolume
       level = ratio <= 1 / 3 ? 1 : ratio <= 2 / 3 ? 2 : 3
+    } else if (activeDates.has(date)) {
+      level = 1
     }
     days.push({ date, volumeKg, level })
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
+    cursor.setDate(cursor.getDate() + 1)
   }
   return days
 }
@@ -59,9 +68,10 @@ const LEVEL_CLASS: Record<HeatmapDay['level'], string> = {
 
 export function ContributionHeatmap({
   dailyVolumeKg,
+  activeDates = new Set(),
   weeksToShow = 53,
 }: ContributionHeatmapProps) {
-  const days = buildHeatmapDays(dailyVolumeKg, weeksToShow)
+  const days = buildHeatmapDays(dailyVolumeKg, weeksToShow, new Date(), activeDates)
 
   return (
     <div className="flex flex-col gap-2">
@@ -70,13 +80,21 @@ export function ContributionHeatmap({
           className="grid grid-flow-col gap-1"
           style={{ gridTemplateRows: 'repeat(7, minmax(0, 1fr))' }}
         >
-          {days.map((day) => (
-            <div
-              key={day.date}
-              title={`${day.date} · ${day.volumeKg > 0 ? `${Math.round(day.volumeKg)} kg déplacés` : 'aucune séance'}`}
-              className={cn('size-3 rounded-sm', LEVEL_CLASS[day.level])}
-            />
-          ))}
+          {days.map((day) => {
+            const label =
+              day.volumeKg > 0
+                ? `${Math.round(day.volumeKg)} kg déplacés`
+                : activeDates.has(day.date)
+                  ? 'séance réalisée, sans détail enregistré'
+                  : 'aucune séance'
+            return (
+              <div
+                key={day.date}
+                title={`${day.date} · ${label}`}
+                className={cn('size-3 rounded-sm', LEVEL_CLASS[day.level])}
+              />
+            )
+          })}
         </div>
       </div>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

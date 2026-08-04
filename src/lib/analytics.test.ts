@@ -6,6 +6,7 @@ import {
   computeWeeklyTonnage,
   countCompletedSessionsThisWeek,
   countTrainingDaysThisWeek,
+  getCompletedSessionDates,
   getLoggedExercises,
 } from '@/lib/analytics'
 import type { SetHistoryRecord } from '@/lib/analytics-api'
@@ -184,6 +185,23 @@ describe('countCompletedSessionsThisWeek', () => {
       { status: 'completed', started_at: new Date(2026, 6, 13, 9, 0, 0).toISOString() },
     ]
     expect(countCompletedSessionsThisWeek(logs, now)).toBe(0)
+  })
+})
+
+describe('getCompletedSessionDates', () => {
+  it('returns the local date of every completed log, unbounded by week', () => {
+    const logs = [
+      { status: 'completed', started_at: new Date(2026, 6, 13, 9, 0, 0).toISOString() },
+      { status: 'completed', started_at: new Date(2026, 6, 22, 9, 0, 0).toISOString() },
+    ]
+    expect(getCompletedSessionDates(logs)).toEqual(new Set(['2026-07-13', '2026-07-22']))
+  })
+
+  it('excludes logs that are not completed', () => {
+    const logs = [
+      { status: 'in_progress', started_at: new Date(2026, 6, 22, 9, 0, 0).toISOString() },
+    ]
+    expect(getCompletedSessionDates(logs)).toEqual(new Set())
   })
 })
 

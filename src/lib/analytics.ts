@@ -1,4 +1,5 @@
 import { estimateOneRepMax } from '@/lib/one-rep-max'
+import { toLocalDateString } from '@/lib/dates'
 import type { SetHistoryRecord } from '@/lib/analytics-api'
 
 export interface ExerciseOption {
@@ -101,31 +102,20 @@ export function computeDailyVolume(records: SetHistoryRecord[]): Map<string, num
 
 // Distinct training days within the current ISO week — reuses the same
 // week-bucketing as computeWeeklyTonnage so this stays consistent with what
-// the same data would show on the full Analytics chart.
+// the same data would show on the full Analytics chart. loggedAt is already
+// a local calendar date (see fetchSetHistory), so now is bucketed the same
+// way for a correct comparison.
 export function countTrainingDaysThisWeek(
   records: SetHistoryRecord[],
   now: Date = new Date(),
 ): number {
-  const currentWeekStart = getIsoWeekStart(now.toISOString().slice(0, 10))
+  const currentWeekStart = getIsoWeekStart(toLocalDateString(now.toISOString()))
   const uniqueDates = new Set(
     records
       .filter((record) => getIsoWeekStart(record.loggedAt) === currentWeekStart)
       .map((record) => record.loggedAt),
   )
   return uniqueDates.size
-}
-
-// Local calendar date (YYYY-MM-DD) for an ISO instant, in the viewer's own
-// timezone — as opposed to the UTC date baked into the instant's string
-// representation. A session started in the evening west of UTC (e.g.
-// Tahiti, UTC-10) would otherwise land on "tomorrow" by UTC while still
-// being "today" for the person who ran it.
-export function toLocalDateString(instant: string): string {
-  const date = new Date(instant)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 export interface CompletedSessionRecord {
@@ -152,6 +142,17 @@ export function countCompletedSessionsThisWeek(
       .filter((date) => getIsoWeekStart(date) === currentWeekStart),
   )
   return uniqueDates.size
+}
+
+// Every local calendar date with at least one completed session log,
+// unbounded by week — feeds the contribution heatmap's "did I train" signal
+// as a layer separate from kg-based intensity, so a completed session with
+// no sets entered still shows up as activity instead of reading as a rest
+// day (see ContributionHeatmap's activeDates prop).
+export function getCompletedSessionDates(logs: CompletedSessionRecord[]): Set<string> {
+  return new Set(
+    logs.filter((log) => log.status === 'completed').map((log) => toLocalDateString(log.started_at)),
+  )
 }
 
 export interface TrendSummaryExercise {
