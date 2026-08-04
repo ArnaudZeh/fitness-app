@@ -29,6 +29,7 @@ import {
   useDeleteSessionLogSet,
   useSessionLog,
   useSessionLogSets,
+  useSessionLogSetsForLogs,
   useSessionLogs,
   useSessionPlan,
 } from '@/hooks/useSessionLogs'
@@ -68,19 +69,25 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   const plan = useSessionPlan(log.program_id, log.session_template_id)
   const sets = useSessionLogSets(log.id)
   const programLogs = useSessionLogs(log.program_id)
-  // The last time this exact recurring slot (same session_template_id) was
-  // run — used to pre-fill charge/reps below with real history instead of
-  // just the program's target. Not "the last completed one": an unfinished
-  // attempt still has real sets worth reusing as a reference.
-  const previousLog = useMemo(
+  // Every other time this exact recurring slot (same session_template_id)
+  // was run, most recent first — used to pre-fill charge/reps below with
+  // real history instead of just the program's target. Not "the last
+  // completed one": an unfinished attempt still has real sets worth
+  // reusing as a reference. Capped rather than the full history since a
+  // handful of recent attempts is enough to skip past an empty/aborted one
+  // (e.g. an accidental double "Démarrer la séance") without unbounded
+  // growth in what gets fetched.
+  const previousLogs = useMemo(
     () =>
       (programLogs ?? [])
         .filter((other) => other.session_template_id === log.session_template_id)
         .filter((other) => other.id !== log.id)
-        .sort((a, b) => b.started_at.localeCompare(a.started_at))[0],
+        .sort((a, b) => b.started_at.localeCompare(a.started_at))
+        .slice(0, 5),
     [programLogs, log.session_template_id, log.id],
   )
-  const previousSets = useSessionLogSets(previousLog?.id) ?? []
+  const previousLogIds = useMemo(() => previousLogs.map((l) => l.id), [previousLogs])
+  const previousSets = useSessionLogSetsForLogs(previousLogIds) ?? []
   const completeLog = useCompleteSessionLog(log.id)
   const deleteLog = useDeleteSessionLog()
   const { data: exercises } = useExercises()
@@ -191,6 +198,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                       sets={allSets.filter(
                         (set) => set.session_template_exercise_id === slot.id,
                       )}
+                      previousLogs={previousLogs}
                       previousSets={previousSets}
                       sessionLogId={log.id}
                       focus={focus}
@@ -219,6 +227,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                 sets={allSets.filter(
                   (set) => set.session_template_exercise_id === block.slot.id,
                 )}
+                previousLogs={previousLogs}
                 previousSets={previousSets}
                 sessionLogId={log.id}
                 focus={focus}
@@ -248,17 +257,25 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
 // logged set's own exercise_id (if any) wins — it means that specific set
 // was an ad-hoc substitution — otherwise it falls back to the slot's
 // current permanent exercise, since history doesn't track what the slot's
-// exercise was at the time.
+// exercise was at the time. previousLogs is sorted most-recent-first: among
+// the candidates that logged this exercise, the most recent one wins, so an
+// empty/aborted attempt (started then finished without logging anything)
+// doesn't shadow real history from further back.
 function resolveLastTimeSets(
+  previousLogs: SessionLog[],
   previousSets: SessionLogSet[],
   slotId: string,
   slotExerciseId: string,
   effectiveExerciseId: string,
 ): SessionLogSet[] {
-  return previousSets
+  const matching = previousSets
     .filter((set) => set.session_template_exercise_id === slotId)
     .filter((set) => (set.exercise_id ?? slotExerciseId) === effectiveExerciseId)
-    .sort((a, b) => a.set_number - b.set_number)
+  for (const candidateLog of previousLogs) {
+    const setsForLog = matching.filter((set) => set.session_log_id === candidateLog.id)
+    if (setsForLog.length > 0) return setsForLog.sort((a, b) => a.set_number - b.set_number)
+  }
+  return []
 }
 
 // The reference for a given upcoming set number — same set number last
@@ -291,6 +308,7 @@ function SessionLogExerciseCard({
   slot,
   allSlots,
   sets,
+  previousLogs,
   previousSets,
   sessionLogId,
   focus,
@@ -306,6 +324,7 @@ function SessionLogExerciseCard({
   slot: CachedPlanExercise
   allSlots: CachedPlanExercise[]
   sets: SessionLogSet[]
+  previousLogs: SessionLog[]
   previousSets: SessionLogSet[]
   sessionLogId: string
   focus: ProgramFocus
@@ -348,8 +367,14 @@ function SessionLogExerciseCard({
 
   const lastTimeSets = useMemo(
     () =>
-      resolveLastTimeSets(previousSets, slot.id, slot.exercise_id, effectiveExerciseId),
-    [previousSets, slot.id, slot.exercise_id, effectiveExerciseId],
+      resolveLastTimeSets(
+        previousLogs,
+        previousSets,
+        slot.id,
+        slot.exercise_id,
+        effectiveExerciseId,
+      ),
+    [previousLogs, previousSets, slot.id, slot.exercise_id, effectiveExerciseId],
   )
 
   const [weight, setWeight] = useState(() => {
@@ -410,6 +435,7 @@ function SessionLogExerciseCard({
     // reuse that charge — otherwise the old target/charge doesn't transfer
     // to a different exercise/machine, so clearing beats a misleading value.
     const history = resolveLastTimeSets(
+      previousLogs,
       previousSets,
       slot.id,
       slot.exercise_id,
@@ -423,6 +449,7 @@ function SessionLogExerciseCard({
   function revertToPlanned() {
     setSubstituteExerciseId(null)
     const history = resolveLastTimeSets(
+      previousLogs,
       previousSets,
       slot.id,
       slot.exercise_id,

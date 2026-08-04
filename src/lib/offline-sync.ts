@@ -168,6 +168,40 @@ export async function refreshSessionLogSetsCache(sessionLogId: string): Promise<
   }
 }
 
+// Same as refreshSessionLogSetsCache but for several logs at once — used to
+// pull in "last time" history that spans more than just the single most
+// recent prior session (see useSessionLogSetsForLogs).
+export async function refreshSessionLogSetsCacheForLogs(
+  sessionLogIds: string[],
+): Promise<void> {
+  if (!isOnline() || sessionLogIds.length === 0) return
+  try {
+    const { data, error } = await supabase
+      .from('session_log_sets')
+      .select('*')
+      .in('session_log_id', sessionLogIds)
+    if (error || !data) return
+    for (const row of data) {
+      const existing = await offlineDb.sessionLogSets.get(row.id)
+      if (existing?.dirty) continue
+      await offlineDb.sessionLogSets.put({
+        id: row.id,
+        user_id: row.user_id,
+        session_log_id: row.session_log_id,
+        session_template_exercise_id: row.session_template_exercise_id,
+        set_number: row.set_number,
+        actual_reps: row.actual_reps,
+        actual_weight_kg: row.actual_weight_kg,
+        actual_rpe: row.actual_rpe,
+        exercise_id: row.exercise_id,
+        dirty: null,
+      })
+    }
+  } catch {
+    // Offline — the existing Dexie cache (if any) stands as-is.
+  }
+}
+
 // Read-through cache refresh for one session log itself (status/timestamps)
 // — same rationale as the sets refresh above.
 export async function refreshSessionLogCache(id: string): Promise<void> {

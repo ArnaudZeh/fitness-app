@@ -7,6 +7,7 @@ import type { SessionLog, SessionLogSet } from '@/lib/session-logs-api'
 import {
   refreshSessionLogCache,
   refreshSessionLogSetsCache,
+  refreshSessionLogSetsCacheForLogs,
   refreshSessionLogsCache,
   syncPendingChanges,
 } from '@/lib/offline-sync'
@@ -106,6 +107,29 @@ export function useSessionLogSets(
     if (!sessionLogId) return Promise.resolve<LocalSessionLogSet[]>([])
     return offlineDb.sessionLogSets.where('session_log_id').equals(sessionLogId).toArray()
   }, [sessionLogId])
+
+  return sets?.filter((set) => set.dirty !== 'delete').map(stripDirty)
+}
+
+// Same as useSessionLogSets but spanning several logs — used for "last
+// time" pre-fill, which needs to look past the single most recent prior
+// session in case that one was started and abandoned without any sets
+// (e.g. an accidental double "Démarrer la séance").
+export function useSessionLogSetsForLogs(sessionLogIds: string[]): SessionLogSet[] | undefined {
+  const key = sessionLogIds.join(',')
+
+  useEffect(() => {
+    if (sessionLogIds.length === 0) return
+    void refreshSessionLogSetsCacheForLogs(sessionLogIds)
+    void syncPendingChanges()
+    // sessionLogIds is re-created on every render; key is the stable dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
+  const sets = useLiveQuery(() => {
+    if (sessionLogIds.length === 0) return Promise.resolve<LocalSessionLogSet[]>([])
+    return offlineDb.sessionLogSets.where('session_log_id').anyOf(sessionLogIds).toArray()
+  }, [key])
 
   return sets?.filter((set) => set.dirty !== 'delete').map(stripDirty)
 }
