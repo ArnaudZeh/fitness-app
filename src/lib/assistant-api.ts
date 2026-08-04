@@ -142,6 +142,7 @@ export async function fetchActiveProgramSnapshot(): Promise<ProgramDaySnapshot[]
        )`,
     )
     .eq('program_id', activeProgram.id)
+    .is('session_template_exercises.archived_at', null)
     .order('day_of_week', { ascending: true })
   if (templatesError) throw templatesError
 

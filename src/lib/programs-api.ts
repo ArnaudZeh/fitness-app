@@ -150,6 +150,7 @@ async function copyProgramInternal(program: Program, newName: string): Promise<P
       .from('session_template_exercises')
       .select('*')
       .eq('session_template_id', sourceTemplate.id)
+      .is('archived_at', null)
       .order('order_index', { ascending: true })
     if (slotsError) throw slotsError
 

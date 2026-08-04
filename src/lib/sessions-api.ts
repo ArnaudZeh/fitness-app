@@ -151,6 +151,7 @@ export async function fetchSessionTemplateExercises(
     .from('session_template_exercises')
     .select('*, exercise:exercises(id, name, muscle_group, image_url)')
     .eq('session_template_id', sessionTemplateId)
+    .is('archived_at', null)
     .order('order_index', { ascending: true })
   if (error) throw error
   return data
@@ -191,7 +192,33 @@ export async function updateSessionTemplateExercise(
   return data
 }
 
+// A plain hard delete would cascade-delete every session_log_set ever
+// logged against this slot (session_log_sets.session_template_exercise_id
+// references it on delete cascade) — permanently destroying past training
+// data the moment someone removes an exercise from the plan, whether via
+// this button, "Adapter avec l'IA", or "Dupliquer un jour". A slot with no
+// history has nothing to protect, so it's still hard-deleted; one with any
+// logged sets is archived instead — dropped from every "current exercises"
+// read (see fetchSessionTemplateExercises and friends, all filtered on
+// archived_at is null) but still in the database, keeping its history
+// correctly attributed to the exercise it actually was.
 export async function deleteSessionTemplateExercise(id: string): Promise<void> {
+  const { data: loggedSets, error: checkError } = await supabase
+    .from('session_log_sets')
+    .select('id')
+    .eq('session_template_exercise_id', id)
+    .limit(1)
+  if (checkError) throw checkError
+
+  if (loggedSets.length > 0) {
+    const { error } = await supabase
+      .from('session_template_exercises')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+    return
+  }
+
   const { error } = await supabase
     .from('session_template_exercises')
     .delete()
@@ -243,11 +270,14 @@ export async function duplicateSessionTemplateExercises(
   const userId = await requireUserId()
   const sourceSlots = await fetchSessionTemplateExercises(sourceTemplateId)
 
-  const { error: deleteError } = await supabase
-    .from('session_template_exercises')
-    .delete()
-    .eq('session_template_id', targetTemplateId)
-  if (deleteError) throw deleteError
+  // One at a time through deleteSessionTemplateExercise rather than a
+  // single bulk delete on the target — a target slot with logged history
+  // gets archived instead of cascade-deleting that history, same as a
+  // manual "Supprimer".
+  const targetSlots = await fetchSessionTemplateExercises(targetTemplateId)
+  for (const slot of targetSlots) {
+    await deleteSessionTemplateExercise(slot.id)
+  }
 
   const { error: dayTypeError } = await supabase
     .from('session_templates')

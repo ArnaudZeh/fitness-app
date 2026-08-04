@@ -84,6 +84,7 @@ export async function cacheSessionPlan(
         .from('session_template_exercises')
         .select('*, exercise:exercises(id, name, muscle_group, image_url)')
         .eq('session_template_id', sessionTemplateId)
+        .is('archived_at', null)
         .order('order_index', { ascending: true }),
     ])
     if (programResult.error) throw programResult.error

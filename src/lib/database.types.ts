@@ -691,6 +691,7 @@ export type Database = {
       }
       session_template_exercises: {
         Row: {
+          archived_at: string | null
           created_at: string
           exercise_id: string
           id: string
@@ -710,6 +711,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           exercise_id: string
           id?: string
@@ -729,6 +731,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           exercise_id?: string
           id?: string

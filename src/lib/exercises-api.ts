@@ -41,6 +41,7 @@ export async function fetchExerciseUsageCounts(): Promise<Map<string, number>> {
     .from('session_template_exercises')
     .select('exercise_id')
     .eq('user_id', user.id)
+    .is('archived_at', null)
   if (error) throw error
 
   const counts = new Map<string, number>()
