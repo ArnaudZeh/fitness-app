@@ -1,7 +1,23 @@
-import { expect, test as setup } from '@playwright/test'
+import { expect, type Page, test as setup } from '@playwright/test'
 
 const authFile = 'e2e/.auth/user.json'
 const authFile2 = 'e2e/.auth/user2.json'
+
+// NotificationsPromptDialog shows once per (browser, app version) — it pops
+// up asynchronously (waits on a push-subscription check) after first login,
+// and would otherwise cover the page and block every spec that navigates
+// right after auth. Dismissing it here, before the storageState snapshot is
+// written, marks it "seen" in localStorage for that version — captured into
+// storageState so every spec reusing this fixture starts past it. Read the
+// version from the running app itself (localStorage key set on dismiss)
+// rather than hardcoding it, since it's the current git SHA and changes on
+// every commit.
+async function dismissNotificationsPrompt(page: Page): Promise<void> {
+  await page
+    .getByRole('button', { name: 'Plus tard' })
+    .click({ timeout: 5_000 })
+    .catch(() => {})
+}
 
 setup('authenticate as the persistent E2E fixture account', async ({ page }) => {
   const email = process.env.PLAYWRIGHT_TEST_EMAIL
@@ -17,6 +33,7 @@ setup('authenticate as the persistent E2E fixture account', async ({ page }) => 
   await page.getByLabel('Mot de passe').fill(password)
   await page.getByRole('button', { name: 'Se connecter' }).click()
   await expect(page).toHaveURL('/')
+  await dismissNotificationsPrompt(page)
 
   await page.context().storageState({ path: authFile })
 })
@@ -38,6 +55,7 @@ setup('authenticate as the second E2E fixture account', async ({ page }) => {
   await page.getByLabel('Mot de passe').fill(password)
   await page.getByRole('button', { name: 'Se connecter' }).click()
   await expect(page).toHaveURL('/')
+  await dismissNotificationsPrompt(page)
 
   await page.context().storageState({ path: authFile2 })
 })
