@@ -33,7 +33,7 @@ export function ProgramsListPage() {
   const { data: weekOverview } = useProgramsWeekOverview(
     programs?.map((program) => program.id) ?? [],
   )
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
 
   const filteredPrograms = programs?.filter(
     (program) => statusFilter === 'all' || program.status === statusFilter,
@@ -68,12 +68,12 @@ export function ProgramsListPage() {
       )}
 
       {programs && programs.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border p-0.5">
+        <div className="flex w-fit flex-wrap items-center gap-0.5 rounded-lg border border-border p-0.5">
           {STATUS_FILTER_OPTIONS.map((option) => (
             <Button
               key={option.value}
               type="button"
-              size="sm"
+              size="xs"
               variant={statusFilter === option.value ? 'default' : 'ghost'}
               onClick={() => setStatusFilter(option.value)}
             >
@@ -89,21 +89,23 @@ export function ProgramsListPage() {
         </p>
       )}
 
-      <ul className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-4">
         {filteredPrograms?.map((program) => {
           const days = weekOverview?.[program.id] ?? []
           const trainingDays = days.filter((day) => day.day_type === 'training')
           return (
             <li key={program.id}>
               <Link to={`/programs/${program.id}`}>
-                <Card className="transition-colors hover:bg-muted/50">
-                  <CardHeader>
-                    <CardTitle as="h2">{program.name}</CardTitle>
+                <Card className="[--card-spacing:--spacing(4)] transition-colors hover:bg-muted/50">
+                  <CardHeader className="gap-1.5">
+                    <CardTitle as="h2" className="text-lg">
+                      {program.name}
+                    </CardTitle>
                     {program.description && (
                       <CardDescription>{program.description}</CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent className="flex flex-col gap-2">
+                  <CardContent className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                       <Badge>{PROGRAM_FOCUS_LABELS[program.focus]}</Badge>
                       <Badge variant="outline">
@@ -111,17 +113,22 @@ export function ProgramsListPage() {
                       </Badge>
                     </div>
                     {trainingDays.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {trainingDays.map((day) => (
-                          <Badge
-                            key={day.day_of_week}
-                            variant="outline"
-                            className="font-normal text-muted-foreground"
-                          >
-                            {WEEKDAY_SHORT_LABELS[day.day_of_week]}
-                            {day.label ? ` · ${day.label}` : ''}
-                          </Badge>
-                        ))}
+                      <div className="flex flex-col gap-2">
+                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Semaine type
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {trainingDays.map((day) => (
+                            <Badge
+                              key={day.day_of_week}
+                              variant="outline"
+                              className="h-auto px-2.5 py-1 text-sm font-normal text-muted-foreground"
+                            >
+                              {WEEKDAY_SHORT_LABELS[day.day_of_week]}
+                              {day.label ? ` · ${day.label}` : ''}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </CardContent>
