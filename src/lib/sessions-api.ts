@@ -120,6 +120,68 @@ export async function fetchSessionTemplates(
   return data.map(toSessionTemplate)
 }
 
+export interface ProgramWeekDay {
+  day_of_week: number
+  day_type: DayType
+  label: string | null
+}
+
+// Powers the programs-list week preview: which days train + what muscle
+// group, for every program at once. Two flat queries scoped to programIds
+// (not one query per program, not a nested embed) so the list page's cost
+// stays constant instead of growing with the number of programs. Explicit
+// user_id filter on both, not just RLS — same reasoning as fetchPrograms in
+// programs-api.ts.
+export async function fetchProgramsWeekOverview(
+  programIds: string[],
+): Promise<Record<string, ProgramWeekDay[]>> {
+  const userId = await requireUserId()
+  if (programIds.length === 0) return {}
+
+  const { data: templates, error: templatesError } = await supabase
+    .from('session_templates')
+    .select('id, program_id, day_of_week, day_type, muscle_group_label')
+    .eq('user_id', userId)
+    .in('program_id', programIds)
+  if (templatesError) throw templatesError
+
+  const templateIds = templates.map((template) => template.id)
+  const { data: slots, error: slotsError } =
+    templateIds.length > 0
+      ? await supabase
+          .from('session_template_exercises')
+          .select('session_template_id, exercise:exercises(muscle_group)')
+          .eq('user_id', userId)
+          .in('session_template_id', templateIds)
+          .is('archived_at', null)
+      : { data: [], error: null }
+  if (slotsError) throw slotsError
+
+  const slotsByTemplate = new Map<string, { exercise: { muscle_group: string | null } }[]>()
+  for (const slot of slots) {
+    const forTemplate = slotsByTemplate.get(slot.session_template_id) ?? []
+    forTemplate.push(slot)
+    slotsByTemplate.set(slot.session_template_id, forTemplate)
+  }
+
+  const overview: Record<string, ProgramWeekDay[]> = {}
+  for (const template of templates) {
+    const days = overview[template.program_id] ?? []
+    days.push({
+      day_of_week: template.day_of_week,
+      day_type: template.day_type as DayType,
+      label:
+        template.muscle_group_label ??
+        computeSuggestedMuscleGroupLabel(slotsByTemplate.get(template.id) ?? []),
+    })
+    overview[template.program_id] = days
+  }
+  for (const days of Object.values(overview)) {
+    days.sort((a, b) => a.day_of_week - b.day_of_week)
+  }
+  return overview
+}
+
 export async function fetchSessionTemplate(id: string): Promise<SessionTemplate> {
   const { data, error } = await supabase
     .from('session_templates')
@@ -142,6 +204,35 @@ export async function updateSessionTemplateDayType(
     .single()
   if (error) throw error
   return toSessionTemplate(data)
+}
+
+export async function updateSessionTemplateMuscleGroupLabel(
+  id: string,
+  label: string | null,
+): Promise<SessionTemplate> {
+  const { data, error } = await supabase
+    .from('session_templates')
+    .update({ muscle_group_label: label })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return toSessionTemplate(data)
+}
+
+// Falls back to the muscle groups actually trained that day (deduped, in
+// exercise order) when no manual muscle_group_label override is set — kept
+// in sync with the day's exercises automatically instead of going stale.
+export function computeSuggestedMuscleGroupLabel(
+  slots: { exercise: { muscle_group: string | null } }[],
+): string | null {
+  const groups: string[] = []
+  for (const slot of slots) {
+    if (slot.exercise.muscle_group && !groups.includes(slot.exercise.muscle_group)) {
+      groups.push(slot.exercise.muscle_group)
+    }
+  }
+  return groups.length > 0 ? groups.join('/') : null
 }
 
 export async function fetchSessionTemplateExercises(

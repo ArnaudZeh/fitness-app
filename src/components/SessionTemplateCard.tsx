@@ -47,6 +47,7 @@ import {
   useSetGroupRestSeconds,
   useUpdateSessionTemplateDayType,
   useUpdateSessionTemplateExercise,
+  useUpdateSessionTemplateMuscleGroupLabel,
 } from '@/hooks/useSessionTemplates'
 import { useStartSessionLog } from '@/hooks/useSessionLogs'
 import {
@@ -61,6 +62,7 @@ import {
   DAY_TYPE_LABELS,
   DEFAULT_REST_SECONDS_BY_FOCUS,
   WEEKDAY_LABELS,
+  computeSuggestedMuscleGroupLabel,
   formatBodyweightLoad,
   type DayType,
 } from '@/lib/sessions-api'
@@ -98,6 +100,7 @@ export function SessionTemplateCard({
   const reorderSlots = useReorderSessionTemplateExercises(template.id)
   const setGroupRest = useSetGroupRestSeconds(template.id)
   const updateDayType = useUpdateSessionTemplateDayType(template.program_id)
+  const updateLabel = useUpdateSessionTemplateMuscleGroupLabel(template.program_id)
   const duplicateExercises = useDuplicateSessionTemplateExercises(template.program_id)
   const startSessionLog = useStartSessionLog(template.program_id)
 
@@ -115,6 +118,22 @@ export function SessionTemplateCard({
   const sortedSlots = slots ?? []
   const isTrainingDay = template.day_type === 'training'
   const blocks = computeBlocks(sortedSlots)
+  const suggestedLabel = computeSuggestedMuscleGroupLabel(sortedSlots)
+  const displayLabel = template.muscle_group_label ?? suggestedLabel
+
+  // Uncontrolled-by-prop on purpose: only diverges from the saved value
+  // while the user is actively typing, then re-derives from `template` on
+  // save via the templatesKey invalidation — not synced on every render, so
+  // it doesn't fight the user's keystrokes.
+  const [labelInput, setLabelInput] = useState(template.muscle_group_label ?? '')
+
+  function saveLabel() {
+    const trimmed = labelInput.trim()
+    const normalized = trimmed === '' ? null : trimmed
+    if (normalized !== (template.muscle_group_label ?? null)) {
+      updateLabel.mutate({ id: template.id, label: normalized })
+    }
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -144,54 +163,75 @@ export function SessionTemplateCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle as="h3">{WEEKDAY_LABELS[template.day_of_week]}</CardTitle>
-        <div className="flex items-center gap-2">
-          {readOnly ? (
-            <Badge variant="outline">{DAY_TYPE_LABELS[template.day_type]}</Badge>
-          ) : (
-            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-              {DAY_TYPE_OPTIONS.map((option) => (
-                <Button
-                  key={option}
-                  type="button"
-                  size="sm"
-                  variant={template.day_type === option ? 'default' : 'ghost'}
-                  disabled={updateDayType.isPending}
-                  onClick={() => {
-                    if (template.day_type !== option) {
-                      updateDayType.mutate({ id: template.id, dayType: option })
-                    }
-                  }}
-                >
-                  {DAY_TYPE_LABELS[option]}
-                </Button>
-              ))}
-            </div>
-          )}
-          {!readOnly && sortedSlots.length > 0 && (
-            <DuplicateDayDialog
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Dupliquer ${WEEKDAY_LABELS[template.day_of_week]} vers un autre jour`}
-                >
-                  <Copy />
-                </Button>
-              }
-              sourceTemplate={template}
-              otherTemplates={allTemplates.filter((t) => t.id !== template.id)}
-              onDuplicate={(targetTemplateId) =>
-                duplicateExercises.mutateAsync({
-                  sourceTemplateId: template.id,
-                  targetTemplateId,
-                })
-              }
-            />
-          )}
+      <CardHeader className="flex flex-col gap-2">
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle as="h3">{WEEKDAY_LABELS[template.day_of_week]}</CardTitle>
+          <div className="flex items-center gap-2">
+            {readOnly ? (
+              <Badge variant="outline">{DAY_TYPE_LABELS[template.day_type]}</Badge>
+            ) : (
+              <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+                {DAY_TYPE_OPTIONS.map((option) => (
+                  <Button
+                    key={option}
+                    type="button"
+                    size="sm"
+                    variant={template.day_type === option ? 'default' : 'ghost'}
+                    disabled={updateDayType.isPending}
+                    onClick={() => {
+                      if (template.day_type !== option) {
+                        updateDayType.mutate({ id: template.id, dayType: option })
+                      }
+                    }}
+                  >
+                    {DAY_TYPE_LABELS[option]}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {!readOnly && sortedSlots.length > 0 && (
+              <DuplicateDayDialog
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Dupliquer ${WEEKDAY_LABELS[template.day_of_week]} vers un autre jour`}
+                  >
+                    <Copy />
+                  </Button>
+                }
+                sourceTemplate={template}
+                otherTemplates={allTemplates.filter((t) => t.id !== template.id)}
+                onDuplicate={(targetTemplateId) =>
+                  duplicateExercises.mutateAsync({
+                    sourceTemplateId: template.id,
+                    targetTemplateId,
+                  })
+                }
+              />
+            )}
+          </div>
         </div>
+        {isTrainingDay &&
+          (readOnly ? (
+            displayLabel && (
+              <p className="text-sm text-muted-foreground">{displayLabel}</p>
+            )
+          ) : (
+            <Input
+              value={labelInput}
+              onChange={(event) => setLabelInput(event.target.value)}
+              onBlur={saveLabel}
+              placeholder={
+                suggestedLabel
+                  ? `Groupe musculaire (ex. ${suggestedLabel})`
+                  : 'Groupe musculaire (ex. Jambes, Pec/Biceps…)'
+              }
+              aria-label="Groupe musculaire du jour"
+              className="h-8 text-sm"
+            />
+          ))}
       </CardHeader>
       {isTrainingDay && (
         <CardContent className="flex flex-col gap-2">

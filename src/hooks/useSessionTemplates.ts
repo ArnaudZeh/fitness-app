@@ -22,11 +22,32 @@ export function useSessionTemplate(id: string) {
   })
 }
 
+// Sorted, not raw programIds, as the query key: an unstable array-object
+// identity would refetch on every render even when the underlying id set
+// hasn't changed (usePrograms() returns a fresh array each time).
+export function useProgramsWeekOverview(programIds: string[]) {
+  const sortedIds = [...programIds].sort()
+  return useQuery({
+    queryKey: ['programs-week-overview', sortedIds] as const,
+    queryFn: () => api.fetchProgramsWeekOverview(sortedIds),
+    enabled: sortedIds.length > 0,
+  })
+}
+
 export function useUpdateSessionTemplateDayType(programId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, dayType }: { id: string; dayType: DayType }) =>
       api.updateSessionTemplateDayType(id, dayType),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
+  })
+}
+
+export function useUpdateSessionTemplateMuscleGroupLabel(programId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, label }: { id: string; label: string | null }) =>
+      api.updateSessionTemplateMuscleGroupLabel(id, label),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: templatesKey(programId) }),
   })
 }

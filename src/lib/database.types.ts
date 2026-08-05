@@ -773,6 +773,7 @@ export type Database = {
           day_of_week: number
           day_type: string
           id: string
+          muscle_group_label: string | null
           program_id: string
           updated_at: string
           user_id: string
@@ -782,6 +783,7 @@ export type Database = {
           day_of_week: number
           day_type?: string
           id?: string
+          muscle_group_label?: string | null
           program_id: string
           updated_at?: string
           user_id: string
@@ -791,6 +793,7 @@ export type Database = {
           day_of_week?: number
           day_type?: string
           id?: string
+          muscle_group_label?: string | null
           program_id?: string
           updated_at?: string
           user_id?: string
