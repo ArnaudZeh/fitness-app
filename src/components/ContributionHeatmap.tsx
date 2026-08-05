@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { toLocalDateString } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 
@@ -74,21 +73,10 @@ export function ContributionHeatmap({
   weeksToShow = 53,
 }: ContributionHeatmapProps) {
   const days = buildHeatmapDays(dailyVolumeKg, weeksToShow, new Date(), activeDates)
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  // Grid reads oldest (left) to newest (right), like a calendar — but on a
-  // narrow phone screen it's wider than the viewport, so without this the
-  // current week (the whole point of checking) would be scrolled off to the
-  // right by default. Scroll to the end on mount so it's visible immediately
-  // while the reading order stays natural.
-  useEffect(() => {
-    const el = scrollRef.current
-    if (el) el.scrollLeft = el.scrollWidth
-  }, [days])
 
   return (
     <div className="flex flex-col gap-2">
-      <div ref={scrollRef} className="overflow-x-auto pb-1">
+      <div className="overflow-x-auto pb-1">
         <div
           className="grid grid-flow-col gap-1"
           style={{ gridTemplateRows: 'repeat(7, minmax(0, 1fr))' }}
