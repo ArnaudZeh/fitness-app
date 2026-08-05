@@ -57,7 +57,21 @@ export function buildHeatmapDays(
     cursor.setDate(cursor.getDate() + 1)
   }
 
-  return days
+  // A brand-new account (or one coming off a long gap) has nothing but
+  // empty weeks at the start of the window — left uncut, those pile up as
+  // dead space before the first real activity, pushing it toward the right
+  // edge instead of starting the grid where the activity does. Trim whole
+  // leading empty weeks (never a partial week, so Monday→Sunday stays
+  // intact) up to the first one containing any activity. If the entire
+  // window is empty, leave it as-is rather than trimming everything away.
+  const weeks: HeatmapDay[][] = []
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7))
+  }
+  const firstActiveWeek = weeks.findIndex((week) => week.some((day) => day.level > 0))
+  const trimmedWeeks = firstActiveWeek === -1 ? weeks : weeks.slice(firstActiveWeek)
+
+  return trimmedWeeks.flat()
 }
 
 const LEVEL_CLASS: Record<HeatmapDay['level'], string> = {
