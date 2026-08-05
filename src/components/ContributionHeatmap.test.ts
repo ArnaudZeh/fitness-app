@@ -5,15 +5,15 @@ import { buildHeatmapDays } from '@/components/ContributionHeatmap'
 // stay correct regardless of which timezone they run in — buildHeatmapDays
 // walks local calendar days (see its own comment for why).
 describe('buildHeatmapDays', () => {
-  it('renders the current week first (left) and older weeks after (right), each Monday-to-Sunday', () => {
+  it('renders the oldest week first (left) and the current week last (right), each Monday-to-Sunday', () => {
     // 2026-07-22 is a Wednesday, so the current week is 2026-07-20 (Mon) to 07-26 (Sun).
     const now = new Date(2026, 6, 22, 12, 0, 0)
     const days = buildHeatmapDays(new Map(), 2, now)
 
-    expect(days[0]?.date).toBe('2026-07-20') // current week's Monday, first/leftmost
-    expect(days[6]?.date).toBe('2026-07-26') // current week's Sunday
-    expect(days[7]?.date).toBe('2026-07-13') // older week's Monday follows
-    expect(days.at(-1)?.date).toBe('2026-07-19') // older week's Sunday, last/rightmost
+    expect(days[0]?.date).toBe('2026-07-13') // older week's Monday, first/leftmost
+    expect(days[6]?.date).toBe('2026-07-19') // older week's Sunday
+    expect(days[7]?.date).toBe('2026-07-20') // current week's Monday follows
+    expect(days.at(-1)?.date).toBe('2026-07-26') // current week's Sunday, last/rightmost
     expect(days).toHaveLength(14)
   })
 
