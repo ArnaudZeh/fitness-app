@@ -130,7 +130,7 @@ function DashboardCard({ children }: { children: ReactNode }) {
 // card below the rings reads at a glance.
 function RowIcon({ children }: { children: ReactNode }) {
   return (
-    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
       {children}
     </div>
   )
@@ -227,7 +227,7 @@ function WeeklyRingsSection({
   return (
     <>
       <motion.div variants={cardVariants} className="flex flex-col items-center gap-2 py-1">
-        <div className="mx-auto w-full max-w-[256px]">
+        <div className="mx-auto w-full max-w-[264px]">
           <ActivityRings
             rings={rings}
             centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
@@ -390,7 +390,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
           <Card size="sm" className="transition-colors active:bg-muted/50">
             <CardContent className="flex items-center gap-3">
               <RowIcon>
-                <Plus className="size-5" />
+                <Plus className="size-4" />
               </RowIcon>
               <RowText title="Aucun programme actif" subtitle="Active un programme →" />
             </CardContent>
@@ -406,7 +406,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
         <Card size="sm">
           <CardContent className="flex items-center gap-3">
             <RowIcon>
-              <Moon className="size-5 text-muted-foreground" />
+              <Moon className="size-4 text-muted-foreground" />
             </RowIcon>
             <RowText title="Repos aujourd'hui" subtitle={program.name} />
           </CardContent>
@@ -427,9 +427,9 @@ function TodayCard({ program }: { program: Program | undefined }) {
             <CardContent className="flex items-center gap-3">
               <RowIcon>
                 {todayLog.status === 'completed' ? (
-                  <CheckCircle2 className="size-5 text-primary" />
+                  <CheckCircle2 className="size-4 text-primary" />
                 ) : (
-                  <Play className="size-5 text-primary" />
+                  <Play className="size-4 text-primary" />
                 )}
               </RowIcon>
               <RowText
@@ -467,7 +467,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
         <Card size="sm" className="transition-colors active:bg-muted/50">
           <CardContent className="flex items-center gap-3">
             <RowIcon>
-              <Dumbbell className="size-5 text-primary" />
+              <Dumbbell className="size-4 text-primary" />
             </RowIcon>
             <RowText
               title={title}
@@ -508,7 +508,7 @@ function AiTrendAnalysisCard({
           <Card size="sm" className="transition-colors active:bg-muted/50">
             <CardContent className="flex items-center gap-3">
               <RowIcon>
-                <Sparkles className="size-5" />
+                <Sparkles className="size-4" />
               </RowIcon>
               <RowText title="Analyse IA" subtitle="Configure une clé API dans ton profil →" />
             </CardContent>
@@ -526,7 +526,7 @@ function AiTrendAnalysisCard({
             <Card size="sm" className="transition-colors active:bg-muted/50">
               <CardContent className="flex items-center gap-3">
                 <RowIcon>
-                  <Sparkles className="size-5 text-primary" />
+                  <Sparkles className="size-4 text-primary" />
                 </RowIcon>
                 <RowText
                   title="Analyse IA"
