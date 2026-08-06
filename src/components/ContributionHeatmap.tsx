@@ -9,6 +9,11 @@ interface ContributionHeatmapProps {
   // rather than looking identical to a rest day.
   activeDates?: Set<string>
   weeksToShow?: number
+  // Dashboard card: the grid never scrolls (few enough columns to always
+  // fit), so stretch columns to fill the card's width instead of packing
+  // them to their natural size. The full Analytics page keeps the default
+  // (compact, left-packed) since it scrolls horizontally over many weeks.
+  fillWidth?: boolean
 }
 
 interface HeatmapDay {
@@ -106,6 +111,7 @@ export function ContributionHeatmap({
   dailyVolumeKg,
   activeDates = new Set(),
   weeksToShow = 53,
+  fillWidth = false,
 }: ContributionHeatmapProps) {
   const days = buildHeatmapDays(dailyVolumeKg, weeksToShow, new Date(), activeDates)
 
@@ -113,7 +119,7 @@ export function ContributionHeatmap({
     <div className="flex flex-col gap-2">
       <div className="overflow-x-auto pb-1">
         <div
-          className="grid grid-flow-col justify-start gap-1"
+          className={cn('grid grid-flow-col gap-1', !fillWidth && 'justify-start')}
           style={{ gridTemplateRows: 'repeat(7, minmax(0, 1fr))' }}
         >
           {days.map((day) => {

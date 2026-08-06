@@ -271,6 +271,7 @@ function ThisWeekCard({
             dailyVolumeKg={dailyVolume}
             activeDates={activeDates}
             weeksToShow={8}
+            fillWidth
           />
           <Link to="/analytics" className="text-sm text-primary hover:underline">
             Voir les stats complètes →
