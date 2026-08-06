@@ -41,10 +41,8 @@ export function buildHeatmapDays(
   gridStart.setDate(gridEnd.getDate() - weeksToShow * 7 + 1)
 
   const maxVolume = Math.max(0, ...dailyVolumeKg.values())
-  const days: HeatmapDay[] = []
-  const cursor = new Date(gridStart)
-  while (cursor <= gridEnd) {
-    const date = toLocalDateString(cursor.toISOString())
+  const buildDay = (d: Date): HeatmapDay => {
+    const date = toLocalDateString(d.toISOString())
     const volumeKg = dailyVolumeKg.get(date) ?? 0
     let level: HeatmapDay['level'] = 0
     if (volumeKg > 0 && maxVolume > 0) {
@@ -53,7 +51,13 @@ export function buildHeatmapDays(
     } else if (activeDates.has(date)) {
       level = 1
     }
-    days.push({ date, volumeKg, level })
+    return { date, volumeKg, level }
+  }
+
+  const days: HeatmapDay[] = []
+  const cursor = new Date(gridStart)
+  while (cursor <= gridEnd) {
+    days.push(buildDay(cursor))
     cursor.setDate(cursor.getDate() + 1)
   }
 
@@ -69,7 +73,24 @@ export function buildHeatmapDays(
     weeks.push(days.slice(i, i + 7))
   }
   const firstActiveWeek = weeks.findIndex((week) => week.some((day) => day.level > 0))
-  const trimmedWeeks = firstActiveWeek === -1 ? weeks : weeks.slice(firstActiveWeek)
+  if (firstActiveWeek === -1) return days
+
+  const trimmedWeeks = weeks.slice(firstActiveWeek)
+
+  // Trimming shrinks the grid, so pad it back out to weeksToShow columns
+  // with future weeks (past gridEnd, not yet happened) instead of leaving
+  // it narrower — this keeps every already-placed active week exactly where
+  // it is and only adds blank slots on the right, ready to fill in as real
+  // weeks arrive.
+  const futureCursor = new Date(gridEnd)
+  while (trimmedWeeks.length < weeksToShow) {
+    const week: HeatmapDay[] = []
+    for (let d = 0; d < 7; d++) {
+      futureCursor.setDate(futureCursor.getDate() + 1)
+      week.push(buildDay(futureCursor))
+    }
+    trimmedWeeks.push(week)
+  }
 
   return trimmedWeeks.flat()
 }

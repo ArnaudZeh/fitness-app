@@ -71,30 +71,45 @@ describe('buildHeatmapDays', () => {
     expect(day20?.level).toBe(3)
   })
 
-  it('trims leading empty weeks so activity starts at the leftmost column, a brand-new account', () => {
+  it('trims leading empty weeks and pads the freed columns back in as future weeks on the right, a brand-new account', () => {
     // 2026-07-22 is a Wednesday; only the current week (07-20 to 07-26) has
-    // any activity, so the 3 older empty weeks should be cut entirely.
+    // any activity, so the 3 older empty weeks get cut from the front and
+    // 3 future (not-yet-happened) weeks are appended after gridEnd instead,
+    // keeping the grid at weeksToShow columns without moving the active week.
     const now = new Date(2026, 6, 22, 12, 0, 0)
     const dailyVolumeKg = new Map([['2026-07-21', 100]])
     const days = buildHeatmapDays(dailyVolumeKg, 4, now)
-    expect(days).toHaveLength(7)
-    expect(days[0]?.date).toBe('2026-07-20')
-    expect(days.at(-1)?.date).toBe('2026-07-26')
+    expect(days).toHaveLength(28) // still weeksToShow * 7
+    expect(days[0]?.date).toBe('2026-07-20') // active week untouched, still leftmost
+    expect(days[6]?.date).toBe('2026-07-26')
+    expect(days[7]?.date).toBe('2026-07-27') // future padding starts right after gridEnd
+    expect(days.at(-1)?.date).toBe('2026-08-16')
+    expect(days.slice(7).every((day) => day.level === 0)).toBe(true)
   })
 
   it('does not trim past the first active week, keeping earlier gaps visible', () => {
     // Active in week 2 (of 4), so week 1 (empty) gets trimmed but weeks
     // 2-4 stay intact even though week 3 is itself empty — trimming only
     // cuts the dead space before the first activity, not gaps after it.
+    // The one freed leading week comes back as one future week on the right.
     const now = new Date(2026, 6, 22, 12, 0, 0)
     const dailyVolumeKg = new Map([['2026-07-06', 100]]) // Monday of week 2
     const days = buildHeatmapDays(dailyVolumeKg, 4, now)
-    expect(days).toHaveLength(21) // weeks 2, 3, 4 — week 1 trimmed
+    expect(days).toHaveLength(28)
     expect(days[0]?.date).toBe('2026-07-06')
+    expect(days.at(-1)?.date).toBe('2026-08-02') // 1 future week appended after 07-26
   })
 
-  it('does not trim anything when the entire window is empty', () => {
+  it('does not trim or pad when the entire window is empty', () => {
     const days = buildHeatmapDays(new Map(), 3, new Date(2026, 6, 22, 12, 0, 0))
     expect(days).toHaveLength(21)
+  })
+
+  it('does not pad when the account already has activity spanning the full window', () => {
+    const now = new Date(2026, 6, 22, 12, 0, 0)
+    const dailyVolumeKg = new Map([['2026-07-13', 50]]) // in the oldest of 2 weeks
+    const days = buildHeatmapDays(dailyVolumeKg, 2, now)
+    expect(days).toHaveLength(14)
+    expect(days.at(-1)?.date).toBe('2026-07-26')
   })
 })
