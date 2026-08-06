@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, Outlet } from 'react-router'
 import { motion } from 'framer-motion'
 import { Bot, Dumbbell, Home, Sparkles, Trophy } from 'lucide-react'
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
@@ -9,16 +9,10 @@ import { useFriendsData } from '@/hooks/useFriends'
 import { useUnreadMentionsCount } from '@/hooks/useMentions'
 import { useUnreadActivityNotificationsCount } from '@/hooks/useActivityNotifications'
 import { syncTimezone } from '@/lib/profile-api'
-import { cn } from '@/lib/utils'
 
 export function AppLayout() {
   const session = useAuthStore((state) => state.session)
   const userId = session?.user.id
-  // The dashboard is deliberately laid out to fit one screen (ring sized to
-  // the viewport, cards sized to what's left) — scrolling there would only
-  // ever mean the layout slipped, so it's locked down rather than left as a
-  // silent fallback. Every other route keeps normal scrolling.
-  const isDashboard = useLocation().pathname === '/'
   // All three are only reachable from inside the Feed page (no dedicated
   // nav tab for any), so a corner badge on the Feed icon is the only way
   // any of them is ever noticed without opening it first. Friend requests
@@ -94,10 +88,7 @@ export function AppLayout() {
 
       <main
         ref={mainRef}
-        className={cn(
-          'mx-auto min-h-0 w-full max-w-2xl flex-1 p-4 pb-24 sm:pb-4',
-          isDashboard ? 'overflow-hidden' : 'overflow-y-auto',
-        )}
+        className="mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto p-4 pb-24 sm:pb-4"
       >
         <Suspense fallback={<p className="text-muted-foreground">Chargement…</p>}>
           <Outlet />
