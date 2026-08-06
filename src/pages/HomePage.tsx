@@ -530,7 +530,7 @@ function AiTrendAnalysisCard({
                 </RowIcon>
                 <RowText
                   title="Analyse IA"
-                  subtitle="Tendance de tes 8 dernières semaines d'entraînement"
+                  subtitle="Tendance de tes 8 dernières semaines"
                 />
               </CardContent>
             </Card>
