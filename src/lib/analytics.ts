@@ -162,6 +162,11 @@ export interface WeeklyTonnageProgress {
   ratio: number | null
   thisWeekTonnageKg: number
   lastWeekTonnageKg: number | null
+  // True when a session was completed last week even though it logged no
+  // sets (so lastWeekTonnageKg is null but it isn't accurate to say
+  // "nothing happened" last week) — lets the UI tell that apart from a
+  // genuinely empty week.
+  lastWeekHadSessions: boolean
 }
 
 // This week's total tonnage (Σ weight × reps, reusing computeWeeklyTonnage)
@@ -169,6 +174,7 @@ export interface WeeklyTonnageProgress {
 // last week's volume", capped at 100% for the ring fill.
 export function computeWeeklyTonnageProgress(
   records: SetHistoryRecord[],
+  completedSessionDates: Set<string>,
   now: Date = new Date(),
 ): WeeklyTonnageProgress {
   const currentWeekStart = getIsoWeekStart(toLocalDateString(now.toISOString()))
@@ -180,6 +186,9 @@ export function computeWeeklyTonnageProgress(
   const thisWeekTonnageKg = weekly.find((w) => w.weekStart === currentWeekStart)?.tonnageKg ?? 0
   const priorWeek = weekly.find((w) => w.weekStart === priorWeekStart)
   const lastWeekTonnageKg = priorWeek?.tonnageKg ?? null
+  const lastWeekHadSessions = [...completedSessionDates].some(
+    (date) => getIsoWeekStart(date) === priorWeekStart,
+  )
 
   if (!lastWeekTonnageKg) {
     // No usable baseline — either nothing logged last week, or sessions
@@ -191,6 +200,7 @@ export function computeWeeklyTonnageProgress(
       ratio: thisWeekTonnageKg > 0 ? 1 : null,
       thisWeekTonnageKg,
       lastWeekTonnageKg,
+      lastWeekHadSessions,
     }
   }
 
@@ -198,6 +208,7 @@ export function computeWeeklyTonnageProgress(
     ratio: Math.max(0, Math.min(1, thisWeekTonnageKg / lastWeekTonnageKg)),
     thisWeekTonnageKg,
     lastWeekTonnageKg,
+    lastWeekHadSessions,
   }
 }
 

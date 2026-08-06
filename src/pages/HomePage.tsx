@@ -33,6 +33,7 @@ import {
   computeWeeklyTonnageProgress,
   computeWeightGoalProgress,
   countCompletedSessionsThisWeek,
+  getCompletedSessionDates,
 } from '@/lib/analytics'
 import { toLocalDateString } from '@/lib/dates'
 import type { SessionLog } from '@/lib/session-logs-api'
@@ -194,7 +195,7 @@ function WeeklyRingsSection({
   const weeklyTarget = (templates ?? []).filter((t) => t.day_type === 'training').length
   const sessionsRatio = weeklyTarget > 0 ? Math.min(1, sessionsThisWeek / weeklyTarget) : null
 
-  const tonnage = computeWeeklyTonnageProgress(history)
+  const tonnage = computeWeeklyTonnageProgress(history, getCompletedSessionDates(allLogs))
   const weightGoal = computeWeightGoalProgress(weightEntries, targetWeightKg)
 
   const latestWeight = weightEntries[0]
@@ -226,7 +227,7 @@ function WeeklyRingsSection({
   return (
     <>
       <motion.div variants={cardVariants} className="flex flex-col items-center gap-3 py-2">
-        <div className="mx-auto w-full max-w-sm">
+        <div className="mx-auto w-full max-w-[340px]">
           <ActivityRings
             rings={rings}
             centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
@@ -286,11 +287,13 @@ function WeeklyRingsSection({
                 {Math.round(tonnage.thisWeekTonnageKg)} kg
               </p>
               <p className="text-sm text-muted-foreground">
-                {tonnage.lastWeekTonnageKg === null
-                  ? tonnage.thisWeekTonnageKg > 0
-                    ? "Rien d'enregistré la semaine dernière pour comparer."
-                    : "Pas encore de tonnage enregistré cette semaine."
-                  : `${Math.round((tonnage.ratio ?? 0) * 100)}% du tonnage de la semaine dernière (${Math.round(tonnage.lastWeekTonnageKg)} kg).`}
+                {tonnage.lastWeekTonnageKg !== null
+                  ? `${Math.round((tonnage.ratio ?? 0) * 100)}% du tonnage de la semaine dernière (${Math.round(tonnage.lastWeekTonnageKg)} kg).`
+                  : tonnage.lastWeekHadSessions
+                    ? 'Séance(s) complétée(s) la semaine dernière, mais sans charge ni répétitions enregistrées — rien à comparer.'
+                    : tonnage.thisWeekTonnageKg > 0
+                      ? 'Aucune séance la semaine dernière pour comparer.'
+                      : 'Pas encore de tonnage enregistré cette semaine.'}
               </p>
             </>
           )}

@@ -271,10 +271,11 @@ describe('computeWeeklyTonnageProgress', () => {
   const now = new Date('2026-07-22T12:00:00Z') // Wednesday, week of 2026-07-20
 
   it('returns a null ratio when there is neither a prior week nor anything logged this week', () => {
-    const result = computeWeeklyTonnageProgress([], now)
+    const result = computeWeeklyTonnageProgress([], new Set(), now)
     expect(result.ratio).toBeNull()
     expect(result.lastWeekTonnageKg).toBeNull()
     expect(result.thisWeekTonnageKg).toBe(0)
+    expect(result.lastWeekHadSessions).toBe(false)
   })
 
   it('fully fills the ring when there is tonnage this week but no prior-week baseline', () => {
@@ -283,10 +284,27 @@ describe('computeWeeklyTonnageProgress', () => {
     // any tonnage this week already clears that non-existent bar instead of
     // leaving the ring empty despite a real number to show.
     const records = [makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 })]
-    const result = computeWeeklyTonnageProgress(records, now)
+    const result = computeWeeklyTonnageProgress(records, new Set(), now)
     expect(result.ratio).toBe(1)
     expect(result.lastWeekTonnageKg).toBeNull()
     expect(result.thisWeekTonnageKg).toBe(800)
+  })
+
+  it('flags lastWeekHadSessions when a session was completed last week despite logging no sets', () => {
+    // The exact scenario that looked like a bug: 3 sessions completed last
+    // week (2026-07-13 to 07-19), none of them with any set logged — the
+    // popup needs to say "no tonnage logged", not "nothing happened".
+    const completedSessionDates = new Set(['2026-07-14', '2026-07-16', '2026-07-18'])
+    const records = [makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 })]
+    const result = computeWeeklyTonnageProgress(records, completedSessionDates, now)
+    expect(result.lastWeekTonnageKg).toBeNull()
+    expect(result.lastWeekHadSessions).toBe(true)
+  })
+
+  it('leaves lastWeekHadSessions false when the prior week was genuinely empty', () => {
+    const completedSessionDates = new Set(['2026-07-21']) // this week, not last week
+    const result = computeWeeklyTonnageProgress([], completedSessionDates, now)
+    expect(result.lastWeekHadSessions).toBe(false)
   })
 
   it('computes the ratio of this week\'s tonnage against last week\'s', () => {
@@ -294,7 +312,7 @@ describe('computeWeeklyTonnageProgress', () => {
       makeRecord({ loggedAt: '2026-07-14', weightKg: 100, reps: 10 }), // prior week: 1000
       makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 5 }), // this week: 500
     ]
-    const result = computeWeeklyTonnageProgress(records, now)
+    const result = computeWeeklyTonnageProgress(records, new Set(), now)
     expect(result.lastWeekTonnageKg).toBe(1000)
     expect(result.thisWeekTonnageKg).toBe(500)
     expect(result.ratio).toBe(0.5)
@@ -305,13 +323,13 @@ describe('computeWeeklyTonnageProgress', () => {
       makeRecord({ loggedAt: '2026-07-14', weightKg: 100, reps: 5 }), // prior week: 500
       makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 10 }), // this week: 1000
     ]
-    const result = computeWeeklyTonnageProgress(records, now)
+    const result = computeWeeklyTonnageProgress(records, new Set(), now)
     expect(result.ratio).toBe(1)
   })
 
   it('returns a ratio of 0 when last week had volume but nothing is logged yet this week', () => {
     const records = [makeRecord({ loggedAt: '2026-07-14', weightKg: 100, reps: 10 })]
-    const result = computeWeeklyTonnageProgress(records, now)
+    const result = computeWeeklyTonnageProgress(records, new Set(), now)
     expect(result.thisWeekTonnageKg).toBe(0)
     expect(result.ratio).toBe(0)
   })
