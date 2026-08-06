@@ -164,12 +164,16 @@ export interface WeeklyPerformanceComparison {
   comparableCount: number
 }
 
-// Set-by-set comparison against "last time": for each exercise trained this
-// week, the benchmark is the average set volume (weight × reps) from that
-// exercise's most recent prior session — sets aren't matched by order within
-// a session (set_number isn't in SetHistoryRecord), so a same-day average is
-// the fairest stand-in for "how it went last time". A set counts as meeting
-// the expected performance when its own volume is at least that benchmark.
+// Not a 1RM/strength-curve estimate — this is literally "did you do the same
+// number of sets and reps at the same weight or better than last time, per
+// exercise". For each exercise trained this week, sum this week's total
+// volume (Σ weight × reps across every set) and compare it against the total
+// from that exercise's most recent prior session. Using the session TOTAL
+// (not a per-set average) means dropping sets — fewer reps/sets than last
+// time — pulls the total down and correctly fails the comparison, even if
+// individual sets were heavy; set_number isn't in SetHistoryRecord, so
+// matching set-for-set isn't possible, but comparing totals captures "same
+// or more work done" without needing it.
 export function computeWeeklyPerformanceVsPrevious(
   records: SetHistoryRecord[],
   now: Date = new Date(),
@@ -192,20 +196,28 @@ export function computeWeeklyPerformanceVsPrevious(
     }
   }
 
-  const benchmarkByExercise = new Map<string, number>()
+  const priorTotalByExercise = new Map<string, number>()
   for (const [exerciseId, date] of latestPriorDateByExercise) {
     const sets = priorByExerciseDate.get(`${exerciseId}|${date}`) ?? []
-    const avgVolume = sets.reduce((sum, s) => sum + s.weightKg * s.reps, 0) / sets.length
-    benchmarkByExercise.set(exerciseId, avgVolume)
+    const total = sets.reduce((sum, s) => sum + s.weightKg * s.reps, 0)
+    priorTotalByExercise.set(exerciseId, total)
+  }
+
+  const thisWeekTotalByExercise = new Map<string, number>()
+  for (const record of thisWeek) {
+    thisWeekTotalByExercise.set(
+      record.exerciseId,
+      (thisWeekTotalByExercise.get(record.exerciseId) ?? 0) + record.weightKg * record.reps,
+    )
   }
 
   let metCount = 0
   let comparableCount = 0
-  for (const record of thisWeek) {
-    const benchmark = benchmarkByExercise.get(record.exerciseId)
-    if (benchmark === undefined) continue
+  for (const [exerciseId, thisWeekTotal] of thisWeekTotalByExercise) {
+    const priorTotal = priorTotalByExercise.get(exerciseId)
+    if (priorTotal === undefined) continue
     comparableCount += 1
-    if (record.weightKg * record.reps >= benchmark) metCount += 1
+    if (thisWeekTotal >= priorTotal) metCount += 1
   }
 
   return {

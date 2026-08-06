@@ -16,32 +16,37 @@ interface ActivityRingsProps {
   centerValue: string
   centerLabel: string
   onSelectRing: (id: RingId) => void
-  size?: number
+  className?: string
 }
 
 const VIEWBOX = 200
 const CENTER = VIEWBOX / 2
-const RADII = [82, 62, 42] // outer to inner
-const STROKE_WIDTH = 15
+// Slimmer strokes with wider gaps between rings than a first pass, opening
+// up the center hole so the value/label text has real breathing room
+// instead of crowding the innermost band.
+const RADII = [86, 64, 42] // outer to inner
+const STROKE_WIDTH = 12
 // Wider than the visible stroke so each ring's tap target still clears the
 // 44px touch-target guideline even though the drawn band is thinner.
-const HIT_STROKE_WIDTH = 40
+const HIT_STROKE_WIDTH = 36
 
 // Apple-Watch-style concentric activity rings: each ring is its own
 // independently tappable band (outer → inner), opening a detail popup for
-// just that metric — not a single combined tap target.
+// just that metric — not a single combined tap target. Sized by its
+// container (no fixed pixel size) so a wrapper can make it as large as the
+// layout calls for — see WeeklyRingsSection's max-w wrapper on the
+// dashboard, sized to fill roughly half the screen on a phone.
 export function ActivityRings({
   rings,
   centerValue,
   centerLabel,
   onSelectRing,
-  size = 200,
+  className,
 }: ActivityRingsProps) {
   return (
     <svg
       viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
-      width={size}
-      height={size}
+      className={cn('h-auto w-full', className)}
       role="group"
       aria-label="Progression de la semaine"
     >
@@ -99,18 +104,18 @@ export function ActivityRings({
       </g>
       <text
         x={CENTER}
-        y={CENTER - 4}
+        y={CENTER - 8}
         textAnchor="middle"
-        className="fill-foreground font-mono text-3xl font-semibold"
+        className="fill-foreground font-mono text-4xl font-semibold"
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {centerValue}
       </text>
       <text
         x={CENTER}
-        y={CENTER + 20}
+        y={CENTER + 15}
         textAnchor="middle"
-        className="fill-muted-foreground text-[11px] tracking-wide uppercase"
+        className="fill-muted-foreground text-xs tracking-wide uppercase"
       >
         {centerLabel}
       </text>

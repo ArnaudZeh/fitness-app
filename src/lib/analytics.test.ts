@@ -277,19 +277,36 @@ describe('computeWeeklyPerformanceVsPrevious', () => {
     expect(result.comparableCount).toBe(0)
   })
 
-  it('counts a set as meeting expectations when its volume matches or beats the last session average', () => {
+  it('counts an exercise as meeting expectations when this week\'s total volume matches or beats the last session\'s total', () => {
     const records = [
-      // Last session (prior week): two sets, avg volume = (800 + 700) / 2 = 750
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }), // 800
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 7 }), // 700
-      // This week: one set at exactly the benchmark, one below
-      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 7.5 }), // 750, meets
-      makeRecord({ loggedAt: '2026-07-21', weightKg: 90, reps: 7 }), // 630, misses
+      // ex-squat: prior total 800 + 700 = 1500, this week 800 + 800 = 1600 — meets
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-13', weightKg: 100, reps: 7 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
+      // ex-bench: prior total 500, this week 400 — misses
+      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-07-13', weightKg: 50, reps: 10 }),
+      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-07-21', weightKg: 40, reps: 10 }),
     ]
     const result = computeWeeklyPerformanceVsPrevious(records, now)
     expect(result.comparableCount).toBe(2)
     expect(result.metCount).toBe(1)
     expect(result.ratio).toBe(0.5)
+  })
+
+  it('fails the comparison when fewer sets are done this week even at the same weight and reps, since total volume drops', () => {
+    const records = [
+      // Prior session: 3 sets of 100kg x 8 reps = 2400 total
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
+      // This week: only 2 sets at the same weight/reps — fewer sets, lower total
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
+    ]
+    const result = computeWeeklyPerformanceVsPrevious(records, now)
+    expect(result.comparableCount).toBe(1)
+    expect(result.metCount).toBe(0)
   })
 
   it('benchmarks against the most recent prior session, not an older one', () => {
