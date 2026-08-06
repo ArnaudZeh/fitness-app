@@ -3,7 +3,9 @@ import {
   buildTrendSummary,
   computeDailyVolume,
   computeOneRepMaxProgression,
+  computeWeeklyPerformanceVsPrevious,
   computeWeeklyTonnage,
+  computeWeightGoalProgress,
   countCompletedSessionsThisWeek,
   countTrainingDaysThisWeek,
   getCompletedSessionDates,
@@ -262,5 +264,103 @@ describe('buildTrendSummary', () => {
     expect(summary.exercises).toHaveLength(5)
     const frequent = summary.exercises.find((e) => e.exerciseName === 'Frequent')
     expect(frequent?.recentPoints.length).toBeLessThanOrEqual(6)
+  })
+})
+
+describe('computeWeeklyPerformanceVsPrevious', () => {
+  const now = new Date('2026-07-22T12:00:00Z') // Wednesday, week of 2026-07-20
+
+  it('returns a null ratio when there is no prior history to compare against', () => {
+    const records = [makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 })]
+    const result = computeWeeklyPerformanceVsPrevious(records, now)
+    expect(result.ratio).toBeNull()
+    expect(result.comparableCount).toBe(0)
+  })
+
+  it('counts a set as meeting expectations when its volume matches or beats the last session average', () => {
+    const records = [
+      // Last session (prior week): two sets, avg volume = (800 + 700) / 2 = 750
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }), // 800
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 7 }), // 700
+      // This week: one set at exactly the benchmark, one below
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 7.5 }), // 750, meets
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 90, reps: 7 }), // 630, misses
+    ]
+    const result = computeWeeklyPerformanceVsPrevious(records, now)
+    expect(result.comparableCount).toBe(2)
+    expect(result.metCount).toBe(1)
+    expect(result.ratio).toBe(0.5)
+  })
+
+  it('benchmarks against the most recent prior session, not an older one', () => {
+    const records = [
+      makeRecord({ loggedAt: '2026-06-01', weightKg: 50, reps: 5 }), // older, weaker — ignored
+      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 10 }), // most recent prior: 1000
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 9 }), // 900, below the recent benchmark
+    ]
+    const result = computeWeeklyPerformanceVsPrevious(records, now)
+    expect(result.comparableCount).toBe(1)
+    expect(result.metCount).toBe(0)
+  })
+
+  it('excludes exercises with no comparable prior history from the ratio', () => {
+    const records = [
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
+      makeRecord({ exerciseId: 'ex-new', loggedAt: '2026-07-21', weightKg: 20, reps: 12 }),
+    ]
+    const result = computeWeeklyPerformanceVsPrevious(records, now)
+    expect(result.comparableCount).toBe(1)
+    expect(result.metCount).toBe(1)
+  })
+})
+
+describe('computeWeightGoalProgress', () => {
+  it('returns a null ratio when there are no entries', () => {
+    expect(computeWeightGoalProgress([], 85).ratio).toBeNull()
+  })
+
+  it('returns a null ratio when no target weight is set', () => {
+    const entries = [{ weight_kg: 87.5, recorded_at: '2026-07-22' }]
+    expect(computeWeightGoalProgress(entries, null).ratio).toBeNull()
+  })
+
+  it('computes progress toward a weight-loss goal from the oldest entry to the newest', () => {
+    // entries sorted newest-first, as fetchWeightEntries returns them
+    const entries = [
+      { weight_kg: 87.5, recorded_at: '2026-07-22' }, // current
+      { weight_kg: 88.8, recorded_at: '2026-07-15' },
+      { weight_kg: 90, recorded_at: '2026-07-01' }, // oldest = start
+    ]
+    // (90 - 87.5) / (90 - 85) = 0.5
+    expect(computeWeightGoalProgress(entries, 85).ratio).toBe(0.5)
+  })
+
+  it('computes progress toward a weight-gain goal the same way', () => {
+    const entries = [
+      { weight_kg: 72, recorded_at: '2026-07-22' },
+      { weight_kg: 70, recorded_at: '2026-07-01' }, // start
+    ]
+    // (70 - 72) / (70 - 75) = 0.4
+    expect(computeWeightGoalProgress(entries, 75).ratio).toBe(0.4)
+  })
+
+  it('clamps the ratio to [0, 1] instead of overshooting or going negative', () => {
+    const overshoot = [
+      { weight_kg: 80, recorded_at: '2026-07-22' },
+      { weight_kg: 90, recorded_at: '2026-07-01' },
+    ]
+    expect(computeWeightGoalProgress(overshoot, 85).ratio).toBe(1)
+
+    const wrongDirection = [
+      { weight_kg: 92, recorded_at: '2026-07-22' },
+      { weight_kg: 90, recorded_at: '2026-07-01' },
+    ]
+    expect(computeWeightGoalProgress(wrongDirection, 85).ratio).toBe(0)
+  })
+
+  it('treats a start weight already at target as fully met only once actually there', () => {
+    const atTarget = [{ weight_kg: 85, recorded_at: '2026-07-22' }]
+    expect(computeWeightGoalProgress(atTarget, 85).ratio).toBe(1)
   })
 })

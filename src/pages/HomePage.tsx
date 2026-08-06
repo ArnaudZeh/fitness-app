@@ -1,18 +1,19 @@
 import { useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, Play, Sparkles } from 'lucide-react'
+import { CheckCircle2, Dumbbell, Moon, Play, Plus, Sparkles } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { motion, MotionConfig, type Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { ContributionHeatmap } from '@/components/ContributionHeatmap'
-import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { ActivityRings, type RingDatum, type RingId } from '@/components/ActivityRings'
 import { Avatar } from '@/components/Avatar'
 import { useProfile } from '@/hooks/useProfile'
 import { useAvatarUrl } from '@/hooks/useAvatar'
@@ -29,17 +30,19 @@ import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
 import {
   buildTrendSummary,
-  computeDailyVolume,
-  computeWeeklyTonnage,
+  computeWeeklyPerformanceVsPrevious,
+  computeWeightGoalProgress,
   countCompletedSessionsThisWeek,
-  getCompletedSessionDates,
-  getIsoWeekStart,
 } from '@/lib/analytics'
 import { toLocalDateString } from '@/lib/dates'
 import type { SessionLog } from '@/lib/session-logs-api'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
-import { WEEKDAY_LABELS, getTodayIsoDayOfWeek } from '@/lib/sessions-api'
+import {
+  WEEKDAY_LABELS,
+  computeSuggestedMuscleGroupLabel,
+  getTodayIsoDayOfWeek,
+} from '@/lib/sessions-api'
 import type { Program } from '@/lib/programs-api'
 import type { Profile } from '@/lib/profile-api'
 
@@ -89,14 +92,15 @@ export function HomePage() {
           </Link>
         </motion.div>
 
-        <TodayCard program={activeProgram} />
-
-        <ThisWeekCard history={history ?? []} allLogs={allLogs ?? []} />
-
-        <WeightCard
-          entries={weightEntries ?? []}
+        <WeeklyRingsSection
+          program={activeProgram}
+          allLogs={allLogs ?? []}
+          history={history ?? []}
+          weightEntries={weightEntries ?? []}
           targetWeightKg={profile?.target_weight_kg ?? null}
         />
+
+        <TodayCard program={activeProgram} />
 
         {profile && (
           <AiTrendAnalysisCard
@@ -120,6 +124,228 @@ function DashboardCard({ children }: { children: ReactNode }) {
   )
 }
 
+// Compact icon + 2-line row shared by the TodayCard and AI analysis teaser —
+// a title line and a single subtitle line, nothing else, so every dashboard
+// card below the rings reads at a glance.
+function RowIcon({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+      {children}
+    </div>
+  )
+}
+
+function RowText({ title, subtitle }: { title: string; subtitle: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <p className="truncate font-heading text-base font-semibold">{title}</p>
+      <div className="truncate text-sm text-muted-foreground">{subtitle}</div>
+    </div>
+  )
+}
+
+function RingLegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="size-2 rounded-full" style={{ background: color }} />
+      {label}
+    </span>
+  )
+}
+
+const RING_COLORS: Record<RingId, string> = {
+  sessions: 'var(--chart-1)',
+  performance: 'var(--chart-2)',
+  weight: 'var(--chart-3)',
+}
+
+// The dashboard's hero element: three Apple-Watch-style concentric rings —
+// séances this week (outer), performance vs the last time on the same
+// exercise (middle), progress toward the weight goal (inner). Tapping a
+// ring opens a small popup with that ring's own detail; this replaces the
+// old separate Analytics-heatmap and Poids cards entirely — their content
+// now lives in these popups (heatmap itself stays on the full Analytics
+// page, reachable via "Voir les stats complètes" below).
+function WeeklyRingsSection({
+  program,
+  allLogs,
+  history,
+  weightEntries,
+  targetWeightKg,
+}: {
+  program: Program | undefined
+  allLogs: SessionLog[]
+  history: NonNullable<ReturnType<typeof useSetHistory>['data']>
+  weightEntries: NonNullable<ReturnType<typeof useWeightEntries>['data']>
+  targetWeightKg: number | null
+}) {
+  const { data: templates } = useSessionTemplates(program?.id ?? '')
+  const [selectedRing, setSelectedRing] = useState<RingId | null>(null)
+
+  const sessionsThisWeek = countCompletedSessionsThisWeek(allLogs)
+  const weeklyTarget = (templates ?? []).filter((t) => t.day_type === 'training').length
+  const sessionsRatio = weeklyTarget > 0 ? Math.min(1, sessionsThisWeek / weeklyTarget) : null
+
+  const performance = computeWeeklyPerformanceVsPrevious(history)
+  const weightGoal = computeWeightGoalProgress(weightEntries, targetWeightKg)
+
+  const latestWeight = weightEntries[0]
+  const previousWeight = weightEntries[1]
+  const weightDelta =
+    latestWeight && previousWeight ? latestWeight.weight_kg - previousWeight.weight_kg : null
+
+  const rings: [RingDatum, RingDatum, RingDatum] = [
+    {
+      id: 'sessions',
+      ratio: sessionsRatio,
+      color: RING_COLORS.sessions,
+      label: `Séances cette semaine : ${sessionsThisWeek} sur ${weeklyTarget || 'objectif non défini'}`,
+    },
+    {
+      id: 'performance',
+      ratio: performance.ratio,
+      color: RING_COLORS.performance,
+      label: 'Performance par rapport à la dernière fois',
+    },
+    {
+      id: 'weight',
+      ratio: weightGoal.ratio,
+      color: RING_COLORS.weight,
+      label: 'Progression vers ton objectif de poids',
+    },
+  ]
+
+  return (
+    <>
+      <motion.div variants={cardVariants} className="flex flex-col items-center gap-2 py-2">
+        <ActivityRings
+          rings={rings}
+          centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
+          centerLabel="séances"
+          onSelectRing={setSelectedRing}
+        />
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <RingLegendItem color={RING_COLORS.sessions} label="Séances" />
+          <RingLegendItem color={RING_COLORS.performance} label="Perf" />
+          <RingLegendItem color={RING_COLORS.weight} label="Poids" />
+        </div>
+        <Link to="/analytics" className="text-sm text-primary hover:underline">
+          Voir les stats complètes →
+        </Link>
+      </motion.div>
+
+      <Dialog
+        open={selectedRing !== null}
+        onOpenChange={(open: boolean) => !open && setSelectedRing(null)}
+      >
+        <DialogContent>
+          {selectedRing === 'sessions' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{ background: RING_COLORS.sessions }}
+                  />
+                  Séances cette semaine
+                </DialogTitle>
+              </DialogHeader>
+              <p className="font-mono text-3xl font-semibold tabular-nums">
+                {sessionsThisWeek}/{weeklyTarget || '–'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {weeklyTarget > 0
+                  ? `Objectif basé sur les ${weeklyTarget} jour${weeklyTarget > 1 ? 's' : ''} d'entraînement de ton programme actif.`
+                  : "Active un programme pour définir un objectif hebdomadaire."}
+              </p>
+            </>
+          )}
+
+          {selectedRing === 'performance' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{ background: RING_COLORS.performance }}
+                  />
+                  Performance vs dernière fois
+                </DialogTitle>
+              </DialogHeader>
+              {performance.ratio === null ? (
+                <p className="text-sm text-muted-foreground">
+                  Pas encore assez d'historique pour comparer cette semaine à la précédente.
+                </p>
+              ) : (
+                <>
+                  <p className="font-mono text-3xl font-semibold tabular-nums">
+                    {Math.round(performance.ratio * 100)}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {performance.metCount} série{performance.metCount > 1 ? 's' : ''} sur{' '}
+                    {performance.comparableCount} au moins aussi bonne
+                    {performance.comparableCount > 1 ? 's' : ''} (charge × reps) que la dernière
+                    fois sur le même exercice.
+                  </p>
+                </>
+              )}
+            </>
+          )}
+
+          {selectedRing === 'weight' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{ background: RING_COLORS.weight }}
+                  />
+                  Objectif de poids
+                </DialogTitle>
+              </DialogHeader>
+              {!latestWeight ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Aucune pesée enregistrée.</p>
+                  <Button asChild size="sm" className="self-start">
+                    <Link to="/profile">Enregistrer mon poids</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="font-mono text-3xl font-semibold tabular-nums">
+                    {latestWeight.weight_kg} kg
+                  </p>
+                  {weightDelta !== null && weightDelta !== 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {weightDelta > 0 ? '+' : '−'}
+                      {Math.abs(weightDelta).toFixed(1)} kg depuis la dernière pesée
+                    </p>
+                  )}
+                  {targetWeightKg !== null && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Objectif : {targetWeightKg} kg</span>
+                      <Badge
+                        variant={latestWeight.weight_kg === targetWeightKg ? 'default' : 'outline'}
+                      >
+                        {latestWeight.weight_kg === targetWeightKg
+                          ? 'Atteint'
+                          : `${Math.abs(latestWeight.weight_kg - targetWeightKg).toFixed(1)} kg restants`}
+                      </Badge>
+                    </div>
+                  )}
+                  <Link to="/profile" className="text-sm text-primary hover:underline">
+                    Voir l'historique →
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
 function TodayCard({ program }: { program: Program | undefined }) {
   const navigate = useNavigate()
   const programId = program?.id ?? ''
@@ -129,25 +355,20 @@ function TodayCard({ program }: { program: Program | undefined }) {
 
   const todayIsoDayOfWeek = getTodayIsoDayOfWeek()
   const todayTemplate = (templates ?? []).find((t) => t.day_of_week === todayIsoDayOfWeek)
-  const templateId = todayTemplate?.id ?? ''
-  const { data: exercises } = useSessionTemplateExercises(templateId)
 
   if (!program) {
     return (
       <DashboardCard>
-        <Card>
-          <CardHeader>
-            <CardTitle as="h2">Aujourd'hui</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              Aucun programme actif. Active un programme pour voir ta séance du jour ici.
-            </p>
-            <Button asChild size="sm" className="self-start">
-              <Link to="/programs">Voir mes programmes</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <Link to="/programs">
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
+              <RowIcon>
+                <Plus className="size-5" />
+              </RowIcon>
+              <RowText title="Aucun programme actif" subtitle="Active un programme →" />
+            </CardContent>
+          </Card>
+        </Link>
       </DashboardCard>
     )
   }
@@ -156,189 +377,95 @@ function TodayCard({ program }: { program: Program | undefined }) {
   // Any session actually started today, regardless of which day's template
   // it used — matching strictly on templateId missed a session run ahead of
   // schedule (e.g. Saturday's plan done on Thursday because the week
-  // started early), showing "Repos aujourd'hui" or a redundant "Démarrer"
-  // button right below a session the user had just finished.
+  // started early).
   const todayLog = (logs ?? []).find(
     (log) => toLocalDateString(log.started_at) === todayDateStr,
   )
   const todayLogTemplate = todayLog
     ? (templates ?? []).find((t) => t.id === todayLog.session_template_id)
     : undefined
-  const isOffPlanLog = todayLog !== undefined && todayLog.session_template_id !== templateId
 
-  return (
-    <DashboardCard>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h2">Aujourd'hui</CardTitle>
-          <CardDescription>
-            {program.name} · {WEEKDAY_LABELS[todayIsoDayOfWeek]}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {todayLog ? (
-            <>
-              <Badge variant={todayLog.status === 'completed' ? 'default' : 'outline'}>
-                {todayLog.status === 'completed' ? 'Séance terminée' : 'Séance en cours'}
-              </Badge>
-              {isOffPlanLog && todayLogTemplate && (
-                <p className="text-sm text-muted-foreground">
-                  Séance {WEEKDAY_LABELS[todayLogTemplate.day_of_week]} faite aujourd'hui
-                </p>
-              )}
-              <Button asChild size="sm" className="self-start">
-                <Link to={`/sessions/${todayLog.id}`}>
-                  {todayLog.status === 'completed'
-                    ? 'Revoir la séance'
-                    : 'Continuer la séance'}
-                </Link>
-              </Button>
-            </>
-          ) : !todayTemplate || todayTemplate.day_type === 'rest' ? (
-            <p className="text-sm text-muted-foreground">Repos aujourd'hui.</p>
-          ) : (
-            <>
-              {(exercises ?? []).length > 0 && (
-                <ul className="flex flex-col gap-2">
-                  {(exercises ?? []).map((slot) => (
-                    <li
-                      key={slot.id}
-                      className="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                      <ExerciseThumbnail
-                        imageUrl={slot.exercise.image_url}
-                        muscleGroup={slot.exercise.muscle_group}
-                      />
-                      {slot.exercise.name} · {slot.target_sets} x {slot.target_reps_min}-
-                      {slot.target_reps_max}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <Button
-                size="sm"
-                className="self-start"
-                disabled={startSessionLog.isPending}
-                onClick={() =>
-                  startSessionLog.mutate(templateId, {
-                    onSuccess: (log) => void navigate(`/sessions/${log.id}`),
-                  })
+  const relevantTemplate = todayLog ? (todayLogTemplate ?? todayTemplate) : todayTemplate
+  const relevantTemplateId = relevantTemplate?.id ?? ''
+  const { data: exercises } = useSessionTemplateExercises(relevantTemplateId)
+  const exerciseCount = (exercises ?? []).length
+
+  if (!relevantTemplate || relevantTemplate.day_type === 'rest') {
+    return (
+      <DashboardCard>
+        <Card>
+          <CardContent className="flex items-center gap-3">
+            <RowIcon>
+              <Moon className="size-5 text-muted-foreground" />
+            </RowIcon>
+            <RowText title="Repos aujourd'hui" subtitle={program.name} />
+          </CardContent>
+        </Card>
+      </DashboardCard>
+    )
+  }
+
+  const muscleLabel =
+    relevantTemplate.muscle_group_label ?? computeSuggestedMuscleGroupLabel(exercises ?? [])
+  const title = muscleLabel ?? WEEKDAY_LABELS[relevantTemplate.day_of_week] ?? 'Séance'
+
+  if (todayLog) {
+    return (
+      <DashboardCard>
+        <Link to={`/sessions/${todayLog.id}`}>
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
+              <RowIcon>
+                {todayLog.status === 'completed' ? (
+                  <CheckCircle2 className="size-5 text-primary" />
+                ) : (
+                  <Play className="size-5 text-primary" />
+                )}
+              </RowIcon>
+              <RowText
+                title={title}
+                subtitle={
+                  <span className="flex items-center gap-2">
+                    <Badge variant={todayLog.status === 'completed' ? 'default' : 'outline'}>
+                      {todayLog.status === 'completed' ? 'Terminée' : 'En cours'}
+                    </Badge>
+                    <span>
+                      {exerciseCount} exercice{exerciseCount > 1 ? 's' : ''}
+                    </span>
+                  </span>
                 }
-              >
-                <Play /> Démarrer la séance
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </DashboardCard>
-  )
-}
-
-function ThisWeekCard({
-  history,
-  allLogs,
-}: {
-  history: NonNullable<ReturnType<typeof useSetHistory>['data']>
-  allLogs: SessionLog[]
-}) {
-  // Sessions completed this week, not "days with logged sets" — a session
-  // marked "Terminée" counts even if its sets never got filled in, since
-  // that's still a séance réalisée as far as the user is concerned.
-  const sessionsThisWeek = countCompletedSessionsThisWeek(allLogs)
-  const dailyVolume = computeDailyVolume(history)
-  const activeDates = getCompletedSessionDates(allLogs)
-  const currentWeekStart = getIsoWeekStart(toLocalDateString(new Date().toISOString()))
-  const tonnageThisWeek =
-    computeWeeklyTonnage(history).find((w) => w.weekStart === currentWeekStart)?.tonnageKg ?? 0
+              />
+            </CardContent>
+          </Card>
+        </Link>
+      </DashboardCard>
+    )
+  }
 
   return (
     <DashboardCard>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h2">Analytics</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          <div className="flex items-center gap-4">
-            <p className="font-mono text-xl font-semibold tabular-nums">
-              {sessionsThisWeek} séance{sessionsThisWeek > 1 ? 's' : ''}
-            </p>
-            <p className="font-mono text-xl font-semibold tabular-nums">
-              {Math.round(tonnageThisWeek)} kg
-            </p>
-          </div>
-          <ContributionHeatmap
-            dailyVolumeKg={dailyVolume}
-            activeDates={activeDates}
-            weeksToShow={8}
-            fillWidth
-          />
-          <Link to="/analytics" className="text-sm text-primary hover:underline">
-            Voir les stats complètes →
-          </Link>
-        </CardContent>
-      </Card>
-    </DashboardCard>
-  )
-}
-
-function WeightCard({
-  entries,
-  targetWeightKg,
-}: {
-  entries: NonNullable<ReturnType<typeof useWeightEntries>['data']>
-  targetWeightKg: number | null
-}) {
-  const latest = entries[0]
-  const previous = entries[1]
-  const delta = latest && previous ? latest.weight_kg - previous.weight_kg : null
-
-  return (
-    <DashboardCard>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h2">Poids</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {!latest ? (
-            <>
-              <p className="text-sm text-muted-foreground">Aucune pesée enregistrée.</p>
-              <Button asChild size="sm" className="self-start">
-                <Link to="/profile">Enregistrer mon poids</Link>
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="font-mono text-2xl font-semibold tabular-nums">
-                {latest.weight_kg} kg
-              </p>
-              {delta !== null && delta !== 0 && (
-                <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                  {delta > 0 ? (
-                    <ArrowUp className="size-3.5" />
-                  ) : (
-                    <ArrowDown className="size-3.5" />
-                  )}
-                  {Math.abs(delta).toFixed(1)} kg depuis la dernière pesée
-                </p>
-              )}
-              {targetWeightKg !== null && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Objectif : {targetWeightKg} kg</span>
-                  <Badge variant={latest.weight_kg === targetWeightKg ? 'default' : 'outline'}>
-                    {latest.weight_kg === targetWeightKg
-                      ? 'Atteint'
-                      : `${Math.abs(latest.weight_kg - targetWeightKg).toFixed(1)} kg restants`}
-                  </Badge>
-                </div>
-              )}
-              <Link to="/profile" className="text-sm text-primary hover:underline">
-                Voir l'historique →
-              </Link>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <button
+        type="button"
+        className="block w-full text-left disabled:opacity-60"
+        disabled={startSessionLog.isPending}
+        onClick={() =>
+          startSessionLog.mutate(relevantTemplateId, {
+            onSuccess: (log) => void navigate(`/sessions/${log.id}`),
+          })
+        }
+      >
+        <Card className="transition-colors active:bg-muted/50">
+          <CardContent className="flex items-center gap-3">
+            <RowIcon>
+              <Dumbbell className="size-5 text-primary" />
+            </RowIcon>
+            <RowText
+              title={title}
+              subtitle={`${exerciseCount} exercice${exerciseCount > 1 ? 's' : ''}`}
+            />
+          </CardContent>
+        </Card>
+      </button>
     </DashboardCard>
   )
 }
@@ -356,45 +483,57 @@ function AiTrendAnalysisCard({
   const { data: cycleEntries } = useCycleEntries({ enabled: profile.cycle_module_enabled })
   const analyzeTrends = useAnalyzeTrends()
   const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
+  const [open, setOpen] = useState(false)
 
   const configuredProviders = (keyStatuses ?? [])
     .filter((status) => status.is_valid)
     .map((status) => status.provider)
   const activeProvider = selectedProvider ?? configuredProviders[0] ?? null
+  const hasEnoughHistory = history.length > 0
 
   if (configuredProviders.length === 0) {
     return (
       <DashboardCard>
-        <Card>
-          <CardHeader>
-            <CardTitle as="h2">Analyse IA</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              Configure une clé API (Anthropic ou OpenAI) dans ton profil pour analyser tes
-              tendances d'entraînement.
-            </p>
-            <Button asChild size="sm" className="self-start">
-              <Link to="/profile">Configurer une clé</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <Link to="/profile">
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
+              <RowIcon>
+                <Sparkles className="size-5" />
+              </RowIcon>
+              <RowText title="Analyse IA" subtitle="Configure une clé API dans ton profil →" />
+            </CardContent>
+          </Card>
+        </Link>
       </DashboardCard>
     )
   }
 
-  const hasEnoughHistory = history.length > 0
-
   return (
     <DashboardCard>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h2">Analyse IA</CardTitle>
-          <CardDescription>
-            Tendance de tes 8 dernières semaines (un appel à ta propre clé à chaque analyse).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <button type="button" className="block w-full text-left">
+            <Card className="transition-colors active:bg-muted/50">
+              <CardContent className="flex items-center gap-3">
+                <RowIcon>
+                  <Sparkles className="size-5 text-primary" />
+                </RowIcon>
+                <RowText
+                  title="Analyse IA"
+                  subtitle="Tendance de tes 8 dernières semaines d'entraînement"
+                />
+              </CardContent>
+            </Card>
+          </button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Analyse IA</DialogTitle>
+            <DialogDescription>
+              Tendance de tes 8 dernières semaines (un appel à ta propre clé à chaque analyse).
+            </DialogDescription>
+          </DialogHeader>
+
           {configuredProviders.length > 1 && (
             <div className="flex items-center gap-1 self-start rounded-lg border border-border p-0.5">
               {configuredProviders.map((provider) => (
@@ -445,8 +584,8 @@ function AiTrendAnalysisCard({
           >
             <Sparkles /> {analyzeTrends.isPending ? 'Analyse en cours…' : 'Analyser mes progrès'}
           </Button>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </DashboardCard>
   )
 }

@@ -155,6 +155,110 @@ export function getCompletedSessionDates(logs: CompletedSessionRecord[]): Set<st
   )
 }
 
+export interface WeeklyPerformanceComparison {
+  // null when there's nothing prior to compare this week's sets against yet
+  // (brand-new exercise or brand-new account) — distinct from 0, which would
+  // wrongly read as "underperforming" rather than "no baseline".
+  ratio: number | null
+  metCount: number
+  comparableCount: number
+}
+
+// Set-by-set comparison against "last time": for each exercise trained this
+// week, the benchmark is the average set volume (weight × reps) from that
+// exercise's most recent prior session — sets aren't matched by order within
+// a session (set_number isn't in SetHistoryRecord), so a same-day average is
+// the fairest stand-in for "how it went last time". A set counts as meeting
+// the expected performance when its own volume is at least that benchmark.
+export function computeWeeklyPerformanceVsPrevious(
+  records: SetHistoryRecord[],
+  now: Date = new Date(),
+): WeeklyPerformanceComparison {
+  const currentWeekStart = getIsoWeekStart(toLocalDateString(now.toISOString()))
+  const thisWeek = records.filter((r) => getIsoWeekStart(r.loggedAt) === currentWeekStart)
+  const prior = records.filter((r) => getIsoWeekStart(r.loggedAt) < currentWeekStart)
+
+  const priorByExerciseDate = new Map<string, SetHistoryRecord[]>()
+  const latestPriorDateByExercise = new Map<string, string>()
+  for (const record of prior) {
+    const key = `${record.exerciseId}|${record.loggedAt}`
+    const bucket = priorByExerciseDate.get(key)
+    if (bucket) bucket.push(record)
+    else priorByExerciseDate.set(key, [record])
+
+    const latest = latestPriorDateByExercise.get(record.exerciseId)
+    if (!latest || record.loggedAt > latest) {
+      latestPriorDateByExercise.set(record.exerciseId, record.loggedAt)
+    }
+  }
+
+  const benchmarkByExercise = new Map<string, number>()
+  for (const [exerciseId, date] of latestPriorDateByExercise) {
+    const sets = priorByExerciseDate.get(`${exerciseId}|${date}`) ?? []
+    const avgVolume = sets.reduce((sum, s) => sum + s.weightKg * s.reps, 0) / sets.length
+    benchmarkByExercise.set(exerciseId, avgVolume)
+  }
+
+  let metCount = 0
+  let comparableCount = 0
+  for (const record of thisWeek) {
+    const benchmark = benchmarkByExercise.get(record.exerciseId)
+    if (benchmark === undefined) continue
+    comparableCount += 1
+    if (record.weightKg * record.reps >= benchmark) metCount += 1
+  }
+
+  return {
+    ratio: comparableCount > 0 ? metCount / comparableCount : null,
+    metCount,
+    comparableCount,
+  }
+}
+
+export interface WeightEntryRecord {
+  weight_kg: number
+  recorded_at: string
+}
+
+export interface WeightGoalProgress {
+  // null when there's no entry yet or no target set — distinct from 0
+  // (which would read as "just starting" rather than "no goal configured")
+  ratio: number | null
+  startWeightKg: number | null
+  currentWeightKg: number | null
+}
+
+// entries must be sorted newest-first (fetchWeightEntries's own order) —
+// entries[0] is "current", the oldest entry is the "start" reference point
+// since there's no dedicated starting-weight field on the profile.
+export function computeWeightGoalProgress(
+  entries: WeightEntryRecord[],
+  targetWeightKg: number | null,
+): WeightGoalProgress {
+  const first = entries[0]
+  const last = entries[entries.length - 1]
+  if (!first || !last || targetWeightKg === null) {
+    return { ratio: null, startWeightKg: null, currentWeightKg: null }
+  }
+  const currentWeightKg = first.weight_kg
+  const startWeightKg = last.weight_kg
+
+  if (startWeightKg === targetWeightKg) {
+    return {
+      ratio: currentWeightKg === targetWeightKg ? 1 : 0,
+      startWeightKg,
+      currentWeightKg,
+    }
+  }
+
+  const ratio = (startWeightKg - currentWeightKg) / (startWeightKg - targetWeightKg)
+  return {
+    ratio: Math.max(0, Math.min(1, ratio)),
+    startWeightKg,
+    currentWeightKg,
+  }
+}
+
 export interface TrendSummaryExercise {
   exerciseName: string
   recentPoints: DailyExerciseBest[]
