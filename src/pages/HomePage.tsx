@@ -75,7 +75,7 @@ export function HomePage() {
   return (
     <MotionConfig reducedMotion="user">
       <motion.div
-        className="flex flex-col gap-3 pb-2"
+        className="flex flex-col gap-2 pb-2"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -226,8 +226,8 @@ function WeeklyRingsSection({
 
   return (
     <>
-      <motion.div variants={cardVariants} className="flex flex-col items-center gap-3 py-2">
-        <div className="mx-auto w-full max-w-[340px]">
+      <motion.div variants={cardVariants} className="flex flex-col items-center gap-2 py-1">
+        <div className="mx-auto w-full max-w-[256px]">
           <ActivityRings
             rings={rings}
             centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
@@ -387,7 +387,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
     return (
       <DashboardCard>
         <Link to="/programs">
-          <Card className="transition-colors active:bg-muted/50">
+          <Card size="sm" className="transition-colors active:bg-muted/50">
             <CardContent className="flex items-center gap-3">
               <RowIcon>
                 <Plus className="size-5" />
@@ -403,7 +403,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (!relevantTemplate || relevantTemplate.day_type === 'rest') {
     return (
       <DashboardCard>
-        <Card>
+        <Card size="sm">
           <CardContent className="flex items-center gap-3">
             <RowIcon>
               <Moon className="size-5 text-muted-foreground" />
@@ -423,7 +423,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
     return (
       <DashboardCard>
         <Link to={`/sessions/${todayLog.id}`}>
-          <Card className="transition-colors active:bg-muted/50">
+          <Card size="sm" className="transition-colors active:bg-muted/50">
             <CardContent className="flex items-center gap-3">
               <RowIcon>
                 {todayLog.status === 'completed' ? (
@@ -464,7 +464,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
           })
         }
       >
-        <Card className="transition-colors active:bg-muted/50">
+        <Card size="sm" className="transition-colors active:bg-muted/50">
           <CardContent className="flex items-center gap-3">
             <RowIcon>
               <Dumbbell className="size-5 text-primary" />
@@ -505,7 +505,7 @@ function AiTrendAnalysisCard({
     return (
       <DashboardCard>
         <Link to="/profile">
-          <Card className="transition-colors active:bg-muted/50">
+          <Card size="sm" className="transition-colors active:bg-muted/50">
             <CardContent className="flex items-center gap-3">
               <RowIcon>
                 <Sparkles className="size-5" />
@@ -523,7 +523,7 @@ function AiTrendAnalysisCard({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <button type="button" className="block w-full text-left">
-            <Card className="transition-colors active:bg-muted/50">
+            <Card size="sm" className="transition-colors active:bg-muted/50">
               <CardContent className="flex items-center gap-3">
                 <RowIcon>
                   <Sparkles className="size-5 text-primary" />
