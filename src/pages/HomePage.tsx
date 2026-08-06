@@ -121,15 +121,21 @@ export function HomePage() {
 }
 
 // Shared entrance + tap treatment for each dashboard card. Mobile-only: no
-// hover state (there's no pointer on a phone). flex-1 so, as a sibling of
-// another DashboardCard inside a flex-col parent, it shares the available
-// height evenly instead of shrinking to its content.
+// hover state (there's no pointer on a phone).
+//
+// flex-1: as a sibling of another DashboardCard inside a flex-col parent, it
+// shares the available height evenly instead of shrinking to its content.
+// flex (making it a flex container, not just an item): percentage `height`
+// doesn't reliably resolve through several stacked flex-grow ancestors in
+// practice (confirmed empirically — a child's `h-full` stayed content-sized
+// here even with the parent's computed height forced via !important), so
+// every layer down to CardContent uses flex stretch/grow instead of h-full.
 function DashboardCard({ children }: { children: ReactNode }) {
   return (
     <motion.div
       variants={cardVariants}
       whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
-      className="flex-1"
+      className="flex flex-1 flex-col"
     >
       {children}
     </motion.div>
@@ -402,9 +408,9 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (!program) {
     return (
       <DashboardCard>
-        <Link to="/programs" className="block h-full">
-          <Card className="h-full transition-colors active:bg-muted/50">
-            <CardContent className="flex h-full items-center gap-3">
+        <Link to="/programs" className="flex flex-1 flex-col">
+          <Card className="flex-1 transition-colors active:bg-muted/50">
+            <CardContent className="flex flex-1 items-center gap-3">
               <RowIcon>
                 <Plus className="size-5" />
               </RowIcon>
@@ -419,8 +425,8 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (!relevantTemplate || relevantTemplate.day_type === 'rest') {
     return (
       <DashboardCard>
-        <Card className="h-full">
-          <CardContent className="flex h-full items-center gap-3">
+        <Card className="flex-1">
+          <CardContent className="flex flex-1 items-center gap-3">
             <RowIcon>
               <Moon className="size-5 text-muted-foreground" />
             </RowIcon>
@@ -438,9 +444,9 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (todayLog) {
     return (
       <DashboardCard>
-        <Link to={`/sessions/${todayLog.id}`} className="block h-full">
-          <Card className="h-full transition-colors active:bg-muted/50">
-            <CardContent className="flex h-full items-center gap-3">
+        <Link to={`/sessions/${todayLog.id}`} className="flex flex-1 flex-col">
+          <Card className="flex-1 transition-colors active:bg-muted/50">
+            <CardContent className="flex flex-1 items-center gap-3">
               <RowIcon>
                 {todayLog.status === 'completed' ? (
                   <CheckCircle2 className="size-5 text-primary" />
@@ -472,7 +478,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
     <DashboardCard>
       <button
         type="button"
-        className="block h-full w-full text-left disabled:opacity-60"
+        className="flex flex-1 flex-col text-left disabled:opacity-60"
         disabled={startSessionLog.isPending}
         onClick={() =>
           startSessionLog.mutate(relevantTemplateId, {
@@ -480,8 +486,8 @@ function TodayCard({ program }: { program: Program | undefined }) {
           })
         }
       >
-        <Card className="h-full transition-colors active:bg-muted/50">
-          <CardContent className="flex h-full items-center gap-3">
+        <Card className="flex-1 transition-colors active:bg-muted/50">
+          <CardContent className="flex flex-1 items-center gap-3">
             <RowIcon>
               <Dumbbell className="size-5 text-primary" />
             </RowIcon>
@@ -520,9 +526,9 @@ function AiTrendAnalysisCard({
   if (configuredProviders.length === 0) {
     return (
       <DashboardCard>
-        <Link to="/profile" className="block h-full">
-          <Card className="h-full transition-colors active:bg-muted/50">
-            <CardContent className="flex h-full items-center gap-3">
+        <Link to="/profile" className="flex flex-1 flex-col">
+          <Card className="flex-1 transition-colors active:bg-muted/50">
+            <CardContent className="flex flex-1 items-center gap-3">
               <RowIcon>
                 <Sparkles className="size-5" />
               </RowIcon>
@@ -538,9 +544,9 @@ function AiTrendAnalysisCard({
     <DashboardCard>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <button type="button" className="block h-full w-full text-left">
-            <Card className="h-full transition-colors active:bg-muted/50">
-              <CardContent className="flex h-full items-center gap-3">
+          <button type="button" className="flex flex-1 flex-col text-left">
+            <Card className="flex-1 transition-colors active:bg-muted/50">
+              <CardContent className="flex flex-1 items-center gap-3">
                 <RowIcon>
                   <Sparkles className="size-5 text-primary" />
                 </RowIcon>
