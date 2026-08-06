@@ -356,6 +356,27 @@ function TodayCard({ program }: { program: Program | undefined }) {
   const todayIsoDayOfWeek = getTodayIsoDayOfWeek()
   const todayTemplate = (templates ?? []).find((t) => t.day_of_week === todayIsoDayOfWeek)
 
+  const todayDateStr = toLocalDateString(new Date().toISOString())
+  // Any session actually started today, regardless of which day's template
+  // it used — matching strictly on templateId missed a session run ahead of
+  // schedule (e.g. Saturday's plan done on Thursday because the week
+  // started early).
+  const todayLog = (logs ?? []).find(
+    (log) => toLocalDateString(log.started_at) === todayDateStr,
+  )
+  const todayLogTemplate = todayLog
+    ? (templates ?? []).find((t) => t.id === todayLog.session_template_id)
+    : undefined
+
+  const relevantTemplate = todayLog ? (todayLogTemplate ?? todayTemplate) : todayTemplate
+  const relevantTemplateId = relevantTemplate?.id ?? ''
+  // Called unconditionally, above every early return below — hooks can't be
+  // called conditionally, and this one depends on values only known after
+  // the program/template checks that used to sit above it (React error #310
+  // in production: "rendered more hooks than during the previous render").
+  const { data: exercises } = useSessionTemplateExercises(relevantTemplateId)
+  const exerciseCount = (exercises ?? []).length
+
   if (!program) {
     return (
       <DashboardCard>
@@ -372,23 +393,6 @@ function TodayCard({ program }: { program: Program | undefined }) {
       </DashboardCard>
     )
   }
-
-  const todayDateStr = toLocalDateString(new Date().toISOString())
-  // Any session actually started today, regardless of which day's template
-  // it used — matching strictly on templateId missed a session run ahead of
-  // schedule (e.g. Saturday's plan done on Thursday because the week
-  // started early).
-  const todayLog = (logs ?? []).find(
-    (log) => toLocalDateString(log.started_at) === todayDateStr,
-  )
-  const todayLogTemplate = todayLog
-    ? (templates ?? []).find((t) => t.id === todayLog.session_template_id)
-    : undefined
-
-  const relevantTemplate = todayLog ? (todayLogTemplate ?? todayTemplate) : todayTemplate
-  const relevantTemplateId = relevantTemplate?.id ?? ''
-  const { data: exercises } = useSessionTemplateExercises(relevantTemplateId)
-  const exerciseCount = (exercises ?? []).length
 
   if (!relevantTemplate || relevantTemplate.day_type === 'rest') {
     return (
