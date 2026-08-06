@@ -156,9 +156,9 @@ export function getCompletedSessionDates(logs: CompletedSessionRecord[]): Set<st
 }
 
 export interface WeeklyTonnageProgress {
-  // null when there's no prior week to compare against yet (brand-new
-  // account, or a gap the week before) — distinct from 0, which would
-  // wrongly read as "no volume lifted" rather than "no baseline".
+  // null only when there's truly nothing to show yet (no tonnage this week
+  // AND no baseline from last week) — distinct from 0, which would wrongly
+  // read as "no volume lifted" rather than "no baseline".
   ratio: number | null
   thisWeekTonnageKg: number
   lastWeekTonnageKg: number | null
@@ -182,7 +182,16 @@ export function computeWeeklyTonnageProgress(
   const lastWeekTonnageKg = priorWeek?.tonnageKg ?? null
 
   if (!lastWeekTonnageKg) {
-    return { ratio: null, thisWeekTonnageKg, lastWeekTonnageKg }
+    // No usable baseline — either nothing logged last week, or sessions
+    // were completed but no sets were entered (still 0 tonnage either way).
+    // Any tonnage logged this week already clears that non-existent bar, so
+    // the ring fills rather than sitting empty despite a real number to
+    // show; only genuinely nothing-yet (0 this week too) stays null.
+    return {
+      ratio: thisWeekTonnageKg > 0 ? 1 : null,
+      thisWeekTonnageKg,
+      lastWeekTonnageKg,
+    }
   }
 
   return {

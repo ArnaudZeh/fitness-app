@@ -270,10 +270,21 @@ describe('buildTrendSummary', () => {
 describe('computeWeeklyTonnageProgress', () => {
   const now = new Date('2026-07-22T12:00:00Z') // Wednesday, week of 2026-07-20
 
-  it('returns a null ratio when there is no prior week to compare against', () => {
+  it('returns a null ratio when there is neither a prior week nor anything logged this week', () => {
+    const result = computeWeeklyTonnageProgress([], now)
+    expect(result.ratio).toBeNull()
+    expect(result.lastWeekTonnageKg).toBeNull()
+    expect(result.thisWeekTonnageKg).toBe(0)
+  })
+
+  it('fully fills the ring when there is tonnage this week but no prior-week baseline', () => {
+    // Matches a completed-but-empty prior session too, not just a totally
+    // blank prior week — either way there's no real number to divide by, so
+    // any tonnage this week already clears that non-existent bar instead of
+    // leaving the ring empty despite a real number to show.
     const records = [makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 })]
     const result = computeWeeklyTonnageProgress(records, now)
-    expect(result.ratio).toBeNull()
+    expect(result.ratio).toBe(1)
     expect(result.lastWeekTonnageKg).toBeNull()
     expect(result.thisWeekTonnageKg).toBe(800)
   })

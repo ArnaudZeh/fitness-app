@@ -74,7 +74,7 @@ export function HomePage() {
   return (
     <MotionConfig reducedMotion="user">
       <motion.div
-        className="flex min-h-full flex-col gap-3"
+        className="flex flex-col gap-3 pb-2"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -100,21 +100,15 @@ export function HomePage() {
           targetWeightKg={profile?.target_weight_kg ?? null}
         />
 
-        {/* Fills whatever vertical space the ring didn't use, down to the
-            nav bar, instead of sitting content-sized right under it — on a
-            typical phone (9:16) the ring takes roughly the top half, this
-            takes the rest. */}
-        <div className="flex flex-1 flex-col gap-3">
-          <TodayCard program={activeProgram} />
+        <TodayCard program={activeProgram} />
 
-          {profile && (
-            <AiTrendAnalysisCard
-              history={history ?? []}
-              profile={profile}
-              weightEntries={weightEntries ?? []}
-            />
-          )}
-        </div>
+        {profile && (
+          <AiTrendAnalysisCard
+            history={history ?? []}
+            profile={profile}
+            weightEntries={weightEntries ?? []}
+          />
+        )}
       </motion.div>
     </MotionConfig>
   )
@@ -122,21 +116,9 @@ export function HomePage() {
 
 // Shared entrance + tap treatment for each dashboard card. Mobile-only: no
 // hover state (there's no pointer on a phone).
-//
-// flex-1: as a sibling of another DashboardCard inside a flex-col parent, it
-// shares the available height evenly instead of shrinking to its content.
-// flex (making it a flex container, not just an item): percentage `height`
-// doesn't reliably resolve through several stacked flex-grow ancestors in
-// practice (confirmed empirically — a child's `h-full` stayed content-sized
-// here even with the parent's computed height forced via !important), so
-// every layer down to CardContent uses flex stretch/grow instead of h-full.
 function DashboardCard({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      variants={cardVariants}
-      whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
-      className="flex flex-1 flex-col"
-    >
+    <motion.div variants={cardVariants} whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}>
       {children}
     </motion.div>
   )
@@ -244,7 +226,7 @@ function WeeklyRingsSection({
   return (
     <>
       <motion.div variants={cardVariants} className="flex flex-col items-center gap-3 py-2">
-        <div className="mx-auto w-full max-w-[220px]">
+        <div className="mx-auto w-full max-w-sm">
           <ActivityRings
             rings={rings}
             centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
@@ -305,7 +287,9 @@ function WeeklyRingsSection({
               </p>
               <p className="text-sm text-muted-foreground">
                 {tonnage.lastWeekTonnageKg === null
-                  ? "Pas encore de semaine précédente pour comparer."
+                  ? tonnage.thisWeekTonnageKg > 0
+                    ? "Rien d'enregistré la semaine dernière pour comparer."
+                    : "Pas encore de tonnage enregistré cette semaine."
                   : `${Math.round((tonnage.ratio ?? 0) * 100)}% du tonnage de la semaine dernière (${Math.round(tonnage.lastWeekTonnageKg)} kg).`}
               </p>
             </>
@@ -399,9 +383,9 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (!program) {
     return (
       <DashboardCard>
-        <Link to="/programs" className="flex flex-1 flex-col">
-          <Card className="flex-1 transition-colors active:bg-muted/50">
-            <CardContent className="flex flex-1 items-center gap-3">
+        <Link to="/programs">
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
               <RowIcon>
                 <Plus className="size-5" />
               </RowIcon>
@@ -416,8 +400,8 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (!relevantTemplate || relevantTemplate.day_type === 'rest') {
     return (
       <DashboardCard>
-        <Card className="flex-1">
-          <CardContent className="flex flex-1 items-center gap-3">
+        <Card>
+          <CardContent className="flex items-center gap-3">
             <RowIcon>
               <Moon className="size-5 text-muted-foreground" />
             </RowIcon>
@@ -435,9 +419,9 @@ function TodayCard({ program }: { program: Program | undefined }) {
   if (todayLog) {
     return (
       <DashboardCard>
-        <Link to={`/sessions/${todayLog.id}`} className="flex flex-1 flex-col">
-          <Card className="flex-1 transition-colors active:bg-muted/50">
-            <CardContent className="flex flex-1 items-center gap-3">
+        <Link to={`/sessions/${todayLog.id}`}>
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
               <RowIcon>
                 {todayLog.status === 'completed' ? (
                   <CheckCircle2 className="size-5 text-primary" />
@@ -469,7 +453,7 @@ function TodayCard({ program }: { program: Program | undefined }) {
     <DashboardCard>
       <button
         type="button"
-        className="flex flex-1 flex-col text-left disabled:opacity-60"
+        className="block w-full text-left disabled:opacity-60"
         disabled={startSessionLog.isPending}
         onClick={() =>
           startSessionLog.mutate(relevantTemplateId, {
@@ -477,8 +461,8 @@ function TodayCard({ program }: { program: Program | undefined }) {
           })
         }
       >
-        <Card className="flex-1 transition-colors active:bg-muted/50">
-          <CardContent className="flex flex-1 items-center gap-3">
+        <Card className="transition-colors active:bg-muted/50">
+          <CardContent className="flex items-center gap-3">
             <RowIcon>
               <Dumbbell className="size-5 text-primary" />
             </RowIcon>
@@ -517,9 +501,9 @@ function AiTrendAnalysisCard({
   if (configuredProviders.length === 0) {
     return (
       <DashboardCard>
-        <Link to="/profile" className="flex flex-1 flex-col">
-          <Card className="flex-1 transition-colors active:bg-muted/50">
-            <CardContent className="flex flex-1 items-center gap-3">
+        <Link to="/profile">
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
               <RowIcon>
                 <Sparkles className="size-5" />
               </RowIcon>
@@ -535,9 +519,9 @@ function AiTrendAnalysisCard({
     <DashboardCard>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <button type="button" className="flex flex-1 flex-col text-left">
-            <Card className="flex-1 transition-colors active:bg-muted/50">
-              <CardContent className="flex flex-1 items-center gap-3">
+          <button type="button" className="block w-full text-left">
+            <Card className="transition-colors active:bg-muted/50">
+              <CardContent className="flex items-center gap-3">
                 <RowIcon>
                   <Sparkles className="size-5 text-primary" />
                 </RowIcon>
