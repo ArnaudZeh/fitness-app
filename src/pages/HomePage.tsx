@@ -30,7 +30,7 @@ import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
 import {
   buildTrendSummary,
-  computeWeeklyPerformanceVsPrevious,
+  computeWeeklyTonnageProgress,
   computeWeightGoalProgress,
   countCompletedSessionsThisWeek,
 } from '@/lib/analytics'
@@ -181,17 +181,17 @@ function RingLegendItem({ color, label }: { color: string; label: string }) {
 // three-ring read, not the general chart palette.
 const RING_COLORS: Record<RingId, string> = {
   sessions: 'var(--chart-1)',
-  performance: 'var(--chart-2)',
+  tonnage: 'var(--chart-2)',
   weight: '#d55181',
 }
 
 // The dashboard's hero element: three Apple-Watch-style concentric rings —
-// séances this week (outer), performance vs the last time on the same
-// exercise (middle), progress toward the weight goal (inner). Tapping a
-// ring opens a small popup with that ring's own detail; this replaces the
-// old separate Analytics-heatmap and Poids cards entirely — their content
-// now lives in these popups (heatmap itself stays on the full Analytics
-// page, reachable via "Voir les stats complètes" below).
+// séances this week (outer), tonnage this week vs last week (middle),
+// progress toward the weight goal (inner). Tapping a ring opens a small
+// popup with that ring's own detail; this replaces the old separate
+// Analytics-heatmap and Poids cards entirely — their content now lives in
+// these popups (heatmap itself stays on the full Analytics page, reachable
+// via "Voir les stats complètes" below).
 function WeeklyRingsSection({
   program,
   allLogs,
@@ -212,7 +212,7 @@ function WeeklyRingsSection({
   const weeklyTarget = (templates ?? []).filter((t) => t.day_type === 'training').length
   const sessionsRatio = weeklyTarget > 0 ? Math.min(1, sessionsThisWeek / weeklyTarget) : null
 
-  const performance = computeWeeklyPerformanceVsPrevious(history)
+  const tonnage = computeWeeklyTonnageProgress(history)
   const weightGoal = computeWeightGoalProgress(weightEntries, targetWeightKg)
 
   const latestWeight = weightEntries[0]
@@ -228,10 +228,10 @@ function WeeklyRingsSection({
       label: `Séances cette semaine : ${sessionsThisWeek} sur ${weeklyTarget || 'objectif non défini'}`,
     },
     {
-      id: 'performance',
-      ratio: performance.ratio,
-      color: RING_COLORS.performance,
-      label: 'Performance par rapport à la dernière fois',
+      id: 'tonnage',
+      ratio: tonnage.ratio,
+      color: RING_COLORS.tonnage,
+      label: 'Tonnage cette semaine par rapport à la semaine dernière',
     },
     {
       id: 'weight',
@@ -244,7 +244,7 @@ function WeeklyRingsSection({
   return (
     <>
       <motion.div variants={cardVariants} className="flex flex-col items-center gap-3 py-2">
-        <div className="mx-auto w-full max-w-sm px-2">
+        <div className="mx-auto w-full max-w-[220px]">
           <ActivityRings
             rings={rings}
             centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
@@ -254,7 +254,7 @@ function WeeklyRingsSection({
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <RingLegendItem color={RING_COLORS.sessions} label="Séances" />
-          <RingLegendItem color={RING_COLORS.performance} label="Perf" />
+          <RingLegendItem color={RING_COLORS.tonnage} label="Tonnage" />
           <RingLegendItem color={RING_COLORS.weight} label="Poids" />
         </div>
         <Link to="/analytics" className="text-sm text-primary hover:underline">
@@ -289,34 +289,25 @@ function WeeklyRingsSection({
             </>
           )}
 
-          {selectedRing === 'performance' && (
+          {selectedRing === 'tonnage' && (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <span
                     className="size-2.5 rounded-full"
-                    style={{ background: RING_COLORS.performance }}
+                    style={{ background: RING_COLORS.tonnage }}
                   />
-                  Performance vs dernière fois
+                  Tonnage cette semaine
                 </DialogTitle>
               </DialogHeader>
-              {performance.ratio === null ? (
-                <p className="text-sm text-muted-foreground">
-                  Pas encore assez d'historique pour comparer cette semaine à la précédente.
-                </p>
-              ) : (
-                <>
-                  <p className="font-mono text-3xl font-semibold tabular-nums">
-                    {Math.round(performance.ratio * 100)}%
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {performance.metCount} exercice{performance.metCount > 1 ? 's' : ''} sur{' '}
-                    {performance.comparableCount} avec au moins autant de séries et de
-                    répétitions à charge égale ou supérieure par rapport à la séance précédente
-                    sur cet exercice.
-                  </p>
-                </>
-              )}
+              <p className="font-mono text-3xl font-semibold tabular-nums">
+                {Math.round(tonnage.thisWeekTonnageKg)} kg
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {tonnage.lastWeekTonnageKg === null
+                  ? "Pas encore de semaine précédente pour comparer."
+                  : `${Math.round((tonnage.ratio ?? 0) * 100)}% du tonnage de la semaine dernière (${Math.round(tonnage.lastWeekTonnageKg)} kg).`}
+              </p>
             </>
           )}
 

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export type RingId = 'sessions' | 'performance' | 'weight'
+export type RingId = 'sessions' | 'tonnage' | 'weight'
 
 export interface RingDatum {
   id: RingId
@@ -21,21 +21,26 @@ interface ActivityRingsProps {
 
 const VIEWBOX = 200
 const CENTER = VIEWBOX / 2
-// Slimmer strokes with wider gaps between rings than a first pass, opening
-// up the center hole so the value/label text has real breathing room
-// instead of crowding the innermost band.
-const RADII = [86, 64, 42] // outer to inner
-const STROKE_WIDTH = 12
-// Wider than the visible stroke so each ring's tap target still clears the
-// 44px touch-target guideline even though the drawn band is thinner.
-const HIT_STROKE_WIDTH = 36
+// Radius step between rings equals the stroke width exactly, so adjacent
+// bands sit flush against each other with no visible gap (outer edge of
+// ring N = inner edge of ring N-1). That step also opens up a wide center
+// hole (radius 49, ~49% of the full radius) for the value/label text — far
+// more room than a first pass that left it too tight.
+const STROKE_WIDTH = 14
+const RADII = [84, 70, 56] // outer to inner, each STROKE_WIDTH apart
+// Matches STROKE_WIDTH exactly rather than padding past it: with rings this
+// tightly packed, a wider hit band would overlap into the neighboring
+// ring's own hit zone and steal its taps. This trades some touch-target
+// margin (normally ≥44px) for correct per-ring tap disambiguation — the
+// ring tap is a bonus shortcut, "Voir les stats complètes" stays the
+// reliable, fully-accessible way to reach the same detail.
+const HIT_STROKE_WIDTH = STROKE_WIDTH
 
 // Apple-Watch-style concentric activity rings: each ring is its own
 // independently tappable band (outer → inner), opening a detail popup for
 // just that metric — not a single combined tap target. Sized by its
-// container (no fixed pixel size) so a wrapper can make it as large as the
-// layout calls for — see WeeklyRingsSection's max-w wrapper on the
-// dashboard, sized to fill roughly half the screen on a phone.
+// container (no fixed pixel size) — see WeeklyRingsSection's max-w wrapper
+// on the dashboard for the actual rendered size.
 export function ActivityRings({
   rings,
   centerValue,
@@ -52,7 +57,7 @@ export function ActivityRings({
     >
       <g transform={`rotate(-90 ${CENTER} ${CENTER})`}>
         {rings.map((ring, i) => {
-          const r = RADII[i] ?? 42
+          const r = RADII[i] ?? 56
           const circumference = 2 * Math.PI * r
           const filled = ring.ratio ?? 0
           const dash = circumference * filled
@@ -104,18 +109,18 @@ export function ActivityRings({
       </g>
       <text
         x={CENTER}
-        y={CENTER - 8}
+        y={CENTER - 6}
         textAnchor="middle"
-        className="fill-foreground font-mono text-4xl font-semibold"
+        className="fill-foreground font-mono text-2xl font-semibold"
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {centerValue}
       </text>
       <text
         x={CENTER}
-        y={CENTER + 15}
+        y={CENTER + 16}
         textAnchor="middle"
-        className="fill-muted-foreground text-xs tracking-wide uppercase"
+        className="fill-muted-foreground text-[10px] tracking-wide uppercase"
       >
         {centerLabel}
       </text>

@@ -155,75 +155,40 @@ export function getCompletedSessionDates(logs: CompletedSessionRecord[]): Set<st
   )
 }
 
-export interface WeeklyPerformanceComparison {
-  // null when there's nothing prior to compare this week's sets against yet
-  // (brand-new exercise or brand-new account) — distinct from 0, which would
-  // wrongly read as "underperforming" rather than "no baseline".
+export interface WeeklyTonnageProgress {
+  // null when there's no prior week to compare against yet (brand-new
+  // account, or a gap the week before) — distinct from 0, which would
+  // wrongly read as "no volume lifted" rather than "no baseline".
   ratio: number | null
-  metCount: number
-  comparableCount: number
+  thisWeekTonnageKg: number
+  lastWeekTonnageKg: number | null
 }
 
-// Not a 1RM/strength-curve estimate — this is literally "did you do the same
-// number of sets and reps at the same weight or better than last time, per
-// exercise". For each exercise trained this week, sum this week's total
-// volume (Σ weight × reps across every set) and compare it against the total
-// from that exercise's most recent prior session. Using the session TOTAL
-// (not a per-set average) means dropping sets — fewer reps/sets than last
-// time — pulls the total down and correctly fails the comparison, even if
-// individual sets were heavy; set_number isn't in SetHistoryRecord, so
-// matching set-for-set isn't possible, but comparing totals captures "same
-// or more work done" without needing it.
-export function computeWeeklyPerformanceVsPrevious(
+// This week's total tonnage (Σ weight × reps, reusing computeWeeklyTonnage)
+// against the prior ISO week's total — "are you on pace to match or beat
+// last week's volume", capped at 100% for the ring fill.
+export function computeWeeklyTonnageProgress(
   records: SetHistoryRecord[],
   now: Date = new Date(),
-): WeeklyPerformanceComparison {
+): WeeklyTonnageProgress {
   const currentWeekStart = getIsoWeekStart(toLocalDateString(now.toISOString()))
-  const thisWeek = records.filter((r) => getIsoWeekStart(r.loggedAt) === currentWeekStart)
-  const prior = records.filter((r) => getIsoWeekStart(r.loggedAt) < currentWeekStart)
+  const priorWeekStartDate = new Date(`${currentWeekStart}T00:00:00Z`)
+  priorWeekStartDate.setUTCDate(priorWeekStartDate.getUTCDate() - 7)
+  const priorWeekStart = priorWeekStartDate.toISOString().slice(0, 10)
 
-  const priorByExerciseDate = new Map<string, SetHistoryRecord[]>()
-  const latestPriorDateByExercise = new Map<string, string>()
-  for (const record of prior) {
-    const key = `${record.exerciseId}|${record.loggedAt}`
-    const bucket = priorByExerciseDate.get(key)
-    if (bucket) bucket.push(record)
-    else priorByExerciseDate.set(key, [record])
+  const weekly = computeWeeklyTonnage(records)
+  const thisWeekTonnageKg = weekly.find((w) => w.weekStart === currentWeekStart)?.tonnageKg ?? 0
+  const priorWeek = weekly.find((w) => w.weekStart === priorWeekStart)
+  const lastWeekTonnageKg = priorWeek?.tonnageKg ?? null
 
-    const latest = latestPriorDateByExercise.get(record.exerciseId)
-    if (!latest || record.loggedAt > latest) {
-      latestPriorDateByExercise.set(record.exerciseId, record.loggedAt)
-    }
-  }
-
-  const priorTotalByExercise = new Map<string, number>()
-  for (const [exerciseId, date] of latestPriorDateByExercise) {
-    const sets = priorByExerciseDate.get(`${exerciseId}|${date}`) ?? []
-    const total = sets.reduce((sum, s) => sum + s.weightKg * s.reps, 0)
-    priorTotalByExercise.set(exerciseId, total)
-  }
-
-  const thisWeekTotalByExercise = new Map<string, number>()
-  for (const record of thisWeek) {
-    thisWeekTotalByExercise.set(
-      record.exerciseId,
-      (thisWeekTotalByExercise.get(record.exerciseId) ?? 0) + record.weightKg * record.reps,
-    )
-  }
-
-  let metCount = 0
-  let comparableCount = 0
-  for (const [exerciseId, thisWeekTotal] of thisWeekTotalByExercise) {
-    const priorTotal = priorTotalByExercise.get(exerciseId)
-    if (priorTotal === undefined) continue
-    comparableCount += 1
-    if (thisWeekTotal >= priorTotal) metCount += 1
+  if (!lastWeekTonnageKg) {
+    return { ratio: null, thisWeekTonnageKg, lastWeekTonnageKg }
   }
 
   return {
-    ratio: comparableCount > 0 ? metCount / comparableCount : null,
-    metCount,
-    comparableCount,
+    ratio: Math.max(0, Math.min(1, thisWeekTonnageKg / lastWeekTonnageKg)),
+    thisWeekTonnageKg,
+    lastWeekTonnageKg,
   }
 }
 

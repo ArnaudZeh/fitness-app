@@ -3,8 +3,8 @@ import {
   buildTrendSummary,
   computeDailyVolume,
   computeOneRepMaxProgression,
-  computeWeeklyPerformanceVsPrevious,
   computeWeeklyTonnage,
+  computeWeeklyTonnageProgress,
   computeWeightGoalProgress,
   countCompletedSessionsThisWeek,
   countTrainingDaysThisWeek,
@@ -267,68 +267,42 @@ describe('buildTrendSummary', () => {
   })
 })
 
-describe('computeWeeklyPerformanceVsPrevious', () => {
+describe('computeWeeklyTonnageProgress', () => {
   const now = new Date('2026-07-22T12:00:00Z') // Wednesday, week of 2026-07-20
 
-  it('returns a null ratio when there is no prior history to compare against', () => {
+  it('returns a null ratio when there is no prior week to compare against', () => {
     const records = [makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 })]
-    const result = computeWeeklyPerformanceVsPrevious(records, now)
+    const result = computeWeeklyTonnageProgress(records, now)
     expect(result.ratio).toBeNull()
-    expect(result.comparableCount).toBe(0)
+    expect(result.lastWeekTonnageKg).toBeNull()
+    expect(result.thisWeekTonnageKg).toBe(800)
   })
 
-  it('counts an exercise as meeting expectations when this week\'s total volume matches or beats the last session\'s total', () => {
+  it('computes the ratio of this week\'s tonnage against last week\'s', () => {
     const records = [
-      // ex-squat: prior total 800 + 700 = 1500, this week 800 + 800 = 1600 — meets
-      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
-      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-13', weightKg: 100, reps: 7 }),
-      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
-      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
-      // ex-bench: prior total 500, this week 400 — misses
-      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-07-13', weightKg: 50, reps: 10 }),
-      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-07-21', weightKg: 40, reps: 10 }),
+      makeRecord({ loggedAt: '2026-07-14', weightKg: 100, reps: 10 }), // prior week: 1000
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 5 }), // this week: 500
     ]
-    const result = computeWeeklyPerformanceVsPrevious(records, now)
-    expect(result.comparableCount).toBe(2)
-    expect(result.metCount).toBe(1)
+    const result = computeWeeklyTonnageProgress(records, now)
+    expect(result.lastWeekTonnageKg).toBe(1000)
+    expect(result.thisWeekTonnageKg).toBe(500)
     expect(result.ratio).toBe(0.5)
   })
 
-  it('fails the comparison when fewer sets are done this week even at the same weight and reps, since total volume drops', () => {
+  it('caps the ratio at 1 when this week already beats last week', () => {
     const records = [
-      // Prior session: 3 sets of 100kg x 8 reps = 2400 total
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
-      // This week: only 2 sets at the same weight/reps — fewer sets, lower total
-      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
-      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
+      makeRecord({ loggedAt: '2026-07-14', weightKg: 100, reps: 5 }), // prior week: 500
+      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 10 }), // this week: 1000
     ]
-    const result = computeWeeklyPerformanceVsPrevious(records, now)
-    expect(result.comparableCount).toBe(1)
-    expect(result.metCount).toBe(0)
+    const result = computeWeeklyTonnageProgress(records, now)
+    expect(result.ratio).toBe(1)
   })
 
-  it('benchmarks against the most recent prior session, not an older one', () => {
-    const records = [
-      makeRecord({ loggedAt: '2026-06-01', weightKg: 50, reps: 5 }), // older, weaker — ignored
-      makeRecord({ loggedAt: '2026-07-13', weightKg: 100, reps: 10 }), // most recent prior: 1000
-      makeRecord({ loggedAt: '2026-07-21', weightKg: 100, reps: 9 }), // 900, below the recent benchmark
-    ]
-    const result = computeWeeklyPerformanceVsPrevious(records, now)
-    expect(result.comparableCount).toBe(1)
-    expect(result.metCount).toBe(0)
-  })
-
-  it('excludes exercises with no comparable prior history from the ratio', () => {
-    const records = [
-      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-13', weightKg: 100, reps: 8 }),
-      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-21', weightKg: 100, reps: 8 }),
-      makeRecord({ exerciseId: 'ex-new', loggedAt: '2026-07-21', weightKg: 20, reps: 12 }),
-    ]
-    const result = computeWeeklyPerformanceVsPrevious(records, now)
-    expect(result.comparableCount).toBe(1)
-    expect(result.metCount).toBe(1)
+  it('returns a ratio of 0 when last week had volume but nothing is logged yet this week', () => {
+    const records = [makeRecord({ loggedAt: '2026-07-14', weightKg: 100, reps: 10 })]
+    const result = computeWeeklyTonnageProgress(records, now)
+    expect(result.thisWeekTonnageKg).toBe(0)
+    expect(result.ratio).toBe(0)
   })
 })
 
