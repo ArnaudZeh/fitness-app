@@ -75,7 +75,7 @@ export function HomePage() {
   return (
     <MotionConfig reducedMotion="user">
       <motion.div
-        className="flex flex-col gap-3 pb-2"
+        className="flex h-full flex-col gap-3 pb-2"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -226,21 +226,30 @@ function WeeklyRingsSection({
 
   return (
     <>
-      <motion.div variants={cardVariants} className="flex flex-col items-center gap-3 py-2">
-        <div className="mx-auto w-full max-w-sm">
-          <ActivityRings
-            rings={rings}
-            centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
-            centerLabel="séances"
-            onSelectRing={setSelectedRing}
-          />
-        </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      {/* min-h-0 + flex-1: the ring grows to exactly fill whatever vertical
+          space is left after the header and the two fixed-size cards below,
+          on any screen — instead of a hardcoded pixel size that fit one
+          phone (iPhone 15 Pro Max) and overflowed a shorter one (iPhone 15
+          Pro). aspect-square on the ring itself turns that flex-resolved
+          height directly into a matching width (no percentage-height
+          chain — that's the mechanism that proved unreliable earlier). */}
+      <motion.div
+        variants={cardVariants}
+        className="flex min-h-0 flex-1 flex-col items-center gap-3 py-2"
+      >
+        <ActivityRings
+          rings={rings}
+          centerValue={`${sessionsThisWeek}/${weeklyTarget || '–'}`}
+          centerLabel="séances"
+          onSelectRing={setSelectedRing}
+          className="aspect-square h-full min-h-[160px] w-auto max-w-full flex-1"
+        />
+        <div className="flex shrink-0 items-center gap-4 text-xs text-muted-foreground">
           <RingLegendItem color={RING_COLORS.sessions} label="Séances" />
           <RingLegendItem color={RING_COLORS.tonnage} label="Tonnage" />
           <RingLegendItem color={RING_COLORS.weight} label="Poids" />
         </div>
-        <Link to="/analytics" className="text-sm text-primary hover:underline">
+        <Link to="/analytics" className="shrink-0 text-sm text-primary hover:underline">
           Voir les stats complètes →
         </Link>
       </motion.div>
