@@ -27,9 +27,9 @@ export function DataOwnershipSection() {
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            Télécharge une copie de toutes tes données (profil, fiche coaching, programmes,
-            séances, poids) au format JSON — pratique pour la coller dans un autre
-            assistant IA (Claude Desktop, etc.).
+            Télécharge une copie de toutes tes données (profil, fiche coaching,
+            programmes, séances, poids, mensurations) au format JSON — pratique pour la
+            coller dans un autre assistant IA (Claude Desktop, etc.).
           </p>
           <Button
             variant="outline"
@@ -51,7 +51,8 @@ export function DataOwnershipSection() {
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <p className="text-sm text-muted-foreground">
             Supprimer ton compte efface définitivement toutes tes données : profil,
-            programmes, séances, historique de poids et clés IA enregistrées.
+            programmes, séances, historique de poids et mensurations, et clés IA
+            enregistrées.
           </p>
           <ConfirmDialog
             trigger={
@@ -80,15 +81,20 @@ export function DataOwnershipSection() {
 
 type ExportArrayKey = Exclude<
   keyof UserDataExport,
-  'schema_version' | 'exported_at' | 'profile' | 'coaching_profile'
+  'schema_version' | 'exported_at' | 'profile' | 'coaching_profile' | 'body_measurements'
 >
 
-// coaching_profile is absent on export files created before this field
-// existed — parseUserDataExport() doesn't reject those for backward
-// compatibility, so this must tolerate it being missing too.
+// coaching_profile and body_measurements are absent on export files
+// created before those fields existed — parseUserDataExport() doesn't
+// reject those for backward compatibility, so this must tolerate either
+// being missing too.
 function filledCoachingFieldsCount(parsed: UserDataExport): number {
   return Object.values(parsed.coaching_profile ?? {}).filter((value) => value !== null)
     .length
+}
+
+function bodyMeasurementsCount(parsed: UserDataExport): number {
+  return parsed.body_measurements?.length ?? 0
 }
 
 const SUMMARY_LABELS: [key: ExportArrayKey, label: string][] = [
@@ -126,9 +132,9 @@ function ImportSection() {
   return (
     <div className="flex flex-col gap-2 border-t border-border pt-4">
       <p className="text-sm text-muted-foreground">
-        Importe un fichier exporté précédemment. Les pesées existantes sont mises à jour
-        par date ; le reste (programmes, séances, exercices) vient s'ajouter à ce qui
-        existe déjà sur ton compte.
+        Importe un fichier exporté précédemment. Les pesées et mensurations existantes
+        sont mises à jour par date ; le reste (programmes, séances, exercices) vient
+        s'ajouter à ce qui existe déjà sur ton compte.
       </p>
       <input
         ref={fileInputRef}
@@ -158,6 +164,9 @@ function ImportSection() {
           <ul className="text-sm text-muted-foreground">
             {filledCoachingFieldsCount(parsed) > 0 && (
               <li>{filledCoachingFieldsCount(parsed)} champs de fiche coaching</li>
+            )}
+            {bodyMeasurementsCount(parsed) > 0 && (
+              <li>{bodyMeasurementsCount(parsed)} mensuration(s)</li>
             )}
             {SUMMARY_LABELS.filter(([key]) => parsed[key].length > 0).map(
               ([key, label]) => (
@@ -196,7 +205,8 @@ function ImportSection() {
           <p>
             Import terminé : {result.imported.programs} programme(s),{' '}
             {result.imported.session_logs} séance(s) loguée(s),{' '}
-            {result.imported.weight_entries} pesée(s).
+            {result.imported.weight_entries} pesée(s), {result.imported.body_measurements}{' '}
+            mensuration(s).
           </p>
           {result.errors.length > 0 && (
             <>

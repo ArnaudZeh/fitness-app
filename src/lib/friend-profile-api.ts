@@ -10,6 +10,16 @@ export interface FriendProfile {
   age: number | null
   goal: Goal | null
   recentWeights: { weightKg: number; recordedAt: string }[]
+  recentMeasurements: {
+    recordedAt: string
+    neckCm: number | null
+    chestCm: number | null
+    waistCm: number | null
+    hipsCm: number | null
+    armCm: number | null
+    thighCm: number | null
+    calfCm: number | null
+  }[]
   activeProgram: { id: string; name: string; focus: ProgramFocus } | null
   // Gates the "voir en détail" link on FriendProfilePage: can_view_program_details()
   // only opens session_templates/session_template_exercises for the owner
@@ -32,10 +42,12 @@ export class ProfileNotVisibleError extends Error {
 }
 
 const RECENT_WEIGHTS_LIMIT = 5
+const RECENT_MEASUREMENTS_LIMIT = 5
 
-// Three independent, RLS-gated reads rather than one bespoke view — each
+// Four independent, RLS-gated reads rather than one bespoke view — each
 // already has its own visibility policy (are_friends()/is_profile_public()
-// on weight_entries/programs, friend_profile_details for the rest), so
+// on weight_entries/body_measurements/programs, friend_profile_details for
+// the rest), so
 // there's nothing extra to guard here. Works identically for an accepted
 // friend or a non-friend with a public profile — the RLS decides, this
 // function doesn't need to know which case it is.
@@ -43,6 +55,7 @@ export async function fetchFriendProfile(userId: string): Promise<FriendProfile>
   const [
     { data: details, error: detailsError },
     { data: weights, error: weightsError },
+    { data: measurements, error: measurementsError },
     { data: programs, error: programsError },
   ] = await Promise.all([
     supabase.from('friend_profile_details').select('*').eq('id', userId).maybeSingle(),
@@ -53,6 +66,14 @@ export async function fetchFriendProfile(userId: string): Promise<FriendProfile>
       .order('recorded_at', { ascending: false })
       .limit(RECENT_WEIGHTS_LIMIT),
     supabase
+      .from('body_measurements')
+      .select(
+        'recorded_at, neck_cm, chest_cm, waist_cm, hips_cm, arm_cm, thigh_cm, calf_cm',
+      )
+      .eq('user_id', userId)
+      .order('recorded_at', { ascending: false })
+      .limit(RECENT_MEASUREMENTS_LIMIT),
+    supabase
       .from('programs')
       .select('id, name, focus')
       .eq('user_id', userId)
@@ -60,6 +81,7 @@ export async function fetchFriendProfile(userId: string): Promise<FriendProfile>
   ])
   if (detailsError) throw detailsError
   if (weightsError) throw weightsError
+  if (measurementsError) throw measurementsError
   if (programsError) throw programsError
   if (!details) throw new ProfileNotVisibleError()
 
@@ -77,6 +99,16 @@ export async function fetchFriendProfile(userId: string): Promise<FriendProfile>
     recentWeights: (weights ?? []).map((w) => ({
       weightKg: w.weight_kg,
       recordedAt: w.recorded_at,
+    })),
+    recentMeasurements: (measurements ?? []).map((m) => ({
+      recordedAt: m.recorded_at,
+      neckCm: m.neck_cm,
+      chestCm: m.chest_cm,
+      waistCm: m.waist_cm,
+      hipsCm: m.hips_cm,
+      armCm: m.arm_cm,
+      thighCm: m.thigh_cm,
+      calfCm: m.calf_cm,
     })),
     activeProgram: activeProgram
       ? {

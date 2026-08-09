@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useFriendProfile } from '@/hooks/useFriendProfile'
 import { useCopyProgramToMyAccount } from '@/hooks/usePrograms'
-import { ProfileNotVisibleError } from '@/lib/friend-profile-api'
+import { ProfileNotVisibleError, type FriendProfile } from '@/lib/friend-profile-api'
 import { GOAL_LABELS } from '@/lib/profile-api'
 import { PROGRAM_FOCUS_LABELS, type ProgramFocus } from '@/lib/programs-api'
 
@@ -19,6 +19,27 @@ function formatWeightDate(iso: string): string {
     // it silently shifts back a day for any viewer west of UTC.
     timeZone: 'UTC',
   })
+}
+
+const MEASUREMENT_LABELS: [
+  key: 'neckCm' | 'chestCm' | 'waistCm' | 'hipsCm' | 'armCm' | 'thighCm' | 'calfCm',
+  label: string,
+][] = [
+  ['neckCm', 'Cou'],
+  ['chestCm', 'Poitrine'],
+  ['waistCm', 'Taille'],
+  ['hipsCm', 'Hanches'],
+  ['armCm', 'Bras'],
+  ['thighCm', 'Cuisse'],
+  ['calfCm', 'Mollet'],
+]
+
+function formatMeasurementSummary(
+  entry: FriendProfile['recentMeasurements'][number],
+): string {
+  return MEASUREMENT_LABELS.filter(([key]) => entry[key] !== null)
+    .map(([key, label]) => `${label} ${entry[key]}cm`)
+    .join(' · ')
 }
 
 export function FriendProfilePage() {
@@ -114,6 +135,30 @@ export function FriendProfilePage() {
                       <span className="text-muted-foreground">
                         {formatWeightDate(entry.recordedAt)}
                       </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle as="h2">Dernières mensurations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {profile.recentMeasurements.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucune mensuration enregistrée.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {profile.recentMeasurements.map((entry) => (
+                    <li key={entry.recordedAt} className="text-sm">
+                      <p>{formatMeasurementSummary(entry)}</p>
+                      <p className="text-muted-foreground">
+                        {formatWeightDate(entry.recordedAt)}
+                      </p>
                     </li>
                   ))}
                 </ul>

@@ -10,6 +10,7 @@ export type ExportedCoachingProfile = Omit<
   'id' | 'created_at' | 'updated_at'
 >
 export type ExportedWeightEntry = Omit<Row<'weight_entries'>, 'user_id'>
+export type ExportedBodyMeasurement = Omit<Row<'body_measurements'>, 'user_id'>
 export type ExportedExercise = Pick<
   Row<'exercises'>,
   'id' | 'name' | 'muscle_group' | 'created_at'
@@ -34,6 +35,9 @@ export interface UserDataExport {
   // Always populated by exportUserData() itself for any current export.
   coaching_profile?: ExportedCoachingProfile
   weight_entries: ExportedWeightEntry[]
+  // Optional for the same reason as coaching_profile: absent on export
+  // files created before this table existed.
+  body_measurements?: ExportedBodyMeasurement[]
   exercises: ExportedExercise[]
   programs: ExportedProgram[]
   session_templates: ExportedSessionTemplate[]
@@ -55,7 +59,9 @@ function stripUserId<T extends { user_id: unknown }>(row: T): Omit<T, 'user_id'>
   return rest
 }
 
-function stripCoachingProfileMetadata(row: Row<'coaching_profile'>): ExportedCoachingProfile {
+function stripCoachingProfileMetadata(
+  row: Row<'coaching_profile'>,
+): ExportedCoachingProfile {
   const { id: _id, created_at: _createdAt, updated_at: _updatedAt, ...rest } = row
   return rest
 }
@@ -82,6 +88,12 @@ export async function exportUserData(): Promise<UserDataExport> {
     .select('*')
     .eq('user_id', userId)
   if (weightEntriesResult.error) throw weightEntriesResult.error
+
+  const bodyMeasurementsResult = await supabase
+    .from('body_measurements')
+    .select('*')
+    .eq('user_id', userId)
+  if (bodyMeasurementsResult.error) throw bodyMeasurementsResult.error
 
   const exercisesResult = await supabase
     .from('exercises')
@@ -122,6 +134,7 @@ export async function exportUserData(): Promise<UserDataExport> {
     profile: profileResult.data,
     coaching_profile: stripCoachingProfileMetadata(coachingProfileResult.data),
     weight_entries: weightEntriesResult.data.map(stripUserId),
+    body_measurements: bodyMeasurementsResult.data.map(stripUserId),
     exercises: exercisesResult.data,
     programs: programsResult.data.map(stripUserId),
     session_templates: sessionTemplatesResult.data.map(stripUserId),
@@ -180,6 +193,7 @@ export function parseUserDataExport(text: string): UserDataExport {
 
 export interface ImportSummary {
   weight_entries: number
+  body_measurements: number
   exercises: number
   programs: number
   session_templates: number
@@ -213,6 +227,7 @@ export async function importUserData(data: UserDataExport): Promise<ImportResult
   const errors: string[] = []
   const imported: ImportSummary = {
     weight_entries: 0,
+    body_measurements: 0,
     exercises: 0,
     programs: 0,
     session_templates: 0,
@@ -252,6 +267,22 @@ export async function importUserData(data: UserDataExport): Promise<ImportResult
     )
     if (error) errors.push(`Pesées : ${error.message}`)
     else imported.weight_entries = data.weight_entries.length
+  }
+
+  // Optional, same reason as coaching_profile: absent on export files
+  // created before this table existed.
+  if (data.body_measurements && data.body_measurements.length > 0) {
+    const { error } = await supabase.from('body_measurements').upsert(
+      data.body_measurements.map(
+        ({ id: _id, created_at: _createdAt, updated_at: _updatedAt, ...entry }) => ({
+          ...entry,
+          user_id: userId,
+        }),
+      ),
+      { onConflict: 'user_id,recorded_at' },
+    )
+    if (error) errors.push(`Mensurations : ${error.message}`)
+    else imported.body_measurements = data.body_measurements.length
   }
 
   const exerciseIdMap = new Map<string, string>()

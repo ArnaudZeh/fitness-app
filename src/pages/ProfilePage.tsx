@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { LogOut, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,12 +32,18 @@ import {
   useWeightEntries,
 } from '@/hooks/useWeightEntries'
 import {
+  useDeleteMeasurement,
+  useLogMeasurement,
+  useMeasurements,
+} from '@/hooks/useMeasurements'
+import {
   GOAL_LABELS,
   SEX_LABELS,
   type Goal,
   type Profile,
   type Sex,
 } from '@/lib/profile-api'
+import type { BodyMeasurement, MeasurementInput } from '@/lib/measurements-api'
 
 const SEX_OPTIONS = Object.entries(SEX_LABELS) as [Sex, string][]
 const GOAL_OPTIONS = Object.entries(GOAL_LABELS) as [Goal, string][]
@@ -76,6 +82,7 @@ export function ProfilePage() {
       <CoachingProfileLinkCard />
       <ProfileForm profile={profile} />
       <WeightSection />
+      <MeasurementsSection />
       <PrivacySection profile={profile} />
       <NotificationsCard />
       <CycleModuleSection profile={profile} />
@@ -116,7 +123,11 @@ function AvatarSection({ profile }: { profile: Profile }) {
         <CardTitle as="h2">Photo de profil</CardTitle>
       </CardHeader>
       <CardContent className="flex items-center gap-4">
-        <Avatar url={avatarUrl ?? null} displayName={profile.display_name ?? '?'} size="lg" />
+        <Avatar
+          url={avatarUrl ?? null}
+          displayName={profile.display_name ?? '?'}
+          size="lg"
+        />
         <div className="flex flex-col items-start gap-2">
           <input
             ref={fileInputRef}
@@ -167,8 +178,8 @@ function CoachingProfileLinkCard() {
       <CardHeader>
         <CardTitle as="h2">Fiche coaching complète</CardTitle>
         <CardDescription>
-          Objectifs, antécédents, nutrition, sommeil, mode de vie… pour que le coach IA (et un
-          export vers un autre assistant) te connaisse vraiment.
+          Objectifs, antécédents, nutrition, sommeil, mode de vie… pour que le coach IA
+          (et un export vers un autre assistant) te connaisse vraiment.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -193,14 +204,16 @@ function PrivacySection({ profile }: { profile: Profile }) {
         <p className="text-sm text-muted-foreground">
           {isPublic ? (
             <>
-              Public : ton programme actif et tes 5 dernières pesées sont visibles par tout
-              utilisateur de l'app, pas seulement tes amis. N'importe qui peut aussi copier ton
-              programme actif dans son propre compte.
+              Public : ton programme actif, tes 5 dernières pesées et tes dernières
+              mensurations sont visibles par tout utilisateur de l'app, pas seulement tes
+              amis. N'importe qui peut aussi copier ton programme actif dans son propre
+              compte.
             </>
           ) : (
             <>
-              Privé : seuls tes amis voient ton programme actif et tes pesées, comme aujourd'hui.
-              Personne d'autre ne peut consulter ou copier ton programme.
+              Privé : seuls tes amis voient ton programme actif, tes pesées et tes
+              mensurations, comme aujourd'hui. Personne d'autre ne peut consulter ou
+              copier ton programme.
             </>
           )}
         </p>
@@ -237,8 +250,8 @@ function CycleModuleSection({ profile }: { profile: Profile }) {
         <details className="text-sm text-muted-foreground">
           <summary className="cursor-pointer select-none">Qu'est-ce que c'est ?</summary>
           <p className="mt-2">
-            Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par phase :
-            recommandations générales, pas un outil médical.
+            Suivi du cycle menstruel avec des repères d'entraînement et de nutrition par
+            phase : recommandations générales, pas un outil médical.
           </p>
         </details>
         {updateProfile.isError && (
@@ -479,6 +492,178 @@ function WeightSection() {
                 confirmLabel="Supprimer"
                 onConfirm={async () => {
                   await deleteEntry.mutateAsync(entry.id)
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface MeasurementFieldDef {
+  key: keyof MeasurementInput
+  rowKey: keyof BodyMeasurement
+  label: string
+}
+
+const MEASUREMENT_FIELDS: MeasurementFieldDef[] = [
+  { key: 'neckCm', rowKey: 'neck_cm', label: 'Cou' },
+  { key: 'chestCm', rowKey: 'chest_cm', label: 'Poitrine' },
+  { key: 'waistCm', rowKey: 'waist_cm', label: 'Taille' },
+  { key: 'hipsCm', rowKey: 'hips_cm', label: 'Hanches' },
+  { key: 'armCm', rowKey: 'arm_cm', label: 'Bras' },
+  { key: 'thighCm', rowKey: 'thigh_cm', label: 'Cuisse' },
+  { key: 'calfCm', rowKey: 'calf_cm', label: 'Mollet' },
+]
+
+function toMeasurementFormValues(entry: BodyMeasurement | null): Record<string, string> {
+  const values: Record<string, string> = {}
+  for (const field of MEASUREMENT_FIELDS) {
+    const raw = entry ? entry[field.rowKey] : null
+    values[field.key] = raw === null || raw === undefined ? '' : String(raw)
+  }
+  return values
+}
+
+function toMeasurementInput(values: Record<string, string>): MeasurementInput {
+  const input = {} as MeasurementInput
+  for (const field of MEASUREMENT_FIELDS) {
+    const raw = values[field.key] ?? ''
+    input[field.key] = raw.trim() === '' ? null : Number(raw)
+  }
+  return input
+}
+
+function formatMeasurementSummary(entry: BodyMeasurement): string {
+  return MEASUREMENT_FIELDS.filter((field) => entry[field.rowKey] !== null)
+    .map((field) => `${field.label} ${entry[field.rowKey]}cm`)
+    .join(' · ')
+}
+
+function MeasurementsSection() {
+  const { data: entries, isLoading } = useMeasurements()
+  const logMeasurement = useLogMeasurement()
+  const deleteMeasurement = useDeleteMeasurement()
+
+  const today = todayIsoDate()
+  const todayEntry = useMemo(
+    () => (entries ?? []).find((entry) => entry.recorded_at === today) ?? null,
+    [entries, today],
+  )
+
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    toMeasurementFormValues(todayEntry),
+  )
+  // entries load asynchronously — on first render todayEntry is still null
+  // even when a real entry for today already exists. Once the real value
+  // resolves, re-apply it directly during render (not in an effect, same
+  // pattern as SessionLogPage's last-time prefill) unless the user has
+  // already started editing — otherwise their in-progress edits would be
+  // clobbered the moment the query settles.
+  const [hasUserEdited, setHasUserEdited] = useState(false)
+  const [appliedTodayEntry, setAppliedTodayEntry] = useState(todayEntry)
+  if (todayEntry !== appliedTodayEntry && !hasUserEdited) {
+    setAppliedTodayEntry(todayEntry)
+    setValues(toMeasurementFormValues(todayEntry))
+  }
+
+  function setField(key: string, value: string) {
+    setHasUserEdited(true)
+    setValues((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    await logMeasurement.mutateAsync({
+      input: toMeasurementInput(values),
+      recordedAt: today,
+    })
+    setHasUserEdited(false)
+  }
+
+  const sortedEntries = entries ?? []
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Mensurations</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form
+          onSubmit={(event) => void handleSubmit(event)}
+          className="flex flex-col gap-3"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            {MEASUREMENT_FIELDS.map((field) => (
+              <div key={field.key} className="flex flex-col gap-2">
+                <Label htmlFor={`measurement-${field.key}`}>{field.label} (cm)</Label>
+                <Input
+                  id={`measurement-${field.key}`}
+                  type="number"
+                  min={1}
+                  step={0.1}
+                  value={values[field.key] ?? ''}
+                  onChange={(event) => setField(field.key, event.target.value)}
+                  placeholder="Optionnel"
+                />
+              </div>
+            ))}
+          </div>
+          {logMeasurement.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              Impossible d'enregistrer les mensurations.
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={logMeasurement.isPending}
+            className="self-start"
+          >
+            {logMeasurement.isPending ? 'Enregistrement…' : "Enregistrer aujourd'hui"}
+          </Button>
+        </form>
+
+        {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+        {sortedEntries.length === 0 && !isLoading && (
+          <p className="text-sm text-muted-foreground">
+            Aucune mensuration enregistrée pour l'instant.
+          </p>
+        )}
+
+        <ul className="flex flex-col gap-2">
+          {sortedEntries.map((entry) => (
+            <li
+              key={entry.id}
+              className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
+            >
+              <div>
+                <p className="text-sm">{formatMeasurementSummary(entry)}</p>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(entry.recorded_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'UTC',
+                  })}
+                </p>
+              </div>
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Supprimer ces mensurations"
+                  >
+                    <Trash2 />
+                  </Button>
+                }
+                title="Supprimer ces mensurations ?"
+                description="Cette action est irréversible."
+                confirmLabel="Supprimer"
+                onConfirm={async () => {
+                  await deleteMeasurement.mutateAsync(entry.id)
                 }}
               />
             </li>
