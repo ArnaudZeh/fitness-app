@@ -18,6 +18,7 @@ import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
+import { useCoachingProfile } from '@/hooks/useCoachingProfile'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useApplyProgramProposal, useGenerateProgram } from '@/hooks/useProgramGeneration'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
@@ -33,7 +34,10 @@ export function ProgramGeneratePage() {
   const navigate = useNavigate()
   const { data: profile } = useProfile()
   const { data: weightEntries } = useWeightEntries()
-  const { data: cycleEntries } = useCycleEntries({ enabled: Boolean(profile?.cycle_module_enabled) })
+  const { data: cycleEntries } = useCycleEntries({
+    enabled: Boolean(profile?.cycle_module_enabled),
+  })
+  const { data: coachingProfile } = useCoachingProfile()
   const { data: history } = useSetHistory()
   const { data: keyStatuses } = useAiProviderKeys()
 
@@ -54,7 +58,11 @@ export function ProgramGeneratePage() {
     new Map(
       (history ?? []).map((record) => [
         record.exerciseId,
-        { id: record.exerciseId, name: record.exerciseName, muscleGroup: record.muscleGroup },
+        {
+          id: record.exerciseId,
+          name: record.exerciseName,
+          muscleGroup: record.muscleGroup,
+        },
       ]),
     ).values(),
   )
@@ -93,8 +101,8 @@ export function ProgramGeneratePage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
-              Logue quelques séances d'abord. L'IA ne propose que des exercices que tu as déjà
-              pratiqués.
+              Logue quelques séances d'abord. L'IA ne propose que des exercices que tu as
+              déjà pratiqués.
             </p>
           </CardContent>
         </Card>
@@ -107,7 +115,12 @@ export function ProgramGeneratePage() {
     if (!activeProvider || !profile) return
     generateProgram.mutate({
       provider: activeProvider,
-      profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
+      profileContext: buildUserProfileContext(
+        profile,
+        weightEntries ?? [],
+        cycleEntries ?? [],
+        coachingProfile ?? null,
+      ),
       availableExercises,
       daysPerWeek,
       equipment,
@@ -139,7 +152,10 @@ export function ProgramGeneratePage() {
               .slice()
               .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
               .map((day) => (
-                <div key={day.dayOfWeek} className="flex flex-col gap-2 border-t pt-3 first:border-t-0 first:pt-0">
+                <div
+                  key={day.dayOfWeek}
+                  className="flex flex-col gap-2 border-t pt-3 first:border-t-0 first:pt-0"
+                >
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{WEEKDAY_LABELS[day.dayOfWeek]}</span>
                     <Badge variant="outline">{DAY_TYPE_LABELS[day.dayType]}</Badge>
@@ -147,16 +163,26 @@ export function ProgramGeneratePage() {
                   {day.exercises.length > 0 && (
                     <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
                       {day.exercises.map((exercise, index) => (
-                        <li key={`${day.dayOfWeek}-${index}`} className="flex items-center gap-2">
+                        <li
+                          key={`${day.dayOfWeek}-${index}`}
+                          className="flex items-center gap-2"
+                        >
                           <ExerciseThumbnail
-                            imageUrl={thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null}
-                            muscleGroup={thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null}
+                            imageUrl={
+                              thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ??
+                              null
+                            }
+                            muscleGroup={
+                              thumbnailByExerciseId.get(exercise.exerciseId)
+                                ?.muscleGroup ?? null
+                            }
                           />
                           <span>
                             {exercise.exerciseName} · {exercise.targetSets} ×{' '}
                             {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
                             {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
-                            {exercise.targetWeightKg !== null && ` · ${exercise.targetWeightKg} kg`}
+                            {exercise.targetWeightKg !== null &&
+                              ` · ${exercise.targetWeightKg} kg`}
                           </span>
                         </li>
                       ))}
@@ -188,7 +214,12 @@ export function ProgramGeneratePage() {
                   profile &&
                   generateProgram.mutate({
                     provider: activeProvider,
-                    profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
+                    profileContext: buildUserProfileContext(
+                      profile,
+                      weightEntries ?? [],
+                      cycleEntries ?? [],
+                      coachingProfile ?? null,
+                    ),
                     availableExercises,
                     daysPerWeek,
                     equipment,
@@ -198,7 +229,11 @@ export function ProgramGeneratePage() {
               >
                 Régénérer
               </Button>
-              <Button type="button" variant="ghost" onClick={() => generateProgram.reset()}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => generateProgram.reset()}
+              >
                 Annuler
               </Button>
             </div>
@@ -281,7 +316,8 @@ export function ProgramGeneratePage() {
             )}
 
             <Button type="submit" disabled={!activeProvider || generateProgram.isPending}>
-              <Sparkles /> {generateProgram.isPending ? 'Génération…' : 'Générer le programme'}
+              <Sparkles />{' '}
+              {generateProgram.isPending ? 'Génération…' : 'Générer le programme'}
             </Button>
           </form>
         </CardContent>

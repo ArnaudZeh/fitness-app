@@ -22,9 +22,14 @@ import {
   useSessionTemplateExercises,
   useSessionTemplates,
 } from '@/hooks/useSessionTemplates'
-import { useAllSessionLogs, useSessionLogs, useStartSessionLog } from '@/hooks/useSessionLogs'
+import {
+  useAllSessionLogs,
+  useSessionLogs,
+  useStartSessionLog,
+} from '@/hooks/useSessionLogs'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
+import { useCoachingProfile } from '@/hooks/useCoachingProfile'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
@@ -119,7 +124,10 @@ export function HomePage() {
 // hover state (there's no pointer on a phone).
 function DashboardCard({ children }: { children: ReactNode }) {
   return (
-    <motion.div variants={cardVariants} whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}>
+    <motion.div
+      variants={cardVariants}
+      whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
+    >
       {children}
     </motion.div>
   )
@@ -193,7 +201,8 @@ function WeeklyRingsSection({
 
   const sessionsThisWeek = countCompletedSessionsThisWeek(allLogs)
   const weeklyTarget = (templates ?? []).filter((t) => t.day_type === 'training').length
-  const sessionsRatio = weeklyTarget > 0 ? Math.min(1, sessionsThisWeek / weeklyTarget) : null
+  const sessionsRatio =
+    weeklyTarget > 0 ? Math.min(1, sessionsThisWeek / weeklyTarget) : null
 
   const tonnage = computeWeeklyTonnageProgress(history, getCompletedSessionDates(allLogs))
   const weightGoal = computeWeightGoalProgress(weightEntries, targetWeightKg)
@@ -201,7 +210,9 @@ function WeeklyRingsSection({
   const latestWeight = weightEntries[0]
   const previousWeight = weightEntries[1]
   const weightDelta =
-    latestWeight && previousWeight ? latestWeight.weight_kg - previousWeight.weight_kg : null
+    latestWeight && previousWeight
+      ? latestWeight.weight_kg - previousWeight.weight_kg
+      : null
 
   const rings: [RingDatum, RingDatum, RingDatum] = [
     {
@@ -276,7 +287,7 @@ function WeeklyRingsSection({
               <p className="text-sm text-muted-foreground">
                 {weeklyTarget > 0
                   ? `Objectif basé sur les ${weeklyTarget} jour${weeklyTarget > 1 ? 's' : ''} d'entraînement de ton programme actif.`
-                  : "Active un programme pour définir un objectif hebdomadaire."}
+                  : 'Active un programme pour définir un objectif hebdomadaire.'}
               </p>
             </>
           )}
@@ -320,7 +331,9 @@ function WeeklyRingsSection({
               </DialogHeader>
               {!latestWeight ? (
                 <>
-                  <p className="text-sm text-muted-foreground">Aucune pesée enregistrée.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Aucune pesée enregistrée.
+                  </p>
                   <Button asChild size="sm" className="self-start">
                     <Link to="/profile">Enregistrer mon poids</Link>
                   </Button>
@@ -340,7 +353,11 @@ function WeeklyRingsSection({
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>Objectif : {targetWeightKg} kg</span>
                       <Badge
-                        variant={latestWeight.weight_kg === targetWeightKg ? 'default' : 'outline'}
+                        variant={
+                          latestWeight.weight_kg === targetWeightKg
+                            ? 'default'
+                            : 'outline'
+                        }
                       >
                         {latestWeight.weight_kg === targetWeightKg
                           ? 'Atteint'
@@ -425,7 +442,8 @@ function TodayCard({ program }: { program: Program | undefined }) {
   }
 
   const muscleLabel =
-    relevantTemplate.muscle_group_label ?? computeSuggestedMuscleGroupLabel(exercises ?? [])
+    relevantTemplate.muscle_group_label ??
+    computeSuggestedMuscleGroupLabel(exercises ?? [])
   const title = muscleLabel ?? WEEKDAY_LABELS[relevantTemplate.day_of_week] ?? 'Séance'
 
   if (todayLog) {
@@ -445,7 +463,9 @@ function TodayCard({ program }: { program: Program | undefined }) {
                 title={title}
                 subtitle={
                   <span className="flex items-center gap-2">
-                    <Badge variant={todayLog.status === 'completed' ? 'default' : 'outline'}>
+                    <Badge
+                      variant={todayLog.status === 'completed' ? 'default' : 'outline'}
+                    >
                       {todayLog.status === 'completed' ? 'Terminée' : 'En cours'}
                     </Badge>
                     <span>
@@ -499,7 +519,10 @@ function AiTrendAnalysisCard({
   weightEntries: NonNullable<ReturnType<typeof useWeightEntries>['data']>
 }) {
   const { data: keyStatuses } = useAiProviderKeys()
-  const { data: cycleEntries } = useCycleEntries({ enabled: profile.cycle_module_enabled })
+  const { data: cycleEntries } = useCycleEntries({
+    enabled: profile.cycle_module_enabled,
+  })
+  const { data: coachingProfile } = useCoachingProfile()
   const analyzeTrends = useAnalyzeTrends()
   const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
   const [open, setOpen] = useState(false)
@@ -519,7 +542,10 @@ function AiTrendAnalysisCard({
               <RowIcon>
                 <Sparkles className="size-5" />
               </RowIcon>
-              <RowText title="Analyse IA" subtitle="Configure une clé API dans ton profil →" />
+              <RowText
+                title="Analyse IA"
+                subtitle="Configure une clé API dans ton profil →"
+              />
             </CardContent>
           </Card>
         </Link>
@@ -549,7 +575,8 @@ function AiTrendAnalysisCard({
           <DialogHeader>
             <DialogTitle>Analyse IA</DialogTitle>
             <DialogDescription>
-              Tendance de tes 8 dernières semaines (un appel à ta propre clé à chaque analyse).
+              Tendance de tes 8 dernières semaines (un appel à ta propre clé à chaque
+              analyse).
             </DialogDescription>
           </DialogHeader>
 
@@ -597,11 +624,17 @@ function AiTrendAnalysisCard({
               analyzeTrends.mutate({
                 provider: activeProvider,
                 summary: buildTrendSummary(history),
-                profileContext: buildUserProfileContext(profile, weightEntries, cycleEntries ?? []),
+                profileContext: buildUserProfileContext(
+                  profile,
+                  weightEntries,
+                  cycleEntries ?? [],
+                  coachingProfile ?? null,
+                ),
               })
             }}
           >
-            <Sparkles /> {analyzeTrends.isPending ? 'Analyse en cours…' : 'Analyser mes progrès'}
+            <Sparkles />{' '}
+            {analyzeTrends.isPending ? 'Analyse en cours…' : 'Analyser mes progrès'}
           </Button>
         </DialogContent>
       </Dialog>

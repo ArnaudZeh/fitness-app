@@ -10,6 +10,7 @@ import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
+import { useCoachingProfile } from '@/hooks/useCoachingProfile'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useSpeechToText } from '@/hooks/useSpeechToText'
 import { useTextToSpeech } from '@/hooks/useTextToSpeech'
@@ -59,7 +60,9 @@ function ExerciseList({
         <li key={`${exercise.exerciseName}-${index}`} className="flex items-center gap-2">
           <ExerciseThumbnail
             imageUrl={thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null}
-            muscleGroup={thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null}
+            muscleGroup={
+              thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null
+            }
           />
           <span>
             {exercise.exerciseName} · {exercise.targetSets} × {exercise.targetRepsMin}-
@@ -148,7 +151,10 @@ export function CoachPage() {
   const { data: keyStatuses, isLoading: isLoadingKeyStatuses } = useAiProviderKeys()
   const { data: profile } = useProfile()
   const { data: weightEntries } = useWeightEntries()
-  const { data: cycleEntries } = useCycleEntries({ enabled: Boolean(profile?.cycle_module_enabled) })
+  const { data: cycleEntries } = useCycleEntries({
+    enabled: Boolean(profile?.cycle_module_enabled),
+  })
+  const { data: coachingProfile } = useCoachingProfile()
   const { data: history } = useSetHistory()
   const { data: programStructure } = useActiveProgramSnapshot()
   const { data: messages } = useAssistantMessages()
@@ -173,7 +179,11 @@ export function CoachPage() {
     new Map(
       (history ?? []).map((record) => [
         record.exerciseId,
-        { id: record.exerciseId, name: record.exerciseName, muscleGroup: record.muscleGroup },
+        {
+          id: record.exerciseId,
+          name: record.exerciseName,
+          muscleGroup: record.muscleGroup,
+        },
       ]),
     ).values(),
   )
@@ -189,13 +199,21 @@ export function CoachPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!activeProvider || !profile || draft.trim() === '') return
-    const conversationHistory = (messages ?? []).map((m) => ({ role: m.role, content: m.content }))
+    const conversationHistory = (messages ?? []).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }))
     sendMessage.mutate(
       {
         provider: activeProvider,
         message: draft.trim(),
         conversationHistory,
-        profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
+        profileContext: buildUserProfileContext(
+          profile,
+          weightEntries ?? [],
+          cycleEntries ?? [],
+          coachingProfile ?? null,
+        ),
         trendSummary: buildTrendSummary(history ?? []),
         programStructure: programStructure ?? [],
         availableExercises,
@@ -235,8 +253,8 @@ export function CoachPage() {
             <div className="flex flex-col gap-1">
               <p className="font-medium">Ton coach n'est pas encore configuré</p>
               <p className="mx-auto max-w-xs text-sm text-muted-foreground">
-                Connecte ta propre clé API (Anthropic ou OpenAI) pour discuter de ta progression,
-                générer un programme ou adapter une séance à la volée.
+                Connecte ta propre clé API (Anthropic ou OpenAI) pour discuter de ta
+                progression, générer un programme ou adapter une séance à la volée.
               </p>
             </div>
             <Button asChild size="sm">
@@ -264,8 +282,9 @@ export function CoachPage() {
 
           {(messages ?? []).length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Pose une question sur ta progression, demande un programme ou une adaptation de
-              séance : ton coach a accès à ton profil, ton historique et ton programme actif.
+              Pose une question sur ta progression, demande un programme ou une adaptation
+              de séance : ton coach a accès à ton profil, ton historique et ton programme
+              actif.
             </p>
           )}
 
@@ -313,7 +332,7 @@ export function CoachPage() {
             <p role="alert" className="text-sm text-destructive">
               {sendMessage.error instanceof Error
                 ? sendMessage.error.message
-                : "Impossible de contacter le coach."}
+                : 'Impossible de contacter le coach.'}
             </p>
           )}
 
@@ -326,7 +345,9 @@ export function CoachPage() {
                 className="self-start"
                 disabled={sendMessage.isPending}
                 onClick={() =>
-                  voiceInput.isListening ? voiceInput.stopListening() : voiceInput.startListening()
+                  voiceInput.isListening
+                    ? voiceInput.stopListening()
+                    : voiceInput.startListening()
                 }
               >
                 {voiceInput.isListening ? (

@@ -2,6 +2,18 @@ import type { Goal, Profile, Sex } from '@/lib/profile-api'
 import type { WeightEntry } from '@/lib/weight-api'
 import type { CycleEntry } from '@/lib/cycle-api'
 import { computeCyclePhase, type CyclePhase } from '@/lib/cycle-phase'
+import type { CoachingProfile } from '@/lib/coaching-profile-api'
+
+// The full fiche coaching (objectifs, antécédents médicaux, blessures,
+// nutrition, sommeil, mode de vie…) minus row metadata the AI has no use
+// for. Sent as one opaque block, same philosophy as the rest of this file —
+// every couche IA Edge Function already relays profileContext as `unknown`
+// straight into the prompt (see coach-persona.ts), so adding fields here
+// needs no server-side change.
+export type CoachingProfileContext = Omit<
+  CoachingProfile,
+  'id' | 'created_at' | 'updated_at'
+>
 
 export interface UserProfileContext {
   sex: Sex | null
@@ -11,6 +23,7 @@ export interface UserProfileContext {
   targetWeightKg: number | null
   currentWeightKg: number | null
   cyclePhase: { phase: CyclePhase; cycleDay: number } | null
+  coaching: CoachingProfileContext | null
 }
 
 // Whole years, not just a year subtraction — someone born on 2000-12-30
@@ -39,10 +52,24 @@ function toLocalDateString(now: Date): string {
 // most-recent-first (fetchWeightEntries already orders this way);
 // cycleEntries is expected sorted oldest-first (fetchCycleEntries already
 // orders this way — same convention computeCyclePhase itself expects).
+function toCoachingContext(
+  coachingProfile: CoachingProfile | null,
+): CoachingProfileContext | null {
+  if (!coachingProfile) return null
+  const {
+    id: _id,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    ...rest
+  } = coachingProfile
+  return rest
+}
+
 export function buildUserProfileContext(
   profile: Profile,
   weightEntries: Pick<WeightEntry, 'weight_kg'>[],
   cycleEntries: Pick<CycleEntry, 'start_date'>[],
+  coachingProfile: CoachingProfile | null,
   now: Date = new Date(),
 ): UserProfileContext {
   // Opt-in, same as everywhere else the cycle module appears: never compute
@@ -65,5 +92,6 @@ export function buildUserProfileContext(
     cyclePhase: cyclePhaseResult
       ? { phase: cyclePhaseResult.phase, cycleDay: cyclePhaseResult.cycleDay }
       : null,
+    coaching: toCoachingContext(coachingProfile),
   }
 }

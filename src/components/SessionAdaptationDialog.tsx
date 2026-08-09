@@ -17,8 +17,12 @@ import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
+import { useCoachingProfile } from '@/hooks/useCoachingProfile'
 import { useSetHistory } from '@/hooks/useAnalytics'
-import { useApplySessionAdaptation, useGenerateSessionAdaptation } from '@/hooks/useSessionAdaptation'
+import {
+  useApplySessionAdaptation,
+  useGenerateSessionAdaptation,
+} from '@/hooks/useSessionAdaptation'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
 import { buildUserProfileContext } from '@/lib/user-context'
 import { buildTrendSummary } from '@/lib/analytics'
@@ -42,7 +46,10 @@ export function SessionAdaptationDialog({
   const { data: keyStatuses } = useAiProviderKeys()
   const { data: profile } = useProfile()
   const { data: weightEntries } = useWeightEntries()
-  const { data: cycleEntries } = useCycleEntries({ enabled: Boolean(profile?.cycle_module_enabled) })
+  const { data: cycleEntries } = useCycleEntries({
+    enabled: Boolean(profile?.cycle_module_enabled),
+  })
+  const { data: coachingProfile } = useCoachingProfile()
   const { data: history } = useSetHistory()
   const generateAdaptation = useGenerateSessionAdaptation()
   const applyAdaptation = useApplySessionAdaptation(sessionTemplateId)
@@ -56,7 +63,11 @@ export function SessionAdaptationDialog({
     new Map(
       (history ?? []).map((record) => [
         record.exerciseId,
-        { id: record.exerciseId, name: record.exerciseName, muscleGroup: record.muscleGroup },
+        {
+          id: record.exerciseId,
+          name: record.exerciseName,
+          muscleGroup: record.muscleGroup,
+        },
       ]),
     ).values(),
   )
@@ -81,7 +92,12 @@ export function SessionAdaptationDialog({
     if (!activeProvider || !profile) return
     generateAdaptation.mutate({
       provider: activeProvider,
-      profileContext: buildUserProfileContext(profile, weightEntries ?? [], cycleEntries ?? []),
+      profileContext: buildUserProfileContext(
+        profile,
+        weightEntries ?? [],
+        cycleEntries ?? [],
+        coachingProfile ?? null,
+      ),
       trendSummary: buildTrendSummary(history ?? []),
       currentExercises: currentSlots.map((slot) => ({
         exerciseId: slot.exercise_id,
@@ -122,8 +138,8 @@ export function SessionAdaptationDialog({
         {configuredProviders.length === 0 && (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              Configure une clé API (Anthropic ou OpenAI) dans ton profil pour adapter cette
-              séance.
+              Configure une clé API (Anthropic ou OpenAI) dans ton profil pour adapter
+              cette séance.
             </p>
             <Button asChild size="sm" className="self-start">
               <Link to="/profile">Configurer une clé</Link>
@@ -133,8 +149,8 @@ export function SessionAdaptationDialog({
 
         {configuredProviders.length > 0 && availableExercises.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Logue quelques séances d'abord. L'IA ne propose que des exercices que tu as déjà
-            pratiqués.
+            Logue quelques séances d'abord. L'IA ne propose que des exercices que tu as
+            déjà pratiqués.
           </p>
         )}
 
@@ -189,7 +205,9 @@ export function SessionAdaptationDialog({
 
         {generateAdaptation.data && (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">{generateAdaptation.data.rationale}</p>
+            <p className="text-sm text-muted-foreground">
+              {generateAdaptation.data.rationale}
+            </p>
             <ul className="flex flex-col gap-2">
               {generateAdaptation.data.exercises.map((exercise, index) => (
                 <li
@@ -197,15 +215,21 @@ export function SessionAdaptationDialog({
                   className="flex items-center gap-2 rounded-md border border-border p-2"
                 >
                   <ExerciseThumbnail
-                    imageUrl={thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null}
-                    muscleGroup={thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null}
+                    imageUrl={
+                      thumbnailByExerciseId.get(exercise.exerciseId)?.imageUrl ?? null
+                    }
+                    muscleGroup={
+                      thumbnailByExerciseId.get(exercise.exerciseId)?.muscleGroup ?? null
+                    }
                   />
                   <div>
                     <p className="font-medium">{exercise.exerciseName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {exercise.targetSets} × {exercise.targetRepsMin}-{exercise.targetRepsMax} reps
+                      {exercise.targetSets} × {exercise.targetRepsMin}-
+                      {exercise.targetRepsMax} reps
                       {exercise.targetRpe !== null && ` @RPE ${exercise.targetRpe}`}
-                      {exercise.targetWeightKg !== null && ` · ${exercise.targetWeightKg} kg`}
+                      {exercise.targetWeightKg !== null &&
+                        ` · ${exercise.targetWeightKg} kg`}
                     </p>
                   </div>
                 </li>
@@ -234,7 +258,11 @@ export function SessionAdaptationDialog({
               >
                 Régénérer
               </Button>
-              <Button type="button" variant="ghost" onClick={() => generateAdaptation.reset()}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => generateAdaptation.reset()}
+              >
                 Annuler
               </Button>
             </DialogFooter>
