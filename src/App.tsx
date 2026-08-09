@@ -27,6 +27,9 @@ const ProgramDetailPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
 )
+const CoachingProfilePage = lazy(() =>
+  import('@/pages/CoachingProfilePage').then((m) => ({ default: m.CoachingProfilePage })),
+)
 const SessionLogPage = lazy(() =>
   import('@/pages/SessionLogPage').then((m) => ({ default: m.SessionLogPage })),
 )
@@ -85,6 +88,7 @@ function App() {
               <Route path="/programs/generate" element={<ProgramGeneratePage />} />
               <Route path="/programs/:id" element={<ProgramDetailPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/coaching" element={<CoachingProfilePage />} />
               <Route path="/sessions/:id" element={<SessionLogPage />} />
               <Route path="/bien-etre" element={<WellnessPage />} />
               <Route path="/cycle" element={<CyclePage />} />
