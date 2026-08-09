@@ -22,6 +22,7 @@ test('downloads a JSON export with the expected shape', async ({ page }) => {
   expect(content.schema_version).toBe(1)
   expect(typeof content.exported_at).toBe('string')
   expect(content.profile).toBeTruthy()
+  expect(content.coaching_profile).toBeTruthy()
   for (const key of [
     'weight_entries',
     'exercises',

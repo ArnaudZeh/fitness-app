@@ -5,6 +5,10 @@ import type { Database } from '@/lib/database.types'
 type Row<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row']
 
+export type ExportedCoachingProfile = Omit<
+  Row<'coaching_profile'>,
+  'id' | 'created_at' | 'updated_at'
+>
 export type ExportedWeightEntry = Omit<Row<'weight_entries'>, 'user_id'>
 export type ExportedExercise = Pick<
   Row<'exercises'>,
@@ -26,6 +30,9 @@ export interface UserDataExport {
     Row<'profiles'>,
     'display_name' | 'date_of_birth' | 'sex' | 'height_cm' | 'goal' | 'target_weight_kg'
   >
+  // Optional: absent on export files created before this field existed.
+  // Always populated by exportUserData() itself for any current export.
+  coaching_profile?: ExportedCoachingProfile
   weight_entries: ExportedWeightEntry[]
   exercises: ExportedExercise[]
   programs: ExportedProgram[]
@@ -48,6 +55,11 @@ function stripUserId<T extends { user_id: unknown }>(row: T): Omit<T, 'user_id'>
   return rest
 }
 
+function stripCoachingProfileMetadata(row: Row<'coaching_profile'>): ExportedCoachingProfile {
+  const { id: _id, created_at: _createdAt, updated_at: _updatedAt, ...rest } = row
+  return rest
+}
+
 export async function exportUserData(): Promise<UserDataExport> {
   const userId = await requireUserId()
 
@@ -57,6 +69,13 @@ export async function exportUserData(): Promise<UserDataExport> {
     .eq('id', userId)
     .single()
   if (profileResult.error) throw profileResult.error
+
+  const coachingProfileResult = await supabase
+    .from('coaching_profile')
+    .select('*')
+    .eq('id', userId)
+    .single()
+  if (coachingProfileResult.error) throw coachingProfileResult.error
 
   const weightEntriesResult = await supabase
     .from('weight_entries')
@@ -101,6 +120,7 @@ export async function exportUserData(): Promise<UserDataExport> {
     schema_version: 1,
     exported_at: new Date().toISOString(),
     profile: profileResult.data,
+    coaching_profile: stripCoachingProfileMetadata(coachingProfileResult.data),
     weight_entries: weightEntriesResult.data.map(stripUserId),
     exercises: exercisesResult.data,
     programs: programsResult.data.map(stripUserId),
@@ -206,6 +226,19 @@ export async function importUserData(data: UserDataExport): Promise<ImportResult
     .update(data.profile)
     .eq('id', userId)
   if (profileError) errors.push(`Profil : ${profileError.message}`)
+
+  // Optional: absent on export files created before this field existed —
+  // the coaching_profile row itself always exists already (backfilled/
+  // auto-created), so this is an update, never an insert.
+  if (data.coaching_profile) {
+    const { error: coachingProfileError } = await supabase
+      .from('coaching_profile')
+      .update(data.coaching_profile)
+      .eq('id', userId)
+    if (coachingProfileError) {
+      errors.push(`Fiche coaching : ${coachingProfileError.message}`)
+    }
+  }
 
   if (data.weight_entries.length > 0) {
     const { error } = await supabase.from('weight_entries').upsert(

@@ -27,8 +27,9 @@ export function DataOwnershipSection() {
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            Télécharge une copie de toutes tes données (profil, programmes, séances,
-            poids) au format JSON.
+            Télécharge une copie de toutes tes données (profil, fiche coaching, programmes,
+            séances, poids) au format JSON — pratique pour la coller dans un autre
+            assistant IA (Claude Desktop, etc.).
           </p>
           <Button
             variant="outline"
@@ -79,8 +80,16 @@ export function DataOwnershipSection() {
 
 type ExportArrayKey = Exclude<
   keyof UserDataExport,
-  'schema_version' | 'exported_at' | 'profile'
+  'schema_version' | 'exported_at' | 'profile' | 'coaching_profile'
 >
+
+// coaching_profile is absent on export files created before this field
+// existed — parseUserDataExport() doesn't reject those for backward
+// compatibility, so this must tolerate it being missing too.
+function filledCoachingFieldsCount(parsed: UserDataExport): number {
+  return Object.values(parsed.coaching_profile ?? {}).filter((value) => value !== null)
+    .length
+}
 
 const SUMMARY_LABELS: [key: ExportArrayKey, label: string][] = [
   ['programs', 'programmes'],
@@ -147,6 +156,9 @@ function ImportSection() {
         <div className="flex flex-col gap-2 rounded-md border border-border p-3">
           <p className="text-sm font-medium">Contenu du fichier :</p>
           <ul className="text-sm text-muted-foreground">
+            {filledCoachingFieldsCount(parsed) > 0 && (
+              <li>{filledCoachingFieldsCount(parsed)} champs de fiche coaching</li>
+            )}
             {SUMMARY_LABELS.filter(([key]) => parsed[key].length > 0).map(
               ([key, label]) => (
                 <li key={key}>
