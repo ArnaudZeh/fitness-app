@@ -94,7 +94,19 @@ export function AppLayout() {
       <main
         ref={mainRef}
         className={cn(
-          'mx-auto min-h-0 w-full max-w-2xl flex-1 p-4 pb-24 sm:pb-4',
+          // relative: without it, `<main>` is position:static, so an
+          // absolutely-positioned descendant with no other positioned
+          // ancestor (e.g. Radix Select's hidden native <select>, used for
+          // form/autofill sync) establishes its containing block all the
+          // way up at <html> instead of here. On a long page with several
+          // Select fields (the coaching profile form), that inflates
+          // document.documentElement.scrollHeight past the real viewport
+          // even though <main> itself clips correctly — which lets iOS
+          // Safari rubber-band-scroll the whole page into blank space
+          // below the real content. Confirmed by toggling this on/off:
+          // scrollHeight drops from 1576 to the correct 844 the instant
+          // <main> becomes a containing block.
+          'relative mx-auto min-h-0 w-full max-w-2xl flex-1 p-4 pb-24 sm:pb-4',
           isDashboard ? 'overflow-hidden' : 'overflow-y-auto',
         )}
       >
