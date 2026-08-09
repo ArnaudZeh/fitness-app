@@ -22,6 +22,7 @@ import { ContributionHeatmap } from '@/components/ContributionHeatmap'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAllSessionLogs } from '@/hooks/useSessionLogs'
+import { useMeasurements } from '@/hooks/useMeasurements'
 import {
   computeDailyVolume,
   computeOneRepMaxProgression,
@@ -29,6 +30,12 @@ import {
   getCompletedSessionDates,
   getLoggedExercises,
 } from '@/lib/analytics'
+import {
+  MEASUREMENT_FIELD_LABELS,
+  buildMeasurementTrend,
+  getLoggedMeasurementFields,
+  type MeasurementField,
+} from '@/lib/measurements-display'
 
 // These are already plain calendar dates (YYYY-MM-DD, local to the viewer —
 // see toLocalDateString), not instants — must render in UTC. Without an
@@ -47,7 +54,11 @@ function formatShortDate(dateStr: string): string {
 export function AnalyticsPage() {
   const { data, isLoading, isError } = useSetHistory()
   const allLogs = useAllSessionLogs()
+  const { data: measurements } = useMeasurements()
   const [selectedExerciseId, setSelectedExerciseId] = useState('')
+  const [selectedMeasurementField, setSelectedMeasurementField] = useState<
+    MeasurementField | ''
+  >('')
 
   if (isLoading) return <p className="text-muted-foreground">Chargement…</p>
   if (isError)
@@ -59,10 +70,13 @@ export function AnalyticsPage() {
 
   const history = data ?? []
   const activeDates = getCompletedSessionDates(allLogs ?? [])
+  const measurementEntries = measurements ?? []
 
   // A completed session with no sets entered still counts as activity —
-  // only bail out to the empty state when there's truly nothing at all.
-  if (history.length === 0 && activeDates.size === 0) {
+  // only bail out to the empty state when there's truly nothing at all,
+  // including body measurements (a user could have only those, no training
+  // history yet).
+  if (history.length === 0 && activeDates.size === 0 && measurementEntries.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold">Analytics</h1>
@@ -87,6 +101,18 @@ export function AnalyticsPage() {
     label: formatShortDate(point.weekStart),
   }))
   const dailyVolume = computeDailyVolume(history)
+
+  const loggedMeasurementFields = getLoggedMeasurementFields(measurementEntries)
+  const effectiveMeasurementField =
+    selectedMeasurementField || (loggedMeasurementFields[0] ?? '')
+  const measurementTrend = effectiveMeasurementField
+    ? buildMeasurementTrend(measurementEntries, effectiveMeasurementField).map(
+        (point) => ({
+          ...point,
+          label: formatShortDate(point.date),
+        }),
+      )
+    : []
 
   return (
     <div className="flex flex-col gap-4">
@@ -209,6 +235,84 @@ export function AnalyticsPage() {
             1RM estimé = moyenne des formules Epley et Brzycki, fiable jusqu'à ~12
             répétitions. Au-delà, seule la charge max est affichée.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle as="h2">Évolution des mensurations</CardTitle>
+          {loggedMeasurementFields.length > 0 && (
+            <Select
+              value={effectiveMeasurementField}
+              onValueChange={(value: string) =>
+                setSelectedMeasurementField(value as MeasurementField)
+              }
+            >
+              <SelectTrigger aria-label="Choisir une mensuration">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {loggedMeasurementFields.map((field) => (
+                  <SelectItem key={field} value={field}>
+                    {MEASUREMENT_FIELD_LABELS[field]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </CardHeader>
+        <CardContent>
+          {loggedMeasurementFields.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucune mensuration enregistrée. Ajoutes-en depuis ton profil pour voir leur
+              évolution ici.
+            </p>
+          ) : measurementTrend.length < 2 ? (
+            <p className="text-sm text-muted-foreground">
+              Il faut au moins deux mesures pour tracer une évolution.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={measurementTrend}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="label"
+                  className="fill-muted-foreground text-xs"
+                  tickLine={false}
+                />
+                <YAxis
+                  className="fill-muted-foreground text-xs"
+                  tickLine={false}
+                  domain={['dataMin - 2', 'dataMax + 2']}
+                />
+                <Tooltip
+                  cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+                  formatter={(value) => [
+                    `${Number(value)} cm`,
+                    MEASUREMENT_FIELD_LABELS[
+                      effectiveMeasurementField as MeasurementField
+                    ],
+                  ]}
+                  contentStyle={{
+                    background: 'var(--popover)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}
+                  labelStyle={{ color: 'var(--popover-foreground)', fontWeight: 600 }}
+                  itemStyle={{ color: 'var(--popover-foreground)' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="valueCm"
+                  className="stroke-primary"
+                  strokeWidth={2}
+                  connectNulls
+                  dot={false}
+                  activeDot={{ className: 'fill-primary', stroke: 'var(--background)' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>
