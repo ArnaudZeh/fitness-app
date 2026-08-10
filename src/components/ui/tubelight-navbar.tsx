@@ -35,7 +35,7 @@ export function NavBar({ items, className }: NavBarProps) {
   return (
     <div
       className={cn(
-        'flex w-full items-stretch gap-0.5 rounded-2xl border border-border bg-background/80 p-1 shadow-lg backdrop-blur-lg sm:w-auto sm:items-center sm:gap-1 sm:rounded-full',
+        'glass-nav flex w-full items-stretch gap-0.5 rounded-2xl border border-white/10 p-1 sm:w-auto sm:items-center sm:gap-1 sm:rounded-full',
         className,
       )}
     >
@@ -49,7 +49,7 @@ export function NavBar({ items, className }: NavBarProps) {
             to={item.url}
             aria-label={item.ariaLabel ?? item.name}
             className={cn(
-              'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-xs leading-tight font-medium text-foreground/70 transition-colors',
+              'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-xs leading-tight font-medium text-foreground/70 transition-[color,transform] duration-150 ease-out active:scale-90',
               'sm:flex-none sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:py-2 sm:text-sm sm:leading-normal',
               'hover:text-primary',
               isActive && 'text-primary',
@@ -67,7 +67,7 @@ export function NavBar({ items, className }: NavBarProps) {
             {isActive && (
               <motion.div
                 layoutId="tubelight-active"
-                className="absolute inset-0 -z-10 rounded-xl bg-primary/10 sm:rounded-full"
+                className="glass-active-pill absolute inset-0 -z-10 rounded-xl sm:rounded-full"
                 initial={false}
                 transition={{ type: 'spring', stiffness: 350, damping: 30 }}
               >
