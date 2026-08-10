@@ -1,7 +1,12 @@
-import { Link, useLocation } from 'react-router'
-import { motion } from 'framer-motion'
+import { Link, useLocation, useNavigate } from 'react-router'
+import { motion, type PanInfo } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+// Minimum horizontal travel before a pan on the bar commits to switching
+// tabs — small pans (most taps drift a few px) must NOT navigate, only a
+// deliberate swipe should.
+const SWIPE_THRESHOLD_PX = 48
 
 export interface NavItem {
   name: string
@@ -31,9 +36,30 @@ interface NavBarProps {
 // pill with icon and label side by side.
 export function NavBar({ items, className }: NavBarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  // Swipe across the bar itself to move to the adjacent tab — only from one
+  // of the 5 top-level tabs (a sub-route like /programs/:id has no obvious
+  // "adjacent" tab, so swiping there is simply a no-op rather than guessing).
+  function handlePanEnd(_event: PointerEvent, info: PanInfo) {
+    if (
+      Math.abs(info.offset.x) < SWIPE_THRESHOLD_PX ||
+      Math.abs(info.offset.x) < Math.abs(info.offset.y)
+    )
+      return
+
+    const currentIndex = items.findIndex((item) => item.url === location.pathname)
+    if (currentIndex === -1) return
+
+    const nextIndex = info.offset.x < 0 ? currentIndex + 1 : currentIndex - 1
+    const nextItem = items[nextIndex]
+    if (!nextItem) return
+    void navigate(nextItem.url)
+  }
 
   return (
-    <div
+    <motion.div
+      onPanEnd={handlePanEnd}
       className={cn(
         'glass-nav flex w-full items-stretch gap-0.5 rounded-2xl border border-white/10 p-1 sm:w-auto sm:items-center sm:gap-1 sm:rounded-full',
         className,
@@ -79,6 +105,6 @@ export function NavBar({ items, className }: NavBarProps) {
           </Link>
         )
       })}
-    </div>
+    </motion.div>
   )
 }
