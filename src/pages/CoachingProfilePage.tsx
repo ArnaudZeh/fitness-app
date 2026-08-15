@@ -84,7 +84,7 @@ export function CoachingProfilePage() {
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
-        Tout est facultatif — plus c’est rempli, plus le coach IA (et un export vers un autre
+        Tout est facultatif : plus c’est rempli, plus le coach IA (et un export vers un autre
         assistant) peut te guider précisément. Rien de ce qui est ici n’est jamais visible par
         tes amis ni public.
       </p>

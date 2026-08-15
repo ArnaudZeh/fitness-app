@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { useUpdateNutritionTargets } from '@/hooks/useNutritionTargets'
 import {
+  caloriesFromMacros,
   computeAge,
   computeNutritionTargets,
   DAILY_ACTIVITY_LEVEL_LABELS,
@@ -65,11 +66,18 @@ export function NutritionTargetsCard({
   const [activityLevel, setActivityLevel] = useState<string>(
     targets.activity_level ?? NONE_VALUE,
   )
-  const [calories, setCalories] = useState(targets.calories_target?.toString() ?? '')
   const [proteinG, setProteinG] = useState(targets.protein_g_target?.toString() ?? '')
   const [carbsG, setCarbsG] = useState(targets.carbs_g_target?.toString() ?? '')
   const [fatG, setFatG] = useState(targets.fat_g_target?.toString() ?? '')
   const updateNutritionTargets = useUpdateNutritionTargets()
+
+  // Calories are never typed directly — they're always the sum of the
+  // three macros below, so editing protein/carbs/fat always moves the
+  // calorie total too, and the two can never silently disagree.
+  const macrosAreEmpty = proteinG.trim() === '' && carbsG.trim() === '' && fatG.trim() === ''
+  const computedCalories = macrosAreEmpty
+    ? null
+    : caloriesFromMacros(Number(proteinG) || 0, Number(carbsG) || 0, Number(fatG) || 0)
 
   const missing = missingProfileFields(profile, latestWeightKg)
   const usingSteps = avgDailySteps !== null && avgDailySteps > 0
@@ -102,7 +110,6 @@ export function NutritionTargetsCard({
       avgWeeklyTrainingMinutes,
       goal: profile.goal,
     })
-    setCalories(result.caloriesTarget.toString())
     setProteinG(result.proteinGTarget.toString())
     setCarbsG(result.carbsGTarget.toString())
     setFatG(result.fatGTarget.toString())
@@ -130,7 +137,7 @@ export function NutritionTargetsCard({
     event.preventDefault()
     await updateNutritionTargets.mutateAsync({
       activity_level: activityLevel === NONE_VALUE ? null : (activityLevel as DailyActivityLevel),
-      calories_target: calories.trim() === '' ? null : Number(calories),
+      calories_target: computedCalories,
       protein_g_target: proteinG.trim() === '' ? null : Number(proteinG),
       carbs_g_target: carbsG.trim() === '' ? null : Number(carbsG),
       fat_g_target: fatG.trim() === '' ? null : Number(fatG),
@@ -211,7 +218,7 @@ export function NutritionTargetsCard({
               {usingSteps ? (
                 <p className="text-xs text-muted-foreground">
                   Basé sur tes ~{avgDailySteps.toLocaleString('fr-FR')} pas/jour en moyenne (fiche
-                  coaching), plus précis que le menu ci-dessus — qui n'est pas utilisé tant que ce
+                  coaching), plus précis que le menu ci-dessus, qui n'est pas utilisé tant que ce
                   champ reste rempli.
                 </p>
               ) : (
@@ -233,7 +240,7 @@ export function NutritionTargetsCard({
                 <Link to="/profile" className="text-primary hover:underline">
                   page profil
                 </Link>{' '}
-                pour calculer tes cibles automatiquement — tu peux sinon les saisir toi-même
+                pour calculer tes cibles automatiquement. Tu peux sinon les saisir toi-même
                 ci-dessous.
               </p>
             ) : (
@@ -249,20 +256,17 @@ export function NutritionTargetsCard({
 
             <p className="text-xs text-muted-foreground">
               Semaine plus active que d'habitude (rando, surf, déménagement…) ? Ajuste
-              simplement les valeurs ci-dessous à la main — il n'y a pas encore de suivi
+              simplement les valeurs ci-dessous à la main : il n'y a pas encore de suivi
               automatique pour ce type d'activité.
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="calories-target">Calories (kcal)</Label>
-                <Input
-                  id="calories-target"
-                  type="number"
-                  min={0}
-                  value={calories}
-                  onChange={(event) => setCalories(event.target.value)}
-                />
+                <Input id="calories-target" value={computedCalories ?? ''} disabled />
+                <p className="text-xs text-muted-foreground">
+                  Calculées à partir des protéines, glucides et lipides ci-dessous.
+                </p>
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="protein-target">Protéines (g)</Label>

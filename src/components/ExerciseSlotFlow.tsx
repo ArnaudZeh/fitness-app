@@ -396,7 +396,7 @@ export function ExerciseSlotFlow({
                       <p className="text-xs text-muted-foreground">
                         {isBodyweight
                           ? 'Lest ajouté (ex : +5) ou assistance retirée (ex : -10) par rapport au poids du corps seul. Laisser vide pour poids du corps seul.'
-                          : 'Poids de référence à atteindre sur cet exercice — pré-remplit la première série en séance et sert de repère de surcharge progressive (aussi utilisé par le Coach IA).'}
+                          : 'Poids de référence à atteindre sur cet exercice : pré-remplit la première série en séance et sert de repère de surcharge progressive (aussi utilisé par le Coach IA).'}
                       </p>
                     </div>
 
@@ -458,8 +458,8 @@ export function ExerciseSlotFlow({
                         <Label htmlFor="is-unilateral">Unilatéral</Label>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Un côté à la fois (ex : tirage vertical câble en unilatéral) —
-                        affiché comme repère pendant la séance.
+                        Un côté à la fois (ex : tirage vertical câble en unilatéral), affiché
+                        comme repère pendant la séance.
                       </p>
                     </div>
 
@@ -475,7 +475,7 @@ export function ExerciseSlotFlow({
                         <Label htmlFor="is-bodyweight">Poids du corps</Label>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Pas de charge externe requise (ex : abdos, pompes, tractions) — la
+                        Pas de charge externe requise (ex : abdos, pompes, tractions) : la
                         saisie en séance devient une charge additionnelle facultative
                         (lest ou assistance) plutôt qu'une charge totale.
                       </p>

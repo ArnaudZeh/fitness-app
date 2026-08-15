@@ -310,7 +310,7 @@ function WeeklyRingsSection({
                 {tonnage.lastWeekTonnageKg !== null
                   ? `${Math.round((tonnage.ratio ?? 0) * 100)}% du tonnage de la semaine dernière (${Math.round(tonnage.lastWeekTonnageKg)} kg).`
                   : tonnage.lastWeekHadSessions
-                    ? 'Séance(s) complétée(s) la semaine dernière, mais sans charge ni répétitions enregistrées — rien à comparer.'
+                    ? 'Séance(s) complétée(s) la semaine dernière, mais sans charge ni répétitions enregistrées, rien à comparer.'
                     : tonnage.thisWeekTonnageKg > 0
                       ? 'Aucune séance la semaine dernière pour comparer.'
                       : 'Pas encore de tonnage enregistré cette semaine.'}

@@ -62,7 +62,7 @@ export function LinkSupersetDialog({
         <DialogHeader>
           <DialogTitle>Lier {currentSlot.exercise.name} en superset</DialogTitle>
           <DialogDescription>
-            Choisis un autre exercice — ou un superset déjà existant — de ce jour pour les
+            Choisis un autre exercice (ou un superset déjà existant) de ce jour pour les
             enchaîner ensemble.
           </DialogDescription>
         </DialogHeader>

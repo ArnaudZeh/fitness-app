@@ -28,7 +28,7 @@ export function DataOwnershipSection() {
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
             Télécharge une copie de toutes tes données (profil, fiche coaching,
-            programmes, séances, poids, mensurations) au format JSON — pratique pour la
+            programmes, séances, poids, mensurations) au format JSON, pratique pour la
             coller dans un autre assistant IA (Claude Desktop, etc.).
           </p>
           <Button

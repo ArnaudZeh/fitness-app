@@ -65,7 +65,7 @@ export const COACHING_CATEGORIES: CoachingCategoryDef[] = [
   {
     id: 'antecedents_medicaux',
     title: 'Antécédents médicaux',
-    description: 'Sécurité avant tout — rien n’est partagé, jamais visible par des amis.',
+    description: 'Sécurité avant tout : rien n’est partagé, jamais visible par des amis.',
     defaultExpanded: true,
     fields: [
       { key: 'diagnosed_conditions', label: 'Pathologies diagnostiquées', type: 'textarea' },
@@ -164,7 +164,7 @@ export const COACHING_CATEGORIES: CoachingCategoryDef[] = [
         key: 'eating_disorder_history',
         label: 'Historique de troubles du comportement alimentaire',
         type: 'textarea',
-        helperText: 'Optionnel et sensible — à remplir seulement si tu es à l’aise, ça aide à adapter les recommandations en toute sécurité.',
+        helperText: 'Optionnel et sensible : à remplir seulement si tu es à l’aise, ça aide à adapter les recommandations en toute sécurité.',
       },
       { key: 'macro_tracking_experience', label: 'Expérience du tracking de calories/macros', type: 'text' },
       { key: 'estimated_daily_calories', label: 'Apport calorique quotidien estimé', type: 'number', min: 0 },
@@ -250,7 +250,7 @@ export const COACHING_CATEGORIES: CoachingCategoryDef[] = [
         key: 'scale_relationship',
         label: 'Rapport au chiffre sur la balance',
         type: 'textarea',
-        helperText: 'Optionnel — utile si c’est une source de stress plutôt qu’un repère neutre pour toi.',
+        helperText: 'Optionnel : utile si c’est une source de stress plutôt qu’un repère neutre pour toi.',
       },
       { key: 'communication_style_preference', label: 'Style de communication préféré', type: 'text' },
     ],

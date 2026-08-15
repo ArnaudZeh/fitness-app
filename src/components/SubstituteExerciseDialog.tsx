@@ -103,7 +103,7 @@ export function SubstituteExerciseDialog({
             <p className="pl-6 text-xs text-muted-foreground">
               {alsoUpdateProgram
                 ? 'Les prochaines séances utiliseront aussi ce nouvel exercice.'
-                : "Juste pour cette séance — le programme ne change pas."}
+                : 'Juste pour cette séance, le programme ne change pas.'}
             </p>
           </div>
 

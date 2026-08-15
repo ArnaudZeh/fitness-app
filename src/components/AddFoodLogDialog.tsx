@@ -123,7 +123,7 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Valeurs pour 100g — comme sur l'étiquette nutritionnelle.
+            Valeurs pour 100g, comme sur l'étiquette nutritionnelle.
           </p>
           <div className="flex flex-col gap-2">
             <Label htmlFor="food-calories">Calories pour 100g (kcal)</Label>

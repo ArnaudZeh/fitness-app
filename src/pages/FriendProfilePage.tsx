@@ -56,7 +56,7 @@ export function FriendProfilePage() {
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
       {isError && isPrivate && (
         <p className="text-muted-foreground">
-          Ce profil est privé — seuls ses amis peuvent le consulter.
+          Ce profil est privé, seuls ses amis peuvent le consulter.
         </p>
       )}
       {isError && !isPrivate && (

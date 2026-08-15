@@ -213,6 +213,16 @@ export function computeNutritionTargets(input: NutritionCalcInput): NutritionCal
   }
 }
 
+// Calories aren't an independent value — they're defined by the three
+// macros (4/4/9 kcal per gram). Used to keep the calorie target in sync
+// whenever protein/carbs/fat are edited by hand, instead of letting the
+// two drift apart.
+export function caloriesFromMacros(proteinG: number, carbsG: number, fatG: number): number {
+  return Math.round(
+    proteinG * KCAL_PER_G_PROTEIN + carbsG * KCAL_PER_G_CARBS + fatG * KCAL_PER_G_FAT,
+  )
+}
+
 export interface FoodLogTotals {
   calories: number
   proteinG: number | null

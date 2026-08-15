@@ -103,7 +103,7 @@ export function FeedPage() {
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
               Rien pour l'instant. Les objectifs de poids atteints, les records et les posts de tes
-              amis apparaîtront ici — ajoute des amis pour commencer.
+              amis apparaîtront ici. Ajoute des amis pour commencer.
             </p>
           </CardContent>
         </Card>

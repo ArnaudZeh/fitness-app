@@ -28,7 +28,7 @@ export function NotificationsCard() {
           <>
             <p className="text-sm text-muted-foreground">
               Fin de repos entre les séries, rappels bien-être programmés, activité sur le
-              feed — reçus même écran verrouillé.
+              feed : reçus même écran verrouillé.
             </p>
             {error && (
               <p role="alert" className="text-sm text-destructive">

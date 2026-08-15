@@ -200,7 +200,7 @@ function FriendsListCard({ entries }: { entries: FriendEntry[] }) {
       <CardContent>
         {entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Pas encore d'amis — cherche quelqu'un ci-dessus pour lui envoyer une demande.
+            Pas encore d'amis. Cherche quelqu'un ci-dessus pour lui envoyer une demande.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">

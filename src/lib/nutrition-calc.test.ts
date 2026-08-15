@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  caloriesFromMacros,
   computeAge,
   computeAverageWeeklyTrainingMinutes,
   computeBMR,
@@ -8,6 +9,16 @@ import {
   dailyActivityMultiplierFromSteps,
   trainingVolumeBump,
 } from '@/lib/nutrition-calc'
+
+describe('caloriesFromMacros', () => {
+  it('sums protein/carbs at 4 kcal/g and fat at 9 kcal/g', () => {
+    expect(caloriesFromMacros(150, 200, 60)).toBe(150 * 4 + 200 * 4 + 60 * 9)
+  })
+
+  it('returns 0 for all-zero macros', () => {
+    expect(caloriesFromMacros(0, 0, 0)).toBe(0)
+  })
+})
 
 describe('computeAge', () => {
   it('counts a full year once the birthday has passed this year', () => {
