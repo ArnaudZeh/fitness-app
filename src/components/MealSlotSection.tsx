@@ -32,7 +32,10 @@ export function MealSlotSection({ slot, logs, loggedDate }: MealSlotSectionProps
         {logs.map((log) => (
           <div key={log.id} className="flex items-center justify-between gap-2">
             <div className="flex flex-col">
-              <span className="text-sm">{log.name}</span>
+              <span className="text-sm">
+                {log.name}
+                {log.quantity_g !== null ? ` (${log.quantity_g}g)` : ''}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {log.calories} kcal
                 {log.protein_g !== null ? ` · P ${log.protein_g}g` : ''}

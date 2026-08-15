@@ -1,25 +1,52 @@
 import type { Goal, Sex } from '@/lib/profile-api'
 
-export type ActivityLevel = 'sedentaire' | 'leger' | 'modere' | 'actif' | 'tres_actif'
+// Daily/occupational activity only ("NEAT hors sport") — deliberately
+// narrower than a classic 5-way PAL category. A single blended category
+// (the original design) breaks down for a desk job combined with a
+// serious training schedule: picking "modéré" undercounts a heavy lifter,
+// picking "actif" overcounts the other 5 days spent at a desk. Structured
+// training volume is handled as a separate, derived factor below instead
+// (see TRAINING_FREQUENCY_BUMP) rather than folded into this scale.
+export type DailyActivityLevel = 'sedentaire' | 'modere' | 'physique'
 
-export const ACTIVITY_LEVEL_LABELS: Record<ActivityLevel, string> = {
-  sedentaire: 'Sédentaire (peu ou pas d\'exercice)',
-  leger: 'Légèrement actif (exercice 1-3x/semaine)',
-  modere: 'Modérément actif (exercice 3-5x/semaine)',
-  actif: 'Actif (exercice 6-7x/semaine)',
-  tres_actif: 'Très actif (exercice quotidien intense ou travail physique)',
+export const DAILY_ACTIVITY_LEVEL_LABELS: Record<DailyActivityLevel, string> = {
+  sedentaire: 'Sédentaire (bureau, peu de mouvement)',
+  modere: 'Modérément actif (debout, marche régulière)',
+  physique: 'Physique (métier manuel)',
 }
 
-// Classic PAL (Physical Activity Level) multipliers applied to BMR to get
-// TDEE — same category boundaries as the Harris-Benedict/Mifflin-St Jeor
-// activity factors used by most TDEE calculators (McArdle, Katch & Katch,
-// "Exercise Physiology").
-export const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
-  sedentaire: 1.2,
-  leger: 1.375,
-  modere: 1.55,
-  actif: 1.725,
-  tres_actif: 1.9,
+// Baseline PAL-equivalent multiplier for daily/occupational activity
+// alone, before any training is added — lower across the board than a
+// classic single-scale PAL (which bakes in an assumed activity/exercise
+// correlation this model deliberately doesn't assume).
+export const DAILY_ACTIVITY_MULTIPLIERS: Record<DailyActivityLevel, number> = {
+  sedentaire: 1.15,
+  modere: 1.3,
+  physique: 1.5,
+}
+
+// Additive bump for structured training volume, on top of the daily
+// baseline above — the same decomposition (occupational NEAT + separate
+// exercise activity thermogenesis) used in Katch-McArdle-style TDEE
+// breakdowns and common coaching practice (e.g. RP), rather than folding
+// training into the occupational scale. Calibrated so daily+training
+// together still land in the same ~1.15-1.9 range as the classic 5-way
+// PAL scale (physique + 7+ sessions/week = 1.5 + 0.4 = 1.9, matching the
+// old "très actif" ceiling) — a decomposition of the same evidence base,
+// not a new independently-validated formula.
+export const TRAINING_FREQUENCY_BUMP: { maxPerWeek: number; bump: number }[] = [
+  { maxPerWeek: 0, bump: 0 },
+  { maxPerWeek: 2, bump: 0.1 },
+  { maxPerWeek: 4, bump: 0.2 },
+  { maxPerWeek: 6, bump: 0.3 },
+  { maxPerWeek: Infinity, bump: 0.4 },
+]
+
+export function trainingFrequencyBump(avgSessionsPerWeek: number): number {
+  const bracket = TRAINING_FREQUENCY_BUMP.find(
+    (entry) => avgSessionsPerWeek <= entry.maxPerWeek,
+  )
+  return bracket?.bump ?? 0.4
 }
 
 // Deficit/surplus applied to TDEE by goal. perte_de_poids: ~20% deficit is
@@ -44,6 +71,9 @@ export const GOAL_CALORIE_MULTIPLIERS: Record<Goal, number> = {
 // the hypertrophy benefit is already captured (Morton et al. 2018
 // meta-analysis: diminishing returns past ~1.6 g/kg, some benefit to ~2.2).
 // performance/maintien use a lower maintenance-sufficient value.
+// Deliberately independent of activity level — protein requirement scales
+// with bodyweight and training goal, not with PAL/NEAT category (standard
+// ISSN practice), so changing activity level never moves this figure.
 export const GOAL_PROTEIN_G_PER_KG: Record<Goal, number> = {
   perte_de_poids: 2.2,
   prise_de_muscle: 1.8,
@@ -89,7 +119,8 @@ export interface NutritionCalcInput {
   weightKg: number
   heightCm: number
   age: number
-  activityLevel: ActivityLevel
+  dailyActivityLevel: DailyActivityLevel
+  avgSessionsPerWeek: number
   goal: Goal
 }
 
@@ -102,7 +133,10 @@ export interface NutritionCalcResult {
 
 export function computeNutritionTargets(input: NutritionCalcInput): NutritionCalcResult {
   const bmr = computeBMR(input.sex, input.weightKg, input.heightCm, input.age)
-  const tdee = bmr * ACTIVITY_MULTIPLIERS[input.activityLevel]
+  const activityMultiplier =
+    DAILY_ACTIVITY_MULTIPLIERS[input.dailyActivityLevel] +
+    trainingFrequencyBump(input.avgSessionsPerWeek)
+  const tdee = bmr * activityMultiplier
   const calories = tdee * GOAL_CALORIE_MULTIPLIERS[input.goal]
 
   const proteinG = GOAL_PROTEIN_G_PER_KG[input.goal] * input.weightKg
@@ -118,5 +152,33 @@ export function computeNutritionTargets(input: NutritionCalcInput): NutritionCal
     proteinGTarget: Math.round(proteinG),
     carbsGTarget: Math.round(carbsG),
     fatGTarget: Math.round(fatG),
+  }
+}
+
+export interface FoodLogTotals {
+  calories: number
+  proteinG: number | null
+  carbsG: number | null
+  fatG: number | null
+}
+
+// Nutrition labels are printed per 100g — typing a per-100g reference plus
+// how much was actually eaten is far less mental math for the user than
+// typing the total for their exact portion directly.
+export function computeFoodLogTotals(input: {
+  quantityG: number
+  caloriesPer100g: number
+  proteinGPer100g: number | null
+  carbsGPer100g: number | null
+  fatGPer100g: number | null
+}): FoodLogTotals {
+  const factor = input.quantityG / 100
+  const roundToOneDecimal = (value: number) => Math.round(value * 10) / 10
+  return {
+    calories: Math.round(input.caloriesPer100g * factor),
+    proteinG:
+      input.proteinGPer100g === null ? null : roundToOneDecimal(input.proteinGPer100g * factor),
+    carbsG: input.carbsGPer100g === null ? null : roundToOneDecimal(input.carbsGPer100g * factor),
+    fatG: input.fatGPer100g === null ? null : roundToOneDecimal(input.fatGPer100g * factor),
   }
 }

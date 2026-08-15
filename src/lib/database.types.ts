@@ -650,40 +650,55 @@ export type Database = {
       food_logs: {
         Row: {
           calories: number
+          calories_per_100g: number | null
           carbs_g: number | null
+          carbs_g_per_100g: number | null
           created_at: string
           fat_g: number | null
+          fat_g_per_100g: number | null
           id: string
           logged_date: string
           meal_slot_id: string
           name: string
           protein_g: number | null
+          protein_g_per_100g: number | null
+          quantity_g: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           calories: number
+          calories_per_100g?: number | null
           carbs_g?: number | null
+          carbs_g_per_100g?: number | null
           created_at?: string
           fat_g?: number | null
+          fat_g_per_100g?: number | null
           id?: string
           logged_date?: string
           meal_slot_id: string
           name: string
           protein_g?: number | null
+          protein_g_per_100g?: number | null
+          quantity_g?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           calories?: number
+          calories_per_100g?: number | null
           carbs_g?: number | null
+          carbs_g_per_100g?: number | null
           created_at?: string
           fat_g?: number | null
+          fat_g_per_100g?: number | null
           id?: string
           logged_date?: string
           meal_slot_id?: string
           name?: string
           protein_g?: number | null
+          protein_g_per_100g?: number | null
+          quantity_g?: number | null
           updated_at?: string
           user_id?: string
         }

@@ -6,6 +6,7 @@ import { useFoodLogs } from '@/hooks/useFoodLogs'
 import { useMealSlots } from '@/hooks/useMealSlots'
 import { useNutritionTargets } from '@/hooks/useNutritionTargets'
 import { useProfile } from '@/hooks/useProfile'
+import { useAverageSessionsPerWeek } from '@/hooks/useTrainingFrequency'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 
 function todayLocalDate(): string {
@@ -22,6 +23,7 @@ export function NutritionPage() {
   const { data: targets, isLoading: targetsLoading } = useNutritionTargets()
   const { data: profile, isLoading: profileLoading } = useProfile()
   const { data: weightEntries } = useWeightEntries()
+  const { data: avgSessionsPerWeek } = useAverageSessionsPerWeek()
   const { data: foodLogs, isLoading: logsLoading } = useFoodLogs(today)
 
   const isLoading = slotsLoading || targetsLoading || profileLoading || logsLoading
@@ -54,6 +56,7 @@ export function NutritionPage() {
             targets={targets}
             profile={profile}
             latestWeightKg={latestWeightKg}
+            avgSessionsPerWeek={avgSessionsPerWeek ?? null}
             consumed={consumed}
           />
           {mealSlots.map((slot) => (

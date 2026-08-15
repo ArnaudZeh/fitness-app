@@ -1,15 +1,15 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
-import type { ActivityLevel } from '@/lib/nutrition-calc'
+import type { DailyActivityLevel } from '@/lib/nutrition-calc'
 
 type NutritionTargetsRow = Database['public']['Tables']['nutrition_targets']['Row']
 
 export interface NutritionTargets extends Omit<NutritionTargetsRow, 'activity_level'> {
-  activity_level: ActivityLevel | null
+  activity_level: DailyActivityLevel | null
 }
 
 export interface NutritionTargetsInput {
-  activity_level: ActivityLevel | null
+  activity_level: DailyActivityLevel | null
   calories_target: number | null
   protein_g_target: number | null
   carbs_g_target: number | null

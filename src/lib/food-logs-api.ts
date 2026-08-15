@@ -7,6 +7,15 @@ export interface FoodLogInput {
   meal_slot_id: string
   logged_date: string
   name: string
+  quantity_g: number
+  calories_per_100g: number
+  protein_g_per_100g: number | null
+  carbs_g_per_100g: number | null
+  fat_g_per_100g: number | null
+  // Computed totals for the logged quantity (per_100g * quantity_g / 100),
+  // stored alongside the per-100g reference rather than derived at read
+  // time — every other part of the app (progress bars, daily totals) just
+  // sums these, no need to know about the per-100g shape at all.
   calories: number
   protein_g: number | null
   carbs_g: number | null
