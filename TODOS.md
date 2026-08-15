@@ -680,3 +680,22 @@ Suite directe du plan scopé ci-dessus. P0 = nav restructurée + les 3 tables de
 1. Nav mobile et desktop : Nutrition présent, Bien-être accessible depuis Programmes → confirmé visuellement ci-dessus.
 2. RLS croisée sur les 3 nouvelles tables → confirmée par tests REST directs ci-dessus.
 3. `tsc -b`/lint/tests → propres.
+
+**Gate P0 confirmée par le user (2026-08-14)** : nav OK, nutrition strictement privée OK, go P1.
+
+## Nutrition — P1 : repas configurables + cibles calculées + log manuel (2026-08-14)
+
+Suite du plan de phases. P1 rend le module réellement utilisable au quotidien : plus de squelette, un vrai flux onboarding → cibles → log → progression.
+
+- **`src/lib/meal-slots-api.ts`** : CRUD `meal_slots`. `removeMealSlot` tente un hard delete puis, si Postgres renvoie `23503` (le repas a déjà des `food_logs` rattachés), bascule sur `archived_at` au lieu de laisser l'erreur remonter — même détection d'erreur que `offline-sync.ts` (`isForeignKeyViolation`). **Vérifié en direct contre la vraie base** (pas juste supposé) : suppression d'un repas avec un aliment loggé → `archived_at` posé, la ligne `food_logs` correspondante toujours présente en base, aucune erreur UI.
+- **`src/lib/nutrition-calc.ts`** (pur, testé — 11 cas) : Mifflin-St Jeor + facteurs d'activité PAL classiques + ajustement calorique par objectif (perte_de_poids -20%, prise_de_muscle +10%, reste à la maintenance) + protéines en g/kg variables par objectif (2.2 en perte, 1.8 en prise de muscle, etc.) + lipides à 28% des calories, glucides en reste — chaque constante commentée avec sa source (ACSM, Aragon & Schoenfeld 2013, Helms et al. 2014, Morton et al. 2018), même esprit que `DEFAULT_REST_SECONDS_BY_FOCUS`. `computeAge` gère le cas où l'anniversaire n'est pas encore passé dans l'année.
+- **`NutritionTargetsCard`** : cibles affichées avec barres de progression (`MacroProgressBar`, pas de dépendance ajoutée — même choix que `ContributionHeatmap`), section "Ajuster mes cibles" dépliable (même patron que les catégories de `CoachingProfilePage`) avec sélecteur de niveau d'activité + bouton "Calculer automatiquement" (désactivé et remplacé par un message si le profil est incomplet — sexe/taille/date de naissance/objectif/poids loggé manquants, avec lien vers `/profile`) + 4 champs éditables à la main dans tous les cas, un seul bouton "Enregistrer" pour les deux chemins (calculé ou tapé à la main).
+- **Onboarding repas** (`MealSlotOnboarding`) : "Combien de repas par jour ?" avec presets (3/4/5/6) + nombre personnalisé, crée séquentiellement N `meal_slots` nommés "Repas 1"..."Repas N". `ManageMealSlots` permet ensuite de renommer (édition inline, sauvegarde au blur), ajouter et supprimer à tout moment — pas de seed par trigger, contrairement à `session_templates`, comme voulu explicitement par le user.
+- **Log manuel** (`AddFoodLogDialog`, `MealSlotSection`) : formulaire nom+calories (obligatoires)+macros (optionnelles) par repas, suppression d'une entrée derrière `ConfirmDialog` (même prudence que pour les pesées).
+- **Vérifié en direct** (compte fixture, 375px) : flux complet — onboarding 4 repas, saisie manuelle de cibles (2400 kcal / 180g protéines), ajout d'un aliment dans un repas avec mise à jour immédiate des barres de progression, renommage d'un repas, ajout d'un nouveau repas, suppression d'un repas déjà utilisé (confirmé archivé et non supprimé en interrogeant directement l'API REST après coup). Données de test entièrement nettoyées sur le compte fixture après vérification (repas, log, cibles remises à zéro).
+- **Qualité** : `tsc -b` propre, ESLint 0 erreur (mêmes 5 warnings préexistants sans rapport), Vitest 163/163 (11 nouveaux tests `nutrition-calc.test.ts`).
+
+**Gate P1 — à confirmer avant de passer à P2** :
+1. Onboarding + gestion des repas (ajout/renommage/suppression) → vérifié en direct ci-dessus.
+2. Cibles calculées automatiquement + override manuel → vérifié en direct ci-dessus.
+3. Log manuel + barres de progression du jour → vérifié en direct ci-dessus.

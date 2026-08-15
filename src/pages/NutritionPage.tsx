@@ -1,25 +1,72 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ManageMealSlots } from '@/components/ManageMealSlots'
+import { MealSlotOnboarding } from '@/components/MealSlotOnboarding'
+import { MealSlotSection } from '@/components/MealSlotSection'
+import { NutritionTargetsCard } from '@/components/NutritionTargetsCard'
+import { useFoodLogs } from '@/hooks/useFoodLogs'
+import { useMealSlots } from '@/hooks/useMealSlots'
+import { useNutritionTargets } from '@/hooks/useNutritionTargets'
+import { useProfile } from '@/hooks/useProfile'
+import { useWeightEntries } from '@/hooks/useWeightEntries'
 
-// P0 : squelette de route uniquement, pour valider la nav avant de
-// construire dessus. P1 ajoute la configuration des repas (meal_slots), le
-// calcul des cibles (nutrition_targets) et le log manuel (food_logs) — voir
-// TODOS.md ("Nutrition — plan de phases scopé").
+function todayLocalDate(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function NutritionPage() {
+  const today = todayLocalDate()
+  const { data: mealSlots, isLoading: slotsLoading } = useMealSlots()
+  const { data: targets, isLoading: targetsLoading } = useNutritionTargets()
+  const { data: profile, isLoading: profileLoading } = useProfile()
+  const { data: weightEntries } = useWeightEntries()
+  const { data: foodLogs, isLoading: logsLoading } = useFoodLogs(today)
+
+  const isLoading = slotsLoading || targetsLoading || profileLoading || logsLoading
+
+  if (isLoading || !mealSlots || !targets || !profile || !foodLogs) {
+    return <p className="text-muted-foreground">Chargement…</p>
+  }
+
+  const latestWeightKg = weightEntries?.[0]?.weight_kg ?? null
+
+  const consumed = foodLogs.reduce(
+    (totals, log) => ({
+      calories: totals.calories + log.calories,
+      proteinG: totals.proteinG + (log.protein_g ?? 0),
+      carbsG: totals.carbsG + (log.carbs_g ?? 0),
+      fatG: totals.fatG + (log.fat_g ?? 0),
+    }),
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+  )
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Nutrition</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h2" className="text-lg">
-            Bientôt disponible
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Le suivi de tes calories et macros arrive dans une prochaine mise à jour.
-          </p>
-        </CardContent>
-      </Card>
+
+      {mealSlots.length === 0 ? (
+        <MealSlotOnboarding />
+      ) : (
+        <>
+          <NutritionTargetsCard
+            targets={targets}
+            profile={profile}
+            latestWeightKg={latestWeightKg}
+            consumed={consumed}
+          />
+          {mealSlots.map((slot) => (
+            <MealSlotSection
+              key={slot.id}
+              slot={slot}
+              logs={foodLogs.filter((log) => log.meal_slot_id === slot.id)}
+              loggedDate={today}
+            />
+          ))}
+          <ManageMealSlots mealSlots={mealSlots} />
+        </>
+      )}
     </div>
   )
 }
