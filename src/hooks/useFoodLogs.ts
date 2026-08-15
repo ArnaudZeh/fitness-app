@@ -5,6 +5,8 @@ function foodLogsKey(loggedDate: string) {
   return ['food-logs', loggedDate] as const
 }
 
+const recentFoodLogNamesKey = ['recent-food-log-names'] as const
+
 export function useFoodLogs(loggedDate: string) {
   return useQuery({
     queryKey: foodLogsKey(loggedDate),
@@ -12,12 +14,21 @@ export function useFoodLogs(loggedDate: string) {
   })
 }
 
+export function useRecentFoodLogNames() {
+  return useQuery({
+    queryKey: recentFoodLogNamesKey,
+    queryFn: api.fetchRecentFoodLogNames,
+  })
+}
+
 export function useCreateFoodLog() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: api.FoodLogInput) => api.createFoodLog(input),
-    onSuccess: (created) =>
-      void queryClient.invalidateQueries({ queryKey: foodLogsKey(created.logged_date) }),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({ queryKey: foodLogsKey(created.logged_date) })
+      void queryClient.invalidateQueries({ queryKey: recentFoodLogNamesKey })
+    },
   })
 }
 

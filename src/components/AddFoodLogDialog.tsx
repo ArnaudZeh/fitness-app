@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react'
+import { type FoodSelection, OpenFoodFactsSearch } from '@/components/OpenFoodFactsSearch'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,6 +39,15 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
     setCarbsPer100g('')
     setFatPer100g('')
     setError(null)
+  }
+
+  function handleSelectFood(selection: FoodSelection) {
+    setName(selection.name)
+    setQuantityG('100')
+    setCaloriesPer100g(selection.caloriesPer100g.toString())
+    setProteinPer100g(selection.proteinPer100g?.toString() ?? '')
+    setCarbsPer100g(selection.carbsPer100g?.toString() ?? '')
+    setFatPer100g(selection.fatPer100g?.toString() ?? '')
   }
 
   const parsedQuantity = Number(quantityG)
@@ -102,6 +112,12 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
           <DialogTitle>Ajouter un aliment</DialogTitle>
         </DialogHeader>
         <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
+          <OpenFoodFactsSearch onSelect={handleSelectFood} />
+
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Ou saisis les valeurs toi-même
+          </p>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="food-name">Aliment</Label>
             <Input
@@ -109,7 +125,6 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Ex : Riz blanc"
-              autoFocus
             />
           </div>
           <div className="flex flex-col gap-2">

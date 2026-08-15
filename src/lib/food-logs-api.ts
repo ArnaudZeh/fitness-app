@@ -57,3 +57,46 @@ export async function deleteFoodLog(id: string): Promise<void> {
   const { error } = await supabase.from('food_logs').delete().eq('id', id)
   if (error) throw error
 }
+
+export interface RecentFoodLog {
+  name: string
+  caloriesPer100g: number
+  proteinPer100g: number | null
+  carbsPer100g: number | null
+  fatPer100g: number | null
+}
+
+const RECENT_FOOD_LOGS_LIMIT = 8
+
+// Quick-add source: the user's own most-recently-logged foods, deduplicated
+// by name — reuses food_logs itself rather than a separate favorites table
+// (see nutrition plan decisions in TODOS.md). Scanning the last 50 entries
+// for 8 distinct names is a reasonable bound without an extra DB round trip
+// per candidate.
+export async function fetchRecentFoodLogNames(): Promise<RecentFoodLog[]> {
+  const userId = await requireUserId()
+  const { data, error } = await supabase
+    .from('food_logs')
+    .select('name, calories_per_100g, protein_g_per_100g, carbs_g_per_100g, fat_g_per_100g')
+    .eq('user_id', userId)
+    .not('calories_per_100g', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (error) throw error
+
+  const seenNames = new Set<string>()
+  const recents: RecentFoodLog[] = []
+  for (const row of data) {
+    if (seenNames.has(row.name) || row.calories_per_100g === null) continue
+    seenNames.add(row.name)
+    recents.push({
+      name: row.name,
+      caloriesPer100g: row.calories_per_100g,
+      proteinPer100g: row.protein_g_per_100g,
+      carbsPer100g: row.carbs_g_per_100g,
+      fatPer100g: row.fat_g_per_100g,
+    })
+    if (recents.length >= RECENT_FOOD_LOGS_LIMIT) break
+  }
+  return recents
+}
