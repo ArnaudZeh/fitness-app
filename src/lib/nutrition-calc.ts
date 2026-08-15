@@ -29,24 +29,78 @@ export const DAILY_ACTIVITY_MULTIPLIERS: Record<DailyActivityLevel, number> = {
 // baseline above — the same decomposition (occupational NEAT + separate
 // exercise activity thermogenesis) used in Katch-McArdle-style TDEE
 // breakdowns and common coaching practice (e.g. RP), rather than folding
-// training into the occupational scale. Calibrated so daily+training
-// together still land in the same ~1.15-1.9 range as the classic 5-way
-// PAL scale (physique + 7+ sessions/week = 1.5 + 0.4 = 1.9, matching the
-// old "très actif" ceiling) — a decomposition of the same evidence base,
-// not a new independently-validated formula.
-export const TRAINING_FREQUENCY_BUMP: { maxPerWeek: number; bump: number }[] = [
-  { maxPerWeek: 0, bump: 0 },
-  { maxPerWeek: 2, bump: 0.1 },
-  { maxPerWeek: 4, bump: 0.2 },
-  { maxPerWeek: 6, bump: 0.3 },
-  { maxPerWeek: Infinity, bump: 0.4 },
+// training into the occupational scale.
+//
+// Driven by actual weekly training TIME (sum of started_at→completed_at
+// across recently completed sessions), not just a session count — a count
+// alone treats a 20-minute session the same as a 90-minute one. Time is
+// still only a volume proxy, not a real energy-expenditure measure (that
+// would need heart-rate data this app doesn't collect) — going further and
+// weighting by tonnage or average RPE was considered and rejected: neither
+// has a validated conversion to calories (RPE measures perceived exertion,
+// not energy cost; tonnage's kcal-per-kg-moved varies per person), so
+// using them would produce a number that looks precise without actually
+// being more accurate. ~45min is treated as a "typical" session when
+// picking bracket boundaries, keeping the same 0/0.1/0.2/0.3/0.4 bump
+// values (and therefore the same combined 1.15-1.9 range) as the original
+// session-count version.
+export const TRAINING_MINUTES_BUMP: { maxMinutesPerWeek: number; bump: number }[] = [
+  { maxMinutesPerWeek: 0, bump: 0 },
+  { maxMinutesPerWeek: 90, bump: 0.1 },
+  { maxMinutesPerWeek: 180, bump: 0.2 },
+  { maxMinutesPerWeek: 300, bump: 0.3 },
+  { maxMinutesPerWeek: Infinity, bump: 0.4 },
 ]
 
-export function trainingFrequencyBump(avgSessionsPerWeek: number): number {
-  const bracket = TRAINING_FREQUENCY_BUMP.find(
-    (entry) => avgSessionsPerWeek <= entry.maxPerWeek,
+export function trainingVolumeBump(avgWeeklyTrainingMinutes: number): number {
+  const bracket = TRAINING_MINUTES_BUMP.find(
+    (entry) => avgWeeklyTrainingMinutes <= entry.maxMinutesPerWeek,
   )
   return bracket?.bump ?? 0.4
+}
+
+// A session left running for hours (forgot to tap "Terminer") shouldn't
+// blow up the weekly average — caps any single session's contribution at
+// a generous but bounded ceiling.
+const MAX_SESSION_MINUTES = 180
+
+export interface CompletedSessionWindow {
+  startedAt: string
+  completedAt: string | null
+}
+
+export function computeAverageWeeklyTrainingMinutes(
+  sessions: CompletedSessionWindow[],
+  windowDays: number,
+): number {
+  const totalMinutes = sessions.reduce((sum, session) => {
+    if (!session.completedAt) return sum
+    const minutes =
+      (new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()) / 60000
+    return sum + Math.max(0, Math.min(minutes, MAX_SESSION_MINUTES))
+  }, 0)
+  return (totalMinutes / windowDays) * 7
+}
+
+// Step-count-based daily/occupational activity, used in place of the
+// self-declared 3-way select when available (avg_daily_steps on the
+// coaching profile) — a continuous, objective signal beats a coarse
+// self-reported category. Brackets follow Tudor-Locke & Bassett (2004,
+// "How many steps/day are enough?"), a widely-cited step-count activity
+// categorization, mapped onto the same 1.15-1.5 range as
+// DAILY_ACTIVITY_MULTIPLIERS so the two stay consistent at both ends
+// (sedentary ≈1.15, most active ≈1.5).
+const STEP_ACTIVITY_BRACKETS: { maxSteps: number; multiplier: number }[] = [
+  { maxSteps: 5000, multiplier: 1.15 }, // sédentaire
+  { maxSteps: 7499, multiplier: 1.2 }, // peu actif
+  { maxSteps: 9999, multiplier: 1.3 }, // assez actif
+  { maxSteps: 12499, multiplier: 1.4 }, // actif
+  { maxSteps: Infinity, multiplier: 1.5 }, // très actif
+]
+
+export function dailyActivityMultiplierFromSteps(avgDailySteps: number): number {
+  const bracket = STEP_ACTIVITY_BRACKETS.find((entry) => avgDailySteps <= entry.maxSteps)
+  return bracket?.multiplier ?? 1.5
 }
 
 // Deficit/surplus applied to TDEE by goal. perte_de_poids: ~20% deficit is
@@ -119,8 +173,13 @@ export interface NutritionCalcInput {
   weightKg: number
   heightCm: number
   age: number
-  dailyActivityLevel: DailyActivityLevel
-  avgSessionsPerWeek: number
+  // Resolved daily/occupational multiplier — either
+  // DAILY_ACTIVITY_MULTIPLIERS[level] (self-declared) or
+  // dailyActivityMultiplierFromSteps(avgDailySteps) (from the coaching
+  // profile, prioritized when available). Left to the caller to resolve
+  // so this function doesn't need to know which source won.
+  dailyActivityMultiplier: number
+  avgWeeklyTrainingMinutes: number
   goal: Goal
 }
 
@@ -134,8 +193,7 @@ export interface NutritionCalcResult {
 export function computeNutritionTargets(input: NutritionCalcInput): NutritionCalcResult {
   const bmr = computeBMR(input.sex, input.weightKg, input.heightCm, input.age)
   const activityMultiplier =
-    DAILY_ACTIVITY_MULTIPLIERS[input.dailyActivityLevel] +
-    trainingFrequencyBump(input.avgSessionsPerWeek)
+    input.dailyActivityMultiplier + trainingVolumeBump(input.avgWeeklyTrainingMinutes)
   const tdee = bmr * activityMultiplier
   const calories = tdee * GOAL_CALORIE_MULTIPLIERS[input.goal]
 

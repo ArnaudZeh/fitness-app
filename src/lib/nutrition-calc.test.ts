@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   computeAge,
+  computeAverageWeeklyTrainingMinutes,
   computeBMR,
   computeFoodLogTotals,
   computeNutritionTargets,
-  trainingFrequencyBump,
+  dailyActivityMultiplierFromSteps,
+  trainingVolumeBump,
 } from '@/lib/nutrition-calc'
 
 describe('computeAge', () => {
@@ -38,25 +40,65 @@ describe('computeBMR', () => {
   })
 })
 
-describe('trainingFrequencyBump', () => {
+describe('computeAverageWeeklyTrainingMinutes', () => {
+  it('returns 0 for no sessions', () => {
+    expect(computeAverageWeeklyTrainingMinutes([], 14)).toBe(0)
+  })
+
+  it('sums durations and scales to a weekly average', () => {
+    const sessions = [
+      { startedAt: '2026-08-01T10:00:00Z', completedAt: '2026-08-01T11:00:00Z' }, // 60min
+      { startedAt: '2026-08-03T10:00:00Z', completedAt: '2026-08-03T10:30:00Z' }, // 30min
+    ]
+    // 90min total over a 14-day window -> 90/14*7 = 45min/week
+    expect(computeAverageWeeklyTrainingMinutes(sessions, 14)).toBeCloseTo(45)
+  })
+
+  it('skips sessions with no completed_at', () => {
+    const sessions = [
+      { startedAt: '2026-08-01T10:00:00Z', completedAt: '2026-08-01T11:00:00Z' }, // 60min
+      { startedAt: '2026-08-02T10:00:00Z', completedAt: null },
+    ]
+    expect(computeAverageWeeklyTrainingMinutes(sessions, 14)).toBeCloseTo((60 / 14) * 7)
+  })
+
+  it('caps an abnormally long session (forgot to end it) at 180 minutes', () => {
+    const sessions = [
+      { startedAt: '2026-08-01T10:00:00Z', completedAt: '2026-08-03T10:00:00Z' }, // 48h
+    ]
+    expect(computeAverageWeeklyTrainingMinutes(sessions, 14)).toBeCloseTo((180 / 14) * 7)
+  })
+})
+
+describe('trainingVolumeBump', () => {
   it('returns 0 for no training', () => {
-    expect(trainingFrequencyBump(0)).toBe(0)
+    expect(trainingVolumeBump(0)).toBe(0)
   })
 
   it('is inclusive at each bracket boundary', () => {
-    expect(trainingFrequencyBump(2)).toBeCloseTo(0.1)
-    expect(trainingFrequencyBump(4)).toBeCloseTo(0.2)
-    expect(trainingFrequencyBump(6)).toBeCloseTo(0.3)
+    expect(trainingVolumeBump(90)).toBeCloseTo(0.1)
+    expect(trainingVolumeBump(180)).toBeCloseTo(0.2)
+    expect(trainingVolumeBump(300)).toBeCloseTo(0.3)
   })
 
   it('rounds up to the next bracket just past a boundary', () => {
-    expect(trainingFrequencyBump(2.5)).toBeCloseTo(0.2)
-    expect(trainingFrequencyBump(5)).toBeCloseTo(0.3)
+    expect(trainingVolumeBump(91)).toBeCloseTo(0.2)
   })
 
-  it('caps at the top bracket for very high frequencies', () => {
-    expect(trainingFrequencyBump(7)).toBeCloseTo(0.4)
-    expect(trainingFrequencyBump(100)).toBeCloseTo(0.4)
+  it('caps at the top bracket for very high volumes', () => {
+    expect(trainingVolumeBump(301)).toBeCloseTo(0.4)
+    expect(trainingVolumeBump(10000)).toBeCloseTo(0.4)
+  })
+})
+
+describe('dailyActivityMultiplierFromSteps', () => {
+  it('follows the Tudor-Locke step brackets', () => {
+    expect(dailyActivityMultiplierFromSteps(3000)).toBeCloseTo(1.15)
+    expect(dailyActivityMultiplierFromSteps(5000)).toBeCloseTo(1.15)
+    expect(dailyActivityMultiplierFromSteps(7000)).toBeCloseTo(1.2)
+    expect(dailyActivityMultiplierFromSteps(9000)).toBeCloseTo(1.3)
+    expect(dailyActivityMultiplierFromSteps(11000)).toBeCloseTo(1.4)
+    expect(dailyActivityMultiplierFromSteps(15000)).toBeCloseTo(1.5)
   })
 })
 
@@ -67,13 +109,13 @@ describe('computeNutritionTargets', () => {
       weightKg: 80,
       heightCm: 180,
       age: 30,
-      dailyActivityLevel: 'modere',
-      avgSessionsPerWeek: 3,
+      dailyActivityMultiplier: 1.3,
+      avgWeeklyTrainingMinutes: 91, // bump 0.2 -> combined 1.5
       goal: 'perte_de_poids',
     })
-    // BMR 1780 * (1.3 + 0.2 training bump) = 2670, *0.8 deficit = 2136
+    // BMR 1780 * 1.5 = 2670, *0.8 deficit = 2136
     expect(result.caloriesTarget).toBe(2136)
-    // 2.2 g/kg * 80kg = 176g — independent of activity level
+    // 2.2 g/kg * 80kg = 176g
     expect(result.proteinGTarget).toBe(176)
   })
 
@@ -83,35 +125,35 @@ describe('computeNutritionTargets', () => {
       weightKg: 80,
       heightCm: 180,
       age: 30,
-      dailyActivityLevel: 'modere',
-      avgSessionsPerWeek: 3,
+      dailyActivityMultiplier: 1.3,
+      avgWeeklyTrainingMinutes: 91,
       goal: 'prise_de_muscle',
     })
     // BMR 1780 * 1.5 = 2670, *1.1 surplus = 2937
     expect(result.caloriesTarget).toBe(2937)
   })
 
-  it('does not change protein when only activity level/training volume changes', () => {
-    const sedentary = computeNutritionTargets({
+  it('does not change protein when only activity/training volume changes', () => {
+    const low = computeNutritionTargets({
       sex: 'homme',
       weightKg: 80,
       heightCm: 180,
       age: 30,
-      dailyActivityLevel: 'sedentaire',
-      avgSessionsPerWeek: 0,
+      dailyActivityMultiplier: 1.15,
+      avgWeeklyTrainingMinutes: 0,
       goal: 'prise_de_muscle',
     })
-    const active = computeNutritionTargets({
+    const high = computeNutritionTargets({
       sex: 'homme',
       weightKg: 80,
       heightCm: 180,
       age: 30,
-      dailyActivityLevel: 'physique',
-      avgSessionsPerWeek: 6,
+      dailyActivityMultiplier: 1.5,
+      avgWeeklyTrainingMinutes: 400,
       goal: 'prise_de_muscle',
     })
-    expect(sedentary.proteinGTarget).toBe(active.proteinGTarget)
-    expect(sedentary.caloriesTarget).toBeLessThan(active.caloriesTarget)
+    expect(low.proteinGTarget).toBe(high.proteinGTarget)
+    expect(low.caloriesTarget).toBeLessThan(high.caloriesTarget)
   })
 
   it('stays at maintenance for maintien', () => {
@@ -120,8 +162,8 @@ describe('computeNutritionTargets', () => {
       weightKg: 60,
       heightCm: 165,
       age: 25,
-      dailyActivityLevel: 'sedentaire',
-      avgSessionsPerWeek: 0,
+      dailyActivityMultiplier: 1.15,
+      avgWeeklyTrainingMinutes: 0,
       goal: 'maintien',
     })
     // BMR 1345.25 * 1.15 = 1547.0375
@@ -137,8 +179,8 @@ describe('computeNutritionTargets', () => {
       weightKg: 100,
       heightCm: 100,
       age: 100,
-      dailyActivityLevel: 'sedentaire',
-      avgSessionsPerWeek: 0,
+      dailyActivityMultiplier: 1.15,
+      avgWeeklyTrainingMinutes: 0,
       goal: 'perte_de_poids',
     })
     expect(result.carbsGTarget).toBe(0)
@@ -150,8 +192,8 @@ describe('computeNutritionTargets', () => {
       weightKg: 80,
       heightCm: 180,
       age: 30,
-      dailyActivityLevel: 'physique',
-      avgSessionsPerWeek: 7,
+      dailyActivityMultiplier: 1.5,
+      avgWeeklyTrainingMinutes: 400,
       goal: 'maintien',
     })
     const reconstructed =

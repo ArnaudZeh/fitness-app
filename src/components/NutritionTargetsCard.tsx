@@ -18,6 +18,8 @@ import {
   computeAge,
   computeNutritionTargets,
   DAILY_ACTIVITY_LEVEL_LABELS,
+  DAILY_ACTIVITY_MULTIPLIERS,
+  dailyActivityMultiplierFromSteps,
   type DailyActivityLevel,
 } from '@/lib/nutrition-calc'
 import type { NutritionTargets } from '@/lib/nutrition-targets-api'
@@ -34,7 +36,8 @@ interface NutritionTargetsCardProps {
   targets: NutritionTargets
   profile: Profile
   latestWeightKg: number | null
-  avgSessionsPerWeek: number | null
+  avgWeeklyTrainingMinutes: number | null
+  avgDailySteps: number | null
   consumed: DailyTotals
 }
 
@@ -54,7 +57,8 @@ export function NutritionTargetsCard({
   targets,
   profile,
   latestWeightKg,
-  avgSessionsPerWeek,
+  avgWeeklyTrainingMinutes,
+  avgDailySteps,
   consumed,
 }: NutritionTargetsCardProps) {
   const [expanded, setExpanded] = useState(targets.activity_level === null)
@@ -68,11 +72,25 @@ export function NutritionTargetsCard({
   const updateNutritionTargets = useUpdateNutritionTargets()
 
   const missing = missingProfileFields(profile, latestWeightKg)
-  const canAutoCalculate = missing.length === 0 && avgSessionsPerWeek !== null
+  const usingSteps = avgDailySteps !== null && avgDailySteps > 0
+  const effectiveDailyMultiplier = usingSteps
+    ? dailyActivityMultiplierFromSteps(avgDailySteps)
+    : activityLevel !== NONE_VALUE
+      ? DAILY_ACTIVITY_MULTIPLIERS[activityLevel as DailyActivityLevel]
+      : null
+  const canAutoCalculate =
+    missing.length === 0 && avgWeeklyTrainingMinutes !== null && effectiveDailyMultiplier !== null
 
-  function calculateWith(dailyActivityLevel: DailyActivityLevel) {
-    if (!canAutoCalculate || !profile.sex || !profile.height_cm || !profile.date_of_birth ||
-      !profile.goal || !latestWeightKg || avgSessionsPerWeek === null) {
+  function calculateWith(dailyActivityMultiplier: number) {
+    if (
+      missing.length > 0 ||
+      avgWeeklyTrainingMinutes === null ||
+      !profile.sex ||
+      !profile.height_cm ||
+      !profile.date_of_birth ||
+      !profile.goal ||
+      !latestWeightKg
+    ) {
       return
     }
     const result = computeNutritionTargets({
@@ -80,8 +98,8 @@ export function NutritionTargetsCard({
       weightKg: latestWeightKg,
       heightCm: profile.height_cm,
       age: computeAge(profile.date_of_birth),
-      dailyActivityLevel,
-      avgSessionsPerWeek,
+      dailyActivityMultiplier,
+      avgWeeklyTrainingMinutes,
       goal: profile.goal,
     })
     setCalories(result.caloriesTarget.toString())
@@ -90,14 +108,22 @@ export function NutritionTargetsCard({
     setFatG(result.fatGTarget.toString())
   }
 
-  // Recalculates immediately on selection, not just via the button below —
-  // previously the 4 fields only updated on an explicit "Calculer" click,
-  // so switching activity level and saving without re-clicking silently
-  // kept the old level's numbers under the new label. Manual edits made
-  // after picking a level still stick until the level changes again.
+  // Recalculates immediately on selection, not just via the "Recalculer"
+  // button below — previously the 4 fields only updated on an explicit
+  // click, so switching activity level and saving without re-clicking
+  // silently kept the old level's numbers under the new label. Manual
+  // edits made after picking a level still stick until it changes again.
+  // Only relevant when the select is actually driving the calc — inert
+  // while avg_daily_steps takes priority (select disabled in that case).
   function handleActivityLevelChange(next: string) {
     setActivityLevel(next)
-    if (next !== NONE_VALUE) calculateWith(next as DailyActivityLevel)
+    if (!usingSteps && next !== NONE_VALUE) {
+      calculateWith(DAILY_ACTIVITY_MULTIPLIERS[next as DailyActivityLevel])
+    }
+  }
+
+  function handleRecalculate() {
+    if (effectiveDailyMultiplier !== null) calculateWith(effectiveDailyMultiplier)
   }
 
   async function handleSave(event: FormEvent) {
@@ -163,7 +189,11 @@ export function NutritionTargetsCard({
           <form onSubmit={(event) => void handleSave(event)} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="activity-level">Activité quotidienne / professionnelle</Label>
-              <Select value={activityLevel} onValueChange={handleActivityLevelChange}>
+              <Select
+                value={activityLevel}
+                onValueChange={handleActivityLevelChange}
+                disabled={usingSteps}
+              >
                 <SelectTrigger id="activity-level">
                   <SelectValue placeholder="Non renseigné" />
                 </SelectTrigger>
@@ -178,10 +208,22 @@ export function NutritionTargetsCard({
                   ))}
                 </SelectContent>
               </Select>
+              {usingSteps ? (
+                <p className="text-xs text-muted-foreground">
+                  Basé sur tes ~{avgDailySteps.toLocaleString('fr-FR')} pas/jour en moyenne (fiche
+                  coaching), plus précis que le menu ci-dessus — qui n'est pas utilisé tant que ce
+                  champ reste rempli.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Remplis "Nombre de pas moyen par jour" dans ta fiche coaching pour un calcul plus
+                  précis que ce menu.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
-                {avgSessionsPerWeek === null
+                {avgWeeklyTrainingMinutes === null
                   ? 'Volume d’entraînement : calcul en cours…'
-                  : `Volume d'entraînement pris en compte : ~${avgSessionsPerWeek.toFixed(1)} séance(s)/semaine (moyenne des 14 derniers jours, calculée automatiquement).`}
+                  : `Volume d'entraînement pris en compte : ~${Math.round(avgWeeklyTrainingMinutes)} min/semaine (moyenne des 14 derniers jours, calculée automatiquement à partir de tes séances loguées).`}
               </p>
             </div>
 
@@ -194,7 +236,22 @@ export function NutritionTargetsCard({
                 pour calculer tes cibles automatiquement — tu peux sinon les saisir toi-même
                 ci-dessous.
               </p>
-            ) : null}
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!canAutoCalculate}
+                onClick={handleRecalculate}
+              >
+                Recalculer
+              </Button>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Semaine plus active que d'habitude (rando, surf, déménagement…) ? Ajuste
+              simplement les valeurs ci-dessous à la main — il n'y a pas encore de suivi
+              automatique pour ce type d'activité.
+            </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">

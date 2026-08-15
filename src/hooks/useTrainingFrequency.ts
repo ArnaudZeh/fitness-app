@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchAverageSessionsPerWeek } from '@/lib/training-frequency-api'
+import { computeAverageWeeklyTrainingMinutes } from '@/lib/nutrition-calc'
+import { fetchRecentCompletedSessions, TRAINING_WINDOW_DAYS } from '@/lib/training-frequency-api'
 
-export function useAverageSessionsPerWeek() {
+export function useAverageWeeklyTrainingMinutes() {
   return useQuery({
-    queryKey: ['average-sessions-per-week'],
-    queryFn: fetchAverageSessionsPerWeek,
+    queryKey: ['recent-completed-sessions'],
+    queryFn: fetchRecentCompletedSessions,
+    select: (sessions) => computeAverageWeeklyTrainingMinutes(sessions, TRAINING_WINDOW_DAYS),
   })
 }
