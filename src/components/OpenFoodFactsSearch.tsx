@@ -20,7 +20,8 @@ interface OpenFoodFactsSearchProps {
 
 export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
   const [query, setQuery] = useState('')
-  const debouncedQuery = useDebouncedValue(query, 400)
+  const trimmedQuery = query.trim()
+  const debouncedQuery = useDebouncedValue(trimmedQuery, 400)
   const {
     data: results,
     isFetching,
@@ -28,8 +29,16 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
   } = useOpenFoodFactsSearch(debouncedQuery)
   const { data: recents } = useRecentFoodLogNames()
 
-  const showResults = debouncedQuery.trim().length >= 2
+  // Tied to the raw query, not the debounced one that drives the actual
+  // fetch — clearing the field on selection (below) hides the list right
+  // away instead of leaving stale results visible for the debounce delay.
+  const showResults = trimmedQuery.length >= 2
   const showRecents = !showResults && recents !== undefined && recents.length > 0
+
+  function selectAndClear(selection: FoodSelection) {
+    onSelect(selection)
+    setQuery('')
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -53,7 +62,7 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
               key={food.name}
               type="button"
               onClick={() =>
-                onSelect({
+                selectAndClear({
                   name: food.name,
                   caloriesPer100g: food.caloriesPer100g,
                   proteinPer100g: food.proteinPer100g,
@@ -91,7 +100,7 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
                   <button
                     type="button"
                     onClick={() =>
-                      onSelect({
+                      selectAndClear({
                         name: result.name,
                         caloriesPer100g: result.caloriesPer100g,
                         proteinPer100g: result.proteinPer100g,

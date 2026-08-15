@@ -753,3 +753,10 @@ Le user a confirmé que l'ajout d'un aliment fonctionne bien, mais a signalé un
 - **Corrigé en repassant sur plusieurs lignes plutôt qu'en réparant la troncature** (demande explicite du user) : le bouton résultat passe de `flex-row justify-between` à `flex-col items-start`, nom et kcal/100g empilés au lieu d'être serrés côte à côte — élimine la cause racine (plus de ligne flex à faire tenir sur une largeur fixe) plutôt que de juste ajouter `min-w-0`.
 - **Vérifié en direct au pire cas** (le nom le plus long des résultats réels, "Manhattan Oeuf Poulet Rôti Fromage · Salade & Compagnie") : passe proprement sur deux lignes, aucun scroll horizontal, avant et après sélection/préremplissage. `tsc -b`/ESLint (0 erreur) toujours propres.
 - Recherche vérifiée à nouveau en direct avec de vraies données (l'API OpenFoodFacts a renvoyé quelques 503 transitoires pendant les tests — confirmé indépendamment que l'API elle-même répondait normalement en parallèle via `curl`, donc un aléa réseau/navigateur de cette session, pas un problème de code).
+
+## Nutrition — la liste de résultats reste affichée après sélection (2026-08-15)
+
+Retour du user avec capture à l'appui : après avoir sélectionné un résultat de recherche, la liste restait affichée en dessous du formulaire désormais rempli.
+
+- **Corrigé** (`OpenFoodFactsSearch.tsx`) : la sélection (résultat de recherche ou chip "récent") vide maintenant le champ de recherche (`selectAndClear`), ce qui fait disparaître la liste immédiatement. `showResults` dépend maintenant de la valeur brute du champ (pas de la valeur débattue qui pilote la requête réseau) pour que la disparition soit instantanée, sans attendre le délai de debounce.
+- **Vérifié en direct** : recherche "poulet", sélection d'un résultat → champ de recherche revient au placeholder, liste disparaît, formulaire manuel correctement rempli en dessous.
