@@ -54,6 +54,9 @@ const FriendProfilePage = lazy(() =>
 const CoachPage = lazy(() =>
   import('@/pages/CoachPage').then((m) => ({ default: m.CoachPage })),
 )
+const NutritionPage = lazy(() =>
+  import('@/pages/NutritionPage').then((m) => ({ default: m.NutritionPage })),
+)
 
 function App() {
   return (
@@ -91,6 +94,7 @@ function App() {
               <Route path="/profile/coaching" element={<CoachingProfilePage />} />
               <Route path="/sessions/:id" element={<SessionLogPage />} />
               <Route path="/bien-etre" element={<WellnessPage />} />
+              <Route path="/nutrition" element={<NutritionPage />} />
               <Route path="/cycle" element={<CyclePage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/feed" element={<FeedPage />} />

@@ -647,6 +647,56 @@ export type Database = {
         }
         Relationships: []
       }
+      food_logs: {
+        Row: {
+          calories: number
+          carbs_g: number | null
+          created_at: string
+          fat_g: number | null
+          id: string
+          logged_date: string
+          meal_slot_id: string
+          name: string
+          protein_g: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calories: number
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          id?: string
+          logged_date?: string
+          meal_slot_id: string
+          name: string
+          protein_g?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calories?: number
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          id?: string
+          logged_date?: string
+          meal_slot_id?: string
+          name?: string
+          protein_g?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_logs_meal_slot_id_fkey"
+            columns: ["meal_slot_id"]
+            isOneToOne: false
+            referencedRelation: "meal_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -674,6 +724,36 @@ export type Database = {
           status?: string
           user_a?: string | null
           user_b?: string | null
+        }
+        Relationships: []
+      }
+      meal_slots: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -717,6 +797,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      nutrition_targets: {
+        Row: {
+          activity_level: string | null
+          calories_target: number | null
+          carbs_g_target: number | null
+          created_at: string
+          fat_g_target: number | null
+          id: string
+          protein_g_target: number | null
+          updated_at: string
+        }
+        Insert: {
+          activity_level?: string | null
+          calories_target?: number | null
+          carbs_g_target?: number | null
+          created_at?: string
+          fat_g_target?: number | null
+          id: string
+          protein_g_target?: number | null
+          updated_at?: string
+        }
+        Update: {
+          activity_level?: string | null
+          calories_target?: number | null
+          carbs_g_target?: number | null
+          created_at?: string
+          fat_g_target?: number | null
+          id?: string
+          protein_g_target?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       posts: {
         Row: {
@@ -1295,6 +1408,7 @@ export type Database = {
         Args: { p_user_1: string; p_user_2: string }
         Returns: boolean
       }
+      can_view_exercise: { Args: { p_exercise_id: string }; Returns: boolean }
       can_view_feed_target: {
         Args: { p_target_id: string; p_target_type: string }
         Returns: boolean

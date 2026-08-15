@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { motion } from 'framer-motion'
-import { Bot, Dumbbell, Home, Sparkles, Trophy } from 'lucide-react'
+import { Bot, Dumbbell, Home, Trophy, Utensils } from 'lucide-react'
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
 import { NotificationsPromptDialog } from '@/components/NotificationsPromptDialog'
 import { useAuthStore } from '@/lib/auth-store'
@@ -34,9 +34,9 @@ export function AppLayout() {
   const navItems: NavItem[] = [
     { name: 'Accueil', url: '/', icon: Home },
     { name: 'Programmes', url: '/programs', icon: Dumbbell },
+    { name: 'Nutrition', url: '/nutrition', icon: Utensils },
     { name: 'Coach', url: '/coach', icon: Bot },
     { name: 'Feed', url: '/feed', icon: Trophy, badgeCount: feedBadgeCount },
-    { name: 'Bien-être', url: '/bien-etre', icon: Sparkles },
   ]
 
   // Best-effort — a failed sync just means the wellness reminder scheduler

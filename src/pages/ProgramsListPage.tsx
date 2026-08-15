@@ -41,18 +41,25 @@ export function ProgramsListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Mes programmes</h1>
-        <div className="flex gap-2">
-          <Link to="/programs/generate" className="flex-1 sm:flex-none">
-            <Button variant="outline" className="w-full">
-              <Sparkles /> Générer avec l'IA
-            </Button>
-          </Link>
-          <Link to="/programs/new" className="flex-1 sm:flex-none">
-            <Button className="w-full">Nouveau programme</Button>
-          </Link>
-        </div>
+        <Link
+          to="/bien-etre"
+          className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+        >
+          Bien-être →
+        </Link>
+      </div>
+
+      <div className="flex gap-2">
+        <Link to="/programs/generate" className="flex-1 sm:flex-none">
+          <Button variant="outline" className="w-full">
+            <Sparkles /> Générer avec l'IA
+          </Button>
+        </Link>
+        <Link to="/programs/new" className="flex-1 sm:flex-none">
+          <Button className="w-full">Nouveau programme</Button>
+        </Link>
       </div>
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
