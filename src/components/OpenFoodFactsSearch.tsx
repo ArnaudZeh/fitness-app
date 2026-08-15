@@ -99,13 +99,13 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
                         fatPer100g: result.fatPer100g,
                       })
                     }
-                    className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    className="flex w-full flex-col items-start gap-0.5 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
                   >
-                    <span className="truncate">
+                    <span>
                       {result.name}
                       {result.brand ? ` · ${result.brand}` : ''}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {result.caloriesPer100g} kcal/100g
                     </span>
                   </button>

@@ -744,3 +744,12 @@ Deux retours du user avant de passer à P2.
 2. La sélection d'un résultat préremplit correctement calories/macros → vérifié en direct.
 3. La soumission finale enregistre bien l'aliment → **non revérifié en direct cette session**, à confirmer côté user.
 4. Le log manuel reste disponible si rien n'est trouvé → toujours affiché sous la recherche, inchangé de P1.
+
+## Nutrition — fix débordement horizontal mobile sur les résultats de recherche (2026-08-15)
+
+Le user a confirmé que l'ajout d'un aliment fonctionne bien, mais a signalé un vrai bug d'affichage mobile : le préremplissage depuis un résultat de recherche permettait un scroll horizontal gauche/droite, non désiré (mobile-first).
+
+- **Cause identifiée** : dans `OpenFoodFactsSearch.tsx`, chaque résultat était un bouton `flex items-center justify-between` avec un `<span className="truncate">` pour le nom+marque et un `<span className="shrink-0">` pour les kcal/100g. Sans `min-w-0` sur le span tronqué, `truncate` (qui repose sur `white-space: nowrap`) n'a aucun effet réel dans une ligne flex — le span garde sa largeur intrinsèque complète et pousse la ligne (donc la dialog, dont `overflow-y-auto` calcule implicitement `overflow-x` à `auto` par les règles CSS) plus large que le viewport dès qu'un nom de produit est long.
+- **Corrigé en repassant sur plusieurs lignes plutôt qu'en réparant la troncature** (demande explicite du user) : le bouton résultat passe de `flex-row justify-between` à `flex-col items-start`, nom et kcal/100g empilés au lieu d'être serrés côte à côte — élimine la cause racine (plus de ligne flex à faire tenir sur une largeur fixe) plutôt que de juste ajouter `min-w-0`.
+- **Vérifié en direct au pire cas** (le nom le plus long des résultats réels, "Manhattan Oeuf Poulet Rôti Fromage · Salade & Compagnie") : passe proprement sur deux lignes, aucun scroll horizontal, avant et après sélection/préremplissage. `tsc -b`/ESLint (0 erreur) toujours propres.
+- Recherche vérifiée à nouveau en direct avec de vraies données (l'API OpenFoodFacts a renvoyé quelques 503 transitoires pendant les tests — confirmé indépendamment que l'API elle-même répondait normalement en parallèle via `curl`, donc un aléa réseau/navigateur de cette session, pas un problème de code).
