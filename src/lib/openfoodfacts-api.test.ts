@@ -20,7 +20,7 @@ describe('mapOpenFoodFactsResponse', () => {
     }
     expect(mapOpenFoodFactsResponse(data)).toEqual([
       {
-        id: '123',
+        id: 'off:123',
         name: 'Riz basmati',
         brand: 'Taureau Ailé',
         caloriesPer100g: 353,
@@ -90,7 +90,7 @@ describe('mapOpenFoodFactsResponse', () => {
       ],
     }
     expect(mapOpenFoodFactsResponse(data)[0]).toEqual({
-      id: '222',
+      id: 'off:222',
       name: 'Blanc de Poulet',
       brand: null,
       caloriesPer100g: 102,

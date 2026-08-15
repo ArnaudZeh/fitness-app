@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { searchCommonFoods } from '@/lib/common-foods'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useRecentFoodLogNames } from '@/hooks/useFoodLogs'
 import { useOpenFoodFactsSearch } from '@/hooks/useOpenFoodFactsSearch'
+import { useUsdaFdcSearch } from '@/hooks/useUsdaFdcSearch'
 
 export interface FoodSelection {
   name: string
@@ -22,18 +24,37 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
   const [query, setQuery] = useState('')
   const trimmedQuery = query.trim()
   const debouncedQuery = useDebouncedValue(trimmedQuery, 400)
-  const {
-    data: results,
-    isFetching,
-    isError,
-  } = useOpenFoodFactsSearch(debouncedQuery)
   const { data: recents } = useRecentFoodLogNames()
 
-  // Tied to the raw query, not the debounced one that drives the actual
-  // fetch — clearing the field on selection (below) hides the list right
-  // away instead of leaving stale results visible for the debounce delay.
+  // Tied to the raw query, not the debounced one that drives the network
+  // fetches below — clearing the field on selection (selectAndClear) hides
+  // the list right away instead of leaving stale results visible for the
+  // debounce delay.
   const showResults = trimmedQuery.length >= 2
   const showRecents = !showResults && recents !== undefined && recents.length > 0
+
+  // Three sources, curated first: OpenFoodFacts (packaged/barcoded
+  // products) and USDA FDC (Foundation/SR Legacy — mostly English) both
+  // struggle with plain everyday French foods ("riz cuit", "1 œuf"), which
+  // this hand-picked list covers directly and instantly (no network, no
+  // loading state of its own).
+  const commonResults = useMemo(
+    () => (showResults ? searchCommonFoods(trimmedQuery) : []),
+    [trimmedQuery, showResults],
+  )
+  const {
+    data: usdaResults,
+    isFetching: isFetchingUsda,
+    isError: isUsdaError,
+  } = useUsdaFdcSearch(debouncedQuery)
+  const {
+    data: offResults,
+    isFetching: isFetchingOff,
+    isError: isOffError,
+  } = useOpenFoodFactsSearch(debouncedQuery)
+
+  const isFetching = isFetchingUsda || isFetchingOff
+  const combinedResults = [...commonResults, ...(usdaResults ?? []), ...(offResults ?? [])]
 
   function selectAndClear(selection: FoodSelection) {
     onSelect(selection)
@@ -80,22 +101,9 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
 
       {showResults && (
         <div className="flex flex-col gap-1">
-          {isFetching && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" /> Recherche en cours.
-            </p>
-          )}
-          {isError && (
-            <p className="text-xs text-destructive">Recherche indisponible pour le moment.</p>
-          )}
-          {!isFetching && results && results.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              Aucun résultat. Tu peux saisir les valeurs toi-même ci-dessous.
-            </p>
-          )}
-          {results && results.length > 0 && (
+          {combinedResults.length > 0 && (
             <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border border-border p-1">
-              {results.map((result) => (
+              {combinedResults.map((result) => (
                 <li key={result.id}>
                   <button
                     type="button"
@@ -121,6 +129,18 @@ export function OpenFoodFactsSearch({ onSelect }: OpenFoodFactsSearchProps) {
                 </li>
               ))}
             </ul>
+          )}
+          {isFetching && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> Recherche en cours.
+            </p>
+          )}
+          {!isFetching && combinedResults.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              {isOffError && isUsdaError
+                ? 'Recherche indisponible pour le moment. Tu peux saisir les valeurs toi-même ci-dessous.'
+                : 'Aucun résultat. Tu peux saisir les valeurs toi-même ci-dessous.'}
+            </p>
           )}
         </div>
       )}
