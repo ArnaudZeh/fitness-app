@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCreateFoodLog } from '@/hooks/useFoodLogs'
 import { computeFoodLogTotals } from '@/lib/nutrition-calc'
+import { parseLocaleNumber } from '@/lib/number-input'
 
 interface AddFoodLogDialogProps {
   trigger: React.ReactNode
@@ -50,8 +51,8 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
     setFatPer100g(selection.fatPer100g?.toString() ?? '')
   }
 
-  const parsedQuantity = Number(quantityG)
-  const parsedCaloriesPer100g = Number(caloriesPer100g)
+  const parsedQuantity = parseLocaleNumber(quantityG)
+  const parsedCaloriesPer100g = parseLocaleNumber(caloriesPer100g)
   const hasValidBase =
     quantityG.trim() !== '' &&
     !Number.isNaN(parsedQuantity) &&
@@ -63,9 +64,9 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
     ? computeFoodLogTotals({
         quantityG: parsedQuantity,
         caloriesPer100g: parsedCaloriesPer100g,
-        proteinGPer100g: proteinPer100g.trim() === '' ? null : Number(proteinPer100g),
-        carbsGPer100g: carbsPer100g.trim() === '' ? null : Number(carbsPer100g),
-        fatGPer100g: fatPer100g.trim() === '' ? null : Number(fatPer100g),
+        proteinGPer100g: proteinPer100g.trim() === '' ? null : parseLocaleNumber(proteinPer100g),
+        carbsGPer100g: carbsPer100g.trim() === '' ? null : parseLocaleNumber(carbsPer100g),
+        fatGPer100g: fatPer100g.trim() === '' ? null : parseLocaleNumber(fatPer100g),
       })
     : null
 
@@ -83,9 +84,9 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
         name: name.trim(),
         quantity_g: parsedQuantity,
         calories_per_100g: parsedCaloriesPer100g,
-        protein_g_per_100g: proteinPer100g.trim() === '' ? null : Number(proteinPer100g),
-        carbs_g_per_100g: carbsPer100g.trim() === '' ? null : Number(carbsPer100g),
-        fat_g_per_100g: fatPer100g.trim() === '' ? null : Number(fatPer100g),
+        protein_g_per_100g: proteinPer100g.trim() === '' ? null : parseLocaleNumber(proteinPer100g),
+        carbs_g_per_100g: carbsPer100g.trim() === '' ? null : parseLocaleNumber(carbsPer100g),
+        fat_g_per_100g: fatPer100g.trim() === '' ? null : parseLocaleNumber(fatPer100g),
         calories: preview.calories,
         protein_g: preview.proteinG,
         carbs_g: preview.carbsG,
@@ -131,8 +132,8 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
             <Label htmlFor="food-quantity">Quantité (g)</Label>
             <Input
               id="food-quantity"
-              type="number"
-              min={1}
+              type="text"
+              inputMode="decimal"
               value={quantityG}
               onChange={(event) => setQuantityG(event.target.value)}
             />
@@ -144,8 +145,8 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
             <Label htmlFor="food-calories">Calories pour 100g (kcal)</Label>
             <Input
               id="food-calories"
-              type="number"
-              min={0}
+              type="text"
+              inputMode="decimal"
               value={caloriesPer100g}
               onChange={(event) => setCaloriesPer100g(event.target.value)}
             />
@@ -155,8 +156,8 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
               <Label htmlFor="food-protein">Protéines /100g</Label>
               <Input
                 id="food-protein"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={proteinPer100g}
                 onChange={(event) => setProteinPer100g(event.target.value)}
                 placeholder="Optionnel"
@@ -166,8 +167,8 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
               <Label htmlFor="food-carbs">Glucides /100g</Label>
               <Input
                 id="food-carbs"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={carbsPer100g}
                 onChange={(event) => setCarbsPer100g(event.target.value)}
                 placeholder="Optionnel"
@@ -177,8 +178,8 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
               <Label htmlFor="food-fat">Lipides /100g</Label>
               <Input
                 id="food-fat"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={fatPer100g}
                 onChange={(event) => setFatPer100g(event.target.value)}
                 placeholder="Optionnel"

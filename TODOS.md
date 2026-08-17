@@ -772,3 +772,12 @@ Retour du user : trop d'aliments génériques manquants sur OpenFoodFacts (base 
 - **Fusion dans `OpenFoodFactsSearch.tsx`** : maison (instantané) → USDA (async) → OpenFoodFacts (async) dans une seule liste, un seul indicateur de chargement/erreur combiné pour les deux sources réseau.
 - **Vérifié en direct avec la vraie clé** : "poulet" → résultats maison instantanés + OpenFoodFacts (USDA ne matche pas, normal — base anglophone) ; "chicken breast" → résultats USDA réels ("Chicken, breast, boneless, skinless, raw", 106 kcal/100g — exactement la valeur du cas Atwater testé), sélection préremplit correctement le formulaire.
 - **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 194/194 (17 nouveaux tests : mapping USDA avec données réelles trimées, recherche maison, id OpenFoodFacts préfixé).
+
+## Nutrition — virgule décimale rejetée sur les champs numériques (2026-08-16)
+
+Retour du user : sur "Œuf entier", taper "1,1" dans Glucides échouait — seul le point fonctionnait.
+
+- **Cause** : `<input type="number">` est sensible à la locale du navigateur/OS de façon incohérente — sur un appareil en français, le clavier numérique propose la virgule comme séparateur décimal, mais la valeur DOM d'un input `type="number"` n'accepte que le point selon la spec HTML. Résultat bien documenté (surtout iOS Safari) : taper "1,1" laisse le champ dans un état invalide/vide, silencieusement.
+- **Corrigé** (`number-input.ts`, nouvelle fonction pure `parseLocaleNumber` testée) : tous les champs décimaux de `AddFoodLogDialog.tsx` et `NutritionTargetsCard.tsx` passent de `type="number"` à `type="text" inputMode="decimal"` (même clavier numérique sur mobile) et parsent via `parseLocaleNumber` (accepte virgule et point) plutôt que `Number()` directement. Le champ "Quantité (g)" est inclus par cohérence même s'il est rarement décimal. Le champ "Autre nombre" de l'onboarding repas n'est pas concerné (nombre entier de repas, pas de décimale possible).
+- **Vérifié en direct** : "Œuf entier" avec "1,1" tapé tel quel dans Glucides → accepté sans erreur, aperçu "Pour 100g : 155 kcal · P 13g · G 1.1g · L 11g" correctement calculé.
+- **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 200/200 (6 nouveaux tests `parseLocaleNumber`).

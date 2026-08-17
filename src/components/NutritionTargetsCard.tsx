@@ -24,6 +24,7 @@ import {
   type DailyActivityLevel,
 } from '@/lib/nutrition-calc'
 import type { NutritionTargets } from '@/lib/nutrition-targets-api'
+import { parseLocaleNumber } from '@/lib/number-input'
 import type { Profile } from '@/lib/profile-api'
 
 interface DailyTotals {
@@ -77,7 +78,11 @@ export function NutritionTargetsCard({
   const macrosAreEmpty = proteinG.trim() === '' && carbsG.trim() === '' && fatG.trim() === ''
   const computedCalories = macrosAreEmpty
     ? null
-    : caloriesFromMacros(Number(proteinG) || 0, Number(carbsG) || 0, Number(fatG) || 0)
+    : caloriesFromMacros(
+        parseLocaleNumber(proteinG) || 0,
+        parseLocaleNumber(carbsG) || 0,
+        parseLocaleNumber(fatG) || 0,
+      )
 
   const missing = missingProfileFields(profile, latestWeightKg)
   const usingSteps = avgDailySteps !== null && avgDailySteps > 0
@@ -138,9 +143,9 @@ export function NutritionTargetsCard({
     await updateNutritionTargets.mutateAsync({
       activity_level: activityLevel === NONE_VALUE ? null : (activityLevel as DailyActivityLevel),
       calories_target: computedCalories,
-      protein_g_target: proteinG.trim() === '' ? null : Number(proteinG),
-      carbs_g_target: carbsG.trim() === '' ? null : Number(carbsG),
-      fat_g_target: fatG.trim() === '' ? null : Number(fatG),
+      protein_g_target: proteinG.trim() === '' ? null : parseLocaleNumber(proteinG),
+      carbs_g_target: carbsG.trim() === '' ? null : parseLocaleNumber(carbsG),
+      fat_g_target: fatG.trim() === '' ? null : parseLocaleNumber(fatG),
     })
     setExpanded(false)
   }
@@ -272,8 +277,8 @@ export function NutritionTargetsCard({
                 <Label htmlFor="protein-target">Protéines (g)</Label>
                 <Input
                   id="protein-target"
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="decimal"
                   value={proteinG}
                   onChange={(event) => setProteinG(event.target.value)}
                 />
@@ -282,8 +287,8 @@ export function NutritionTargetsCard({
                 <Label htmlFor="carbs-target">Glucides (g)</Label>
                 <Input
                   id="carbs-target"
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="decimal"
                   value={carbsG}
                   onChange={(event) => setCarbsG(event.target.value)}
                 />
@@ -292,8 +297,8 @@ export function NutritionTargetsCard({
                 <Label htmlFor="fat-target">Lipides (g)</Label>
                 <Input
                   id="fat-target"
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="decimal"
                   value={fatG}
                   onChange={(event) => setFatG(event.target.value)}
                 />
