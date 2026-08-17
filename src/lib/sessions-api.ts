@@ -45,10 +45,16 @@ export interface SessionTemplateExerciseInput {
 // - Endurance (higher reps, metabolic/muscular-endurance focus): shorter
 //   rest keeps metabolic stress elevated, consistent with the classic
 //   NSCA muscular-endurance guidance of well under a minute.
+// - Deload: working weights and RPE are both intentionally reduced (see
+//   applyLoadReduction in programs-api.ts), so sets aren't taxing enough to
+//   need force-level recovery — shorter rest than hypertrophie without
+//   going as low as endurance's metabolic-stress target, which isn't the
+//   point of a deload week either.
 export const DEFAULT_REST_SECONDS_BY_FOCUS: Record<ProgramFocus, number> = {
   force: 180,
   hypertrophie: 90,
   endurance: 45,
+  deload: 60,
 }
 
 export const DAY_TYPE_LABELS: Record<DayType, string> = {

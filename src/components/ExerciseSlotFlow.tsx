@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ExercisePicker, NEW_EXERCISE_VALUE } from '@/components/ExercisePicker'
+import { parseLocaleNumber } from '@/lib/number-input'
 import { nextSupersetLabel } from '@/lib/ordering'
 import type { Exercise } from '@/lib/exercises-api'
 import type { ProgramFocus } from '@/lib/programs-api'
@@ -190,10 +191,11 @@ export function ExerciseSlotFlow({
         target_sets: targetSets,
         target_reps_min: targetRepsMin,
         target_reps_max: targetRepsMax,
-        target_rpe: targetRpe.trim() === '' ? null : Number(targetRpe),
+        target_rpe: targetRpe.trim() === '' ? null : parseLocaleNumber(targetRpe),
         target_rest_seconds:
           targetRestSeconds.trim() === '' ? null : Number(targetRestSeconds),
-        target_weight_kg: targetWeightKg.trim() === '' ? null : Number(targetWeightKg),
+        target_weight_kg:
+          targetWeightKg.trim() === '' ? null : parseLocaleNumber(targetWeightKg),
         notes: notes.trim() === '' ? null : notes,
         // The manual free-text field this used to be is gone (typo-prone,
         // easy to silently break a grouping) — a plain add/edit always
@@ -386,9 +388,8 @@ export function ExerciseSlotFlow({
                       </Label>
                       <Input
                         id="target-weight-kg"
-                        type="number"
-                        min={isBodyweight ? undefined : 0}
-                        step={0.5}
+                        type="text"
+                        inputMode="decimal"
                         placeholder="Optionnel"
                         value={targetWeightKg}
                         onChange={(event) => setTargetWeightKg(event.target.value)}
@@ -404,10 +405,8 @@ export function ExerciseSlotFlow({
                       <Label htmlFor="target-rpe">RPE cible</Label>
                       <Input
                         id="target-rpe"
-                        type="number"
-                        min={0}
-                        max={10}
-                        step={0.5}
+                        type="text"
+                        inputMode="decimal"
                         placeholder="Optionnel"
                         value={targetRpe}
                         onChange={(event) => setTargetRpe(event.target.value)}

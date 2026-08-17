@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/programs-api'
-import type { Program, ProgramInput } from '@/lib/programs-api'
+import type { CopyProgramOptions, Program, ProgramInput } from '@/lib/programs-api'
 
 const programsKey = ['programs'] as const
 const programKey = (id: string) => ['programs', id] as const
@@ -49,7 +49,15 @@ export function useDeleteProgram() {
 export function useDuplicateProgram() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (program: Program) => api.duplicateProgram(program),
+    mutationFn: ({
+      program,
+      newName,
+      options,
+    }: {
+      program: Program
+      newName: string
+      options?: CopyProgramOptions
+    }) => api.duplicateProgram(program, newName, options),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: programsKey }),
   })
 }

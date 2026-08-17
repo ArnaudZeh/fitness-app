@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 
 export type ProgramStatus = 'draft' | 'active' | 'archived'
-export type ProgramFocus = 'force' | 'hypertrophie' | 'endurance'
+export type ProgramFocus = 'force' | 'hypertrophie' | 'endurance' | 'deload'
 
 type ProgramRow = Database['public']['Tables']['programs']['Row']
 
@@ -22,6 +22,7 @@ export const PROGRAM_FOCUS_LABELS: Record<ProgramFocus, string> = {
   force: 'Force',
   hypertrophie: 'Hypertrophie',
   endurance: 'Endurance',
+  deload: 'Deload',
 }
 
 export interface Program extends Omit<ProgramRow, 'status' | 'focus'> {
@@ -99,20 +100,50 @@ export async function deleteProgram(id: string): Promise<void> {
   if (error) throw error
 }
 
+// Only reduces genuinely loaded weight — a bodyweight exercise's negative
+// target_weight_kg is assistance (more negative = easier), not a load to
+// cut, so scaling its magnitude down would make the exercise HARDER, the
+// opposite of what a deload wants. Left untouched, along with null (no
+// reference weight set). Rounds to 1 decimal, matching the column's
+// numeric(5,1) precision.
+export function applyLoadReduction(
+  targetWeightKg: number | null,
+  reductionPercent: number,
+): number | null {
+  if (targetWeightKg === null || targetWeightKg <= 0 || reductionPercent === 0) {
+    return targetWeightKg
+  }
+  const reduced = targetWeightKg * (1 - reductionPercent / 100)
+  return Math.round(reduced * 10) / 10
+}
+
+export interface CopyProgramOptions {
+  focus?: ProgramFocus
+  // Percentage cut applied to every exercise's target_weight_kg — see
+  // applyLoadReduction. 0 (default) copies weights unchanged.
+  loadReductionPercent?: number
+}
+
 // Shared by duplicateProgram() (same owner) and copyProgramToMyAccount()
 // (source owned by someone else, entirely) — the source's session_templates/
 // session_template_exercises reads below carry no owner filter, relying on
 // RLS alone to decide what's readable, so this works unchanged for a
 // friend's or public user's active program once RLS allows the read.
-async function copyProgramInternal(program: Program, newName: string): Promise<Program> {
+async function copyProgramInternal(
+  program: Program,
+  newName: string,
+  options: CopyProgramOptions = {},
+): Promise<Program> {
   const userId = await requireUserId()
+  const focus = options.focus ?? program.focus
+  const loadReductionPercent = options.loadReductionPercent ?? 0
   const { data: newProgram, error: programError } = await supabase
     .from('programs')
     .insert({
       user_id: userId,
       name: newName,
       description: program.description,
-      focus: program.focus,
+      focus,
     })
     .select()
     .single()
@@ -168,7 +199,7 @@ async function copyProgramInternal(program: Program, newName: string): Promise<P
             target_reps_max: slot.target_reps_max,
             target_rpe: slot.target_rpe,
             target_rest_seconds: slot.target_rest_seconds,
-            target_weight_kg: slot.target_weight_kg,
+            target_weight_kg: applyLoadReduction(slot.target_weight_kg, loadReductionPercent),
             notes: slot.notes,
             superset_group: slot.superset_group,
             is_unilateral: slot.is_unilateral,
@@ -182,8 +213,12 @@ async function copyProgramInternal(program: Program, newName: string): Promise<P
   return createdProgram
 }
 
-export async function duplicateProgram(program: Program): Promise<Program> {
-  return copyProgramInternal(program, `${program.name} (copie)`)
+export async function duplicateProgram(
+  program: Program,
+  newName: string,
+  options: CopyProgramOptions = {},
+): Promise<Program> {
+  return copyProgramInternal(program, newName, options)
 }
 
 // Copies someone else's active program (friend or public profile — RLS on

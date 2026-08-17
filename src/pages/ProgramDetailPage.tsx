@@ -7,12 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DuplicateProgramDialog } from '@/components/DuplicateProgramDialog'
 import { SessionTemplateCard } from '@/components/SessionTemplateCard'
 import { useAuthStore } from '@/lib/auth-store'
 import {
   useCopyProgramToMyAccount,
   useDeleteProgram,
-  useDuplicateProgram,
   useProgram,
   useUpdateProgram,
 } from '@/hooks/usePrograms'
@@ -42,7 +42,6 @@ export function ProgramDetailPage() {
   const { data: templates } = useSessionTemplates(id)
   const logs = useSessionLogs(id)
   const deleteProgram = useDeleteProgram()
-  const duplicateProgram = useDuplicateProgram()
   const deleteLog = useDeleteSessionLog()
   const updateProgram = useUpdateProgram(id)
   const copyProgram = useCopyProgramToMyAccount()
@@ -190,19 +189,14 @@ export function ProgramDetailPage() {
         <div className="flex flex-wrap gap-2">
           {isOwner ? (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={duplicateProgram.isPending}
-                onClick={() =>
-                  duplicateProgram.mutate(program, {
-                    onSuccess: (newProgram) =>
-                      void navigate(`/programs/${newProgram.id}`),
-                  })
+              <DuplicateProgramDialog
+                program={program}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    Dupliquer
+                  </Button>
                 }
-              >
-                Dupliquer
-              </Button>
+              />
               <ConfirmDialog
                 trigger={
                   <Button variant="destructive" size="sm">
