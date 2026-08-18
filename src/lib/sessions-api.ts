@@ -46,7 +46,7 @@ export interface SessionTemplateExerciseInput {
 //   rest keeps metabolic stress elevated, consistent with the classic
 //   NSCA muscular-endurance guidance of well under a minute.
 // - Deload: working weights and RPE are both intentionally reduced (see
-//   applyLoadReduction in programs-api.ts), so sets aren't taxing enough to
+//   applyLoadAdjustment in programs-api.ts), so sets aren't taxing enough to
 //   need force-level recovery — shorter rest than hypertrophie without
 //   going as low as endurance's metabolic-stress target, which isn't the
 //   point of a deload week either.

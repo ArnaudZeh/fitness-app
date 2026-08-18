@@ -1,33 +1,64 @@
 import { describe, expect, it } from 'vitest'
-import { applyLoadReduction } from '@/lib/programs-api'
+import { applyLoadAdjustment, suggestFocusLoadAdjustmentPercent } from '@/lib/programs-api'
 
-describe('applyLoadReduction', () => {
+describe('applyLoadAdjustment', () => {
   it('reduces a positive target weight by the given percentage', () => {
     // 100 * (1 - 15/100) = 85
-    expect(applyLoadReduction(100, 15)).toBe(85)
+    expect(applyLoadAdjustment(100, 15)).toBe(85)
   })
 
   it('rounds to one decimal, matching the column precision', () => {
     // 62.5 * 0.85 = 53.125 -> 53.1
-    expect(applyLoadReduction(62.5, 15)).toBe(53.1)
+    expect(applyLoadAdjustment(62.5, 15)).toBe(53.1)
+  })
+
+  it('increases the weight when given a negative percentage', () => {
+    // 62.5 * (1 - -18/100) = 62.5 * 1.18 = 73.75 -> 73.8
+    expect(applyLoadAdjustment(62.5, -18)).toBe(73.8)
   })
 
   it('returns null unchanged', () => {
-    expect(applyLoadReduction(null, 15)).toBeNull()
+    expect(applyLoadAdjustment(null, 15)).toBeNull()
   })
 
-  it('leaves a zero reduction percentage as a no-op', () => {
-    expect(applyLoadReduction(100, 0)).toBe(100)
+  it('leaves a zero adjustment percentage as a no-op', () => {
+    expect(applyLoadAdjustment(100, 0)).toBe(100)
   })
 
-  it('does not reduce a negative value (bodyweight assistance, not a load)', () => {
-    // -10 means "10kg of machine assistance" — scaling its magnitude down
-    // would mean LESS assistance, i.e. a HARDER exercise, the opposite of
-    // a deload.
-    expect(applyLoadReduction(-10, 15)).toBe(-10)
+  it('does not adjust a negative value (bodyweight assistance, not a load)', () => {
+    // -10 means "10kg of machine assistance" — scaling its magnitude either
+    // way changes how much help the exercise gets, not a load to cut/raise.
+    expect(applyLoadAdjustment(-10, 15)).toBe(-10)
+    expect(applyLoadAdjustment(-10, -18)).toBe(-10)
   })
 
-  it('does not reduce zero (bodyweight-only, nothing to cut)', () => {
-    expect(applyLoadReduction(0, 15)).toBe(0)
+  it('does not adjust zero (bodyweight-only, nothing to cut)', () => {
+    expect(applyLoadAdjustment(0, 15)).toBe(0)
+  })
+})
+
+describe('suggestFocusLoadAdjustmentPercent', () => {
+  it('suggests a load increase going from hypertrophie to force', () => {
+    // 1 - 90/76 = -0.1842... -> -18
+    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'force')).toBe(-18)
+  })
+
+  it('suggests a load cut going from force to hypertrophie', () => {
+    // 1 - 76/90 = 0.1556... -> 16
+    expect(suggestFocusLoadAdjustmentPercent('force', 'hypertrophie')).toBe(16)
+  })
+
+  it('suggests a load cut going from hypertrophie to endurance', () => {
+    // 1 - 55/76 = 0.2763... -> 28
+    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'endurance')).toBe(28)
+  })
+
+  it('returns 0 when the focus does not change', () => {
+    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'hypertrophie')).toBe(0)
+  })
+
+  it('returns 0 when either side is deload (no absolute reference zone)', () => {
+    expect(suggestFocusLoadAdjustmentPercent('deload', 'hypertrophie')).toBe(0)
+    expect(suggestFocusLoadAdjustmentPercent('force', 'deload')).toBe(0)
   })
 })

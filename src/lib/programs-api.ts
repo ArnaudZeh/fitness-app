@@ -100,28 +100,74 @@ export async function deleteProgram(id: string): Promise<void> {
   if (error) throw error
 }
 
-// Only reduces genuinely loaded weight — a bodyweight exercise's negative
-// target_weight_kg is assistance (more negative = easier), not a load to
-// cut, so scaling its magnitude down would make the exercise HARDER, the
-// opposite of what a deload wants. Left untouched, along with null (no
-// reference weight set). Rounds to 1 decimal, matching the column's
-// numeric(5,1) precision.
-export function applyLoadReduction(
+// Signed percent: positive reduces the weight, negative increases it (used
+// for e.g. hypertrophie -> force, where the working load should go up).
+// Only ever touches genuinely loaded weight — a bodyweight exercise's
+// negative target_weight_kg is assistance (more negative = easier), not a
+// load to scale, so changing its magnitude either way would move the
+// exercise's real difficulty in the wrong direction. Left untouched, along
+// with null (no reference weight set). Rounds to 1 decimal, matching the
+// column's numeric(5,1) precision.
+export function applyLoadAdjustment(
   targetWeightKg: number | null,
-  reductionPercent: number,
+  adjustmentPercent: number,
 ): number | null {
-  if (targetWeightKg === null || targetWeightKg <= 0 || reductionPercent === 0) {
+  if (targetWeightKg === null || targetWeightKg <= 0 || adjustmentPercent === 0) {
     return targetWeightKg
   }
-  const reduced = targetWeightKg * (1 - reductionPercent / 100)
-  return Math.round(reduced * 10) / 10
+  const adjusted = targetWeightKg * (1 - adjustmentPercent / 100)
+  return Math.round(adjusted * 10) / 10
+}
+
+// Representative working-load zone (%1RM) per goal, from NSCA's load/rep/
+// goal programming table (Haff & Triplett, Essentials of Strength Training
+// and Conditioning, 4th ed.): strength >=85% 1RM at <=6 reps, hypertrophy
+// 67-85% 1RM at 6-12 reps, muscular endurance <=67% 1RM at >=12 reps —
+// values below are representative midpoints of each zone. Deload has no
+// absolute zone of its own (it's defined relative to the duplicated
+// session, see DELOAD_REDUCTION_OPTIONS below), so it's deliberately absent
+// from this table.
+export const FOCUS_REFERENCE_1RM_PERCENT: Record<
+  Exclude<ProgramFocus, 'deload'>,
+  number
+> = {
+  force: 90,
+  hypertrophie: 76,
+  endurance: 55,
+}
+
+// Preset choices for a deload duplication's load cut — a 30-50% reduction
+// off the duplicated session's reference weights is the moderate-to-
+// pronounced range commonly used for a deload week in periodization
+// literature (NSCA; Helms/Israetel consensus), deliberately deeper than a
+// merely "moderate" cut since the point of a deload is genuine recovery.
+export const DELOAD_REDUCTION_OPTIONS = [30, 35, 40, 45, 50] as const
+export const DEFAULT_DELOAD_REDUCTION_PERCENT = 40
+
+// Suggests a load adjustment (same signed shape as applyLoadAdjustment:
+// positive reduces, negative increases) when duplicating from one focus to
+// another, derived from the ratio between their FOCUS_REFERENCE_1RM_PERCENT
+// zones — e.g. hypertrophie (76%) -> force (90%) suggests roughly -18%
+// (an 18% load increase), force -> hypertrophie suggests roughly +16% (a
+// 16% cut). Returns 0 when the focus doesn't actually change, or when
+// either side is 'deload' (no absolute zone to compare against — deload
+// duplications use DELOAD_REDUCTION_OPTIONS instead).
+export function suggestFocusLoadAdjustmentPercent(
+  sourceFocus: ProgramFocus,
+  destFocus: ProgramFocus,
+): number {
+  if (sourceFocus === destFocus) return 0
+  if (sourceFocus === 'deload' || destFocus === 'deload') return 0
+  const sourcePercent = FOCUS_REFERENCE_1RM_PERCENT[sourceFocus]
+  const destPercent = FOCUS_REFERENCE_1RM_PERCENT[destFocus]
+  return Math.round((1 - destPercent / sourcePercent) * 100)
 }
 
 export interface CopyProgramOptions {
   focus?: ProgramFocus
-  // Percentage cut applied to every exercise's target_weight_kg — see
-  // applyLoadReduction. 0 (default) copies weights unchanged.
-  loadReductionPercent?: number
+  // Percentage adjustment applied to every exercise's target_weight_kg —
+  // see applyLoadAdjustment. 0 (default) copies weights unchanged.
+  loadAdjustmentPercent?: number
 }
 
 // Shared by duplicateProgram() (same owner) and copyProgramToMyAccount()
@@ -136,7 +182,7 @@ async function copyProgramInternal(
 ): Promise<Program> {
   const userId = await requireUserId()
   const focus = options.focus ?? program.focus
-  const loadReductionPercent = options.loadReductionPercent ?? 0
+  const loadAdjustmentPercent = options.loadAdjustmentPercent ?? 0
   const { data: newProgram, error: programError } = await supabase
     .from('programs')
     .insert({
@@ -199,7 +245,7 @@ async function copyProgramInternal(
             target_reps_max: slot.target_reps_max,
             target_rpe: slot.target_rpe,
             target_rest_seconds: slot.target_rest_seconds,
-            target_weight_kg: applyLoadReduction(slot.target_weight_kg, loadReductionPercent),
+            target_weight_kg: applyLoadAdjustment(slot.target_weight_kg, loadAdjustmentPercent),
             notes: slot.notes,
             superset_group: slot.superset_group,
             is_unilateral: slot.is_unilateral,
