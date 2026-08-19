@@ -14,6 +14,28 @@ export function useFoodLogs(loggedDate: string) {
   })
 }
 
+// Local date math duplicated here rather than extracted — same precedent as
+// toLocalDateString() across the rest of the app (see project history).
+function isoDateDaysAgo(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Feeds the couche IA nutrition context (buildNutritionContext) — a rolling
+// window ending today, e.g. days=7 covers the last 7 calendar days
+// including today.
+export function useRecentFoodLogs(days: number) {
+  const sinceDate = isoDateDaysAgo(days - 1)
+  return useQuery({
+    queryKey: ['food-logs', 'recent', sinceDate],
+    queryFn: () => api.fetchFoodLogsSince(sinceDate),
+  })
+}
+
 export function useRecentFoodLogNames() {
   return useQuery({
     queryKey: recentFoodLogNamesKey,

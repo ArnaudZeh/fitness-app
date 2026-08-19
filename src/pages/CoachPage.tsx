@@ -11,6 +11,8 @@ import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useCoachingProfile } from '@/hooks/useCoachingProfile'
+import { useNutritionTargets } from '@/hooks/useNutritionTargets'
+import { useRecentFoodLogs } from '@/hooks/useFoodLogs'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useSpeechToText } from '@/hooks/useSpeechToText'
 import { useTextToSpeech } from '@/hooks/useTextToSpeech'
@@ -121,6 +123,15 @@ function AssistantProposalCard({
           />
         )}
 
+        {proposal.type === 'ajuster_objectifs_nutrition' && (
+          <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+            <li>Calories : {proposal.proposal.caloriesTarget} kcal</li>
+            <li>Protéines : {proposal.proposal.proteinGTarget} g</li>
+            <li>Glucides : {proposal.proposal.carbsGTarget} g</li>
+            <li>Lipides : {proposal.proposal.fatGTarget} g</li>
+          </ul>
+        )}
+
         {applyProposal.isError && (
           <p role="alert" className="text-sm text-destructive">
             Impossible d'appliquer cette proposition.
@@ -140,7 +151,9 @@ function AssistantProposalCard({
               ? 'Application…'
               : proposal.type === 'generer_programme'
                 ? 'Créer ce programme'
-                : 'Appliquer cette adaptation'}
+                : proposal.type === 'ajuster_objectifs_nutrition'
+                  ? 'Appliquer ces objectifs'
+                  : 'Appliquer cette adaptation'}
         </Button>
       </CardContent>
     </Card>
@@ -155,6 +168,8 @@ export function CoachPage() {
     enabled: Boolean(profile?.cycle_module_enabled),
   })
   const { data: coachingProfile } = useCoachingProfile()
+  const { data: nutritionTargets } = useNutritionTargets()
+  const { data: recentFoodLogs } = useRecentFoodLogs(7)
   const { data: history } = useSetHistory()
   const { data: programStructure } = useActiveProgramSnapshot()
   const { data: messages } = useAssistantMessages()
@@ -213,6 +228,8 @@ export function CoachPage() {
           weightEntries ?? [],
           cycleEntries ?? [],
           coachingProfile ?? null,
+          nutritionTargets ?? null,
+          recentFoodLogs ?? [],
         ),
         trendSummary: buildTrendSummary(history ?? []),
         programStructure: programStructure ?? [],

@@ -18,6 +18,8 @@ import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useCoachingProfile } from '@/hooks/useCoachingProfile'
+import { useNutritionTargets } from '@/hooks/useNutritionTargets'
+import { useRecentFoodLogs } from '@/hooks/useFoodLogs'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import {
   useApplySessionAdaptation,
@@ -50,6 +52,8 @@ export function SessionAdaptationDialog({
     enabled: Boolean(profile?.cycle_module_enabled),
   })
   const { data: coachingProfile } = useCoachingProfile()
+  const { data: nutritionTargets } = useNutritionTargets()
+  const { data: recentFoodLogs } = useRecentFoodLogs(7)
   const { data: history } = useSetHistory()
   const generateAdaptation = useGenerateSessionAdaptation()
   const applyAdaptation = useApplySessionAdaptation(sessionTemplateId)
@@ -97,6 +101,8 @@ export function SessionAdaptationDialog({
         weightEntries ?? [],
         cycleEntries ?? [],
         coachingProfile ?? null,
+        nutritionTargets ?? null,
+        recentFoodLogs ?? [],
       ),
       trendSummary: buildTrendSummary(history ?? []),
       currentExercises: currentSlots.map((slot) => ({

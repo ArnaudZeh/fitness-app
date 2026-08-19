@@ -30,6 +30,8 @@ import {
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useCoachingProfile } from '@/hooks/useCoachingProfile'
+import { useNutritionTargets } from '@/hooks/useNutritionTargets'
+import { useRecentFoodLogs } from '@/hooks/useFoodLogs'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
@@ -523,6 +525,8 @@ function AiTrendAnalysisCard({
     enabled: profile.cycle_module_enabled,
   })
   const { data: coachingProfile } = useCoachingProfile()
+  const { data: nutritionTargets } = useNutritionTargets()
+  const { data: recentFoodLogs } = useRecentFoodLogs(7)
   const analyzeTrends = useAnalyzeTrends()
   const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
   const [open, setOpen] = useState(false)
@@ -629,6 +633,8 @@ function AiTrendAnalysisCard({
                   weightEntries,
                   cycleEntries ?? [],
                   coachingProfile ?? null,
+                  nutritionTargets ?? null,
+                  recentFoodLogs ?? [],
                 ),
               })
             }}

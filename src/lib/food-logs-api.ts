@@ -42,6 +42,21 @@ export async function fetchFoodLogsForDate(loggedDate: string): Promise<FoodLog[
   return data
 }
 
+// Real calendar cutoff, not "the last N rows" — a sparse logging week
+// shouldn't silently pull in entries from a month ago. Used to feed the
+// couche IA nutrition context (see buildNutritionContext in nutrition-calc.ts).
+export async function fetchFoodLogsSince(sinceDate: string): Promise<FoodLog[]> {
+  const userId = await requireUserId()
+  const { data, error } = await supabase
+    .from('food_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('logged_date', sinceDate)
+    .order('logged_date', { ascending: true })
+  if (error) throw error
+  return data
+}
+
 export async function createFoodLog(input: FoodLogInput): Promise<FoodLog> {
   const userId = await requireUserId()
   const { data, error } = await supabase

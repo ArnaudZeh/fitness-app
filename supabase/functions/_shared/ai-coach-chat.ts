@@ -4,6 +4,7 @@ import { fetchWithTimeout } from './fetch-with-timeout.ts'
 import { analyzeTrends } from './ai-analysis.ts'
 import { generateProgram, type ProgramProposal } from './ai-program-generation.ts'
 import { adaptSession, type CurrentExercise, type SessionAdaptationProposal } from './ai-session-adaptation.ts'
+import { adjustNutritionTargets, type NutritionAdjustmentProposal } from './ai-nutrition-adjustment.ts'
 
 export interface ConversationMessage {
   role: 'user' | 'assistant'
@@ -41,6 +42,7 @@ export type CoachChatProposal =
       focus: 'force' | 'hypertrophie' | 'endurance'
       proposal: SessionAdaptationProposal
     }
+  | { type: 'ajuster_objectifs_nutrition'; proposal: NutritionAdjustmentProposal }
 
 export interface CoachChatResult {
   message: string
@@ -73,15 +75,27 @@ const ADAPT_TOOL_SCHEMA = {
   additionalProperties: false,
 }
 
+const ADJUST_NUTRITION_TOOL_SCHEMA = {
+  type: 'object',
+  properties: {
+    userContext: { type: 'string' },
+  },
+  required: ['userContext'],
+  additionalProperties: false,
+}
+
 const ANALYZE_TOOL_NAME = 'analyser_tendance'
 const GENERATE_TOOL_NAME = 'generer_programme'
 const ADAPT_TOOL_NAME = 'adapter_seance'
+const ADJUST_NUTRITION_TOOL_NAME = 'ajuster_objectifs_nutrition'
 const ANALYZE_TOOL_DESCRIPTION =
   "Analyse les données d'entraînement récentes déjà fournies (tonnage, régularité, progression) et retourne une analyse. N'écrit rien."
 const GENERATE_TOOL_DESCRIPTION =
   "Propose un nouveau programme d'entraînement structuré sur 7 jours. Ne l'applique pas, juste une proposition."
 const ADAPT_TOOL_DESCRIPTION =
   "Propose une adaptation d'une séance déjà planifiée dans le programme actif, pour un jour de la semaine donné (1=lundi ... 7=dimanche). Ne l'applique pas, juste une proposition."
+const ADJUST_NUTRITION_TOOL_DESCRIPTION =
+  "Propose un ajustement des cibles nutritionnelles (calories, protéines, glucides, lipides), à la lumière des cibles actuelles et de la consommation récente déjà fournies dans le profil. Ne l'applique pas, juste une proposition."
 
 function buildContextMessage(input: CoachChatInput): string {
   return [
@@ -103,6 +117,10 @@ interface GenerateToolArgs {
 interface AdaptToolArgs {
   dayOfWeek: number
   dayContext: string
+}
+
+interface AdjustNutritionToolArgs {
+  userContext: string
 }
 
 async function runGenerateTool(
@@ -166,6 +184,22 @@ async function runAdaptTool(
   }
 }
 
+async function runAdjustNutritionTool(
+  provider: AiProvider,
+  apiKey: string,
+  input: CoachChatInput,
+  args: AdjustNutritionToolArgs,
+): Promise<CoachChatResult> {
+  const proposal = await adjustNutritionTargets(provider, apiKey, {
+    profileContext: input.profileContext,
+    userContext: args.userContext ?? '',
+  })
+  return {
+    message: `Voici une proposition d'ajustement de tes objectifs nutritionnels. ${proposal.rationale}`,
+    proposal: { type: 'ajuster_objectifs_nutrition', proposal },
+  }
+}
+
 interface AnthropicBlock {
   type: string
   text?: string
@@ -221,6 +255,11 @@ async function runAnthropicChat(
     { name: ANALYZE_TOOL_NAME, description: ANALYZE_TOOL_DESCRIPTION, input_schema: ANALYZE_TOOL_SCHEMA },
     { name: GENERATE_TOOL_NAME, description: GENERATE_TOOL_DESCRIPTION, input_schema: GENERATE_TOOL_SCHEMA },
     { name: ADAPT_TOOL_NAME, description: ADAPT_TOOL_DESCRIPTION, input_schema: ADAPT_TOOL_SCHEMA },
+    {
+      name: ADJUST_NUTRITION_TOOL_NAME,
+      description: ADJUST_NUTRITION_TOOL_DESCRIPTION,
+      input_schema: ADJUST_NUTRITION_TOOL_SCHEMA,
+    },
   ]
   const messages: unknown[] = [
     ...input.conversationHistory.map((m) => ({ role: m.role, content: m.content })),
@@ -244,6 +283,9 @@ async function runAnthropicChat(
   }
   if (toolUse.name === ADAPT_TOOL_NAME) {
     return runAdaptTool(provider, apiKey, input, toolUse.input as AdaptToolArgs)
+  }
+  if (toolUse.name === ADJUST_NUTRITION_TOOL_NAME) {
+    return runAdjustNutritionTool(provider, apiKey, input, toolUse.input as AdjustNutritionToolArgs)
   }
   if (toolUse.name === ANALYZE_TOOL_NAME) {
     const analysis = await analyzeTrends(provider, apiKey, input.trendSummary, input.profileContext)
@@ -349,6 +391,15 @@ async function runOpenAiChat(
         strict: true,
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: ADJUST_NUTRITION_TOOL_NAME,
+        description: ADJUST_NUTRITION_TOOL_DESCRIPTION,
+        parameters: ADJUST_NUTRITION_TOOL_SCHEMA,
+        strict: true,
+      },
+    },
   ]
   const messages: unknown[] = [
     { role: 'system', content: COACH_CHAT_SYSTEM_PROMPT },
@@ -373,6 +424,10 @@ async function runOpenAiChat(
   if (toolCall.function.name === ADAPT_TOOL_NAME) {
     const args = JSON.parse(toolCall.function.arguments) as AdaptToolArgs
     return runAdaptTool(provider, apiKey, input, args)
+  }
+  if (toolCall.function.name === ADJUST_NUTRITION_TOOL_NAME) {
+    const args = JSON.parse(toolCall.function.arguments) as AdjustNutritionToolArgs
+    return runAdjustNutritionTool(provider, apiKey, input, args)
   }
   if (toolCall.function.name === ANALYZE_TOOL_NAME) {
     const analysis = await analyzeTrends(provider, apiKey, input.trendSummary, input.profileContext)

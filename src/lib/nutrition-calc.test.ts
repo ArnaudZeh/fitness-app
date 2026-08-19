@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildNutritionContext,
   caloriesFromMacros,
   computeAge,
   computeAverageWeeklyTrainingMinutes,
@@ -236,5 +237,94 @@ describe('computeFoodLogTotals', () => {
       fatGPer100g: null,
     })
     expect(result).toEqual({ calories: 150, proteinG: null, carbsG: null, fatG: null })
+  })
+})
+
+describe('buildNutritionContext', () => {
+  const targets = {
+    activity_level: 'modere' as const,
+    calories_target: 2400,
+    protein_g_target: 180,
+    carbs_g_target: 220,
+    fat_g_target: 75,
+  }
+
+  it('returns null targets when calories_target was never computed', () => {
+    const result = buildNutritionContext(
+      { activity_level: null, calories_target: null, protein_g_target: null, carbs_g_target: null, fat_g_target: null },
+      [],
+      '2026-08-18',
+    )
+    expect(result.targets).toBeNull()
+  })
+
+  it('maps snake_case targets to a camelCase snapshot', () => {
+    const result = buildNutritionContext(targets, [], '2026-08-18')
+    expect(result.targets).toEqual({
+      activityLevel: 'modere',
+      caloriesTarget: 2400,
+      proteinGTarget: 180,
+      carbsGTarget: 220,
+      fatGTarget: 75,
+    })
+  })
+
+  it('returns null today when nothing was logged today', () => {
+    const result = buildNutritionContext(targets, [], '2026-08-18')
+    expect(result.today).toBeNull()
+    expect(result.last7Days).toBeNull()
+  })
+
+  it("sums today's entries across multiple logs the same day", () => {
+    const result = buildNutritionContext(
+      targets,
+      [
+        { logged_date: '2026-08-18', calories: 300, protein_g: 30, carbs_g: 20, fat_g: 10 },
+        { logged_date: '2026-08-18', calories: 200, protein_g: 10, carbs_g: 15, fat_g: 5 },
+        { logged_date: '2026-08-17', calories: 1800, protein_g: 150, carbs_g: 180, fat_g: 60 },
+      ],
+      '2026-08-18',
+    )
+    expect(result.today).toEqual({
+      caloriesConsumed: 500,
+      proteinGConsumed: 40,
+      carbsGConsumed: 35,
+      fatGConsumed: 15,
+    })
+  })
+
+  it('averages last7Days over days actually logged, not a fixed 7', () => {
+    const result = buildNutritionContext(
+      targets,
+      [
+        { logged_date: '2026-08-18', calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 60 },
+        { logged_date: '2026-08-17', calories: 2200, protein_g: 170, carbs_g: 210, fat_g: 70 },
+      ],
+      '2026-08-18',
+    )
+    // Only 2 distinct days logged out of a 7-day window — average divides
+    // by 2 (days actually logged), not 7, so a sparse week doesn't look
+    // like severe under-eating.
+    expect(result.last7Days).toEqual({
+      daysLogged: 2,
+      avgCaloriesConsumed: 2100,
+      avgProteinGConsumed: 160,
+      avgCarbsGConsumed: 205,
+      avgFatGConsumed: 65,
+    })
+  })
+
+  it('treats missing optional macros on a log entry as 0', () => {
+    const result = buildNutritionContext(
+      targets,
+      [{ logged_date: '2026-08-18', calories: 150, protein_g: null, carbs_g: null, fat_g: null }],
+      '2026-08-18',
+    )
+    expect(result.today).toEqual({
+      caloriesConsumed: 150,
+      proteinGConsumed: 0,
+      carbsGConsumed: 0,
+      fatGConsumed: 0,
+    })
   })
 })

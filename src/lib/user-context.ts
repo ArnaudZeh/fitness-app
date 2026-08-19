@@ -3,6 +3,12 @@ import type { WeightEntry } from '@/lib/weight-api'
 import type { CycleEntry } from '@/lib/cycle-api'
 import { computeCyclePhase, type CyclePhase } from '@/lib/cycle-phase'
 import type { CoachingProfile } from '@/lib/coaching-profile-api'
+import {
+  buildNutritionContext,
+  type FoodLogEntrySnapshot,
+  type NutritionContext,
+  type NutritionTargetsSnapshot,
+} from '@/lib/nutrition-calc'
 
 // The full fiche coaching (objectifs, antécédents médicaux, blessures,
 // nutrition, sommeil, mode de vie…) minus row metadata the AI has no use
@@ -24,6 +30,7 @@ export interface UserProfileContext {
   currentWeightKg: number | null
   cyclePhase: { phase: CyclePhase; cycleDay: number } | null
   coaching: CoachingProfileContext | null
+  nutrition: NutritionContext
 }
 
 // Whole years, not just a year subtraction — someone born on 2000-12-30
@@ -70,16 +77,17 @@ export function buildUserProfileContext(
   weightEntries: Pick<WeightEntry, 'weight_kg'>[],
   cycleEntries: Pick<CycleEntry, 'start_date'>[],
   coachingProfile: CoachingProfile | null,
+  nutritionTargets: NutritionTargetsSnapshot | null,
+  recentFoodLogs: FoodLogEntrySnapshot[],
   now: Date = new Date(),
 ): UserProfileContext {
+  const todayIso = toLocalDateString(now)
+
   // Opt-in, same as everywhere else the cycle module appears: never compute
   // or send a phase unless the user has explicitly turned the module on,
   // even if past entries still exist from before they disabled it.
   const cyclePhaseResult = profile.cycle_module_enabled
-    ? computeCyclePhase(
-        cycleEntries.map((entry) => entry.start_date),
-        toLocalDateString(now),
-      )
+    ? computeCyclePhase(cycleEntries.map((entry) => entry.start_date), todayIso)
     : null
 
   return {
@@ -93,5 +101,6 @@ export function buildUserProfileContext(
       ? { phase: cyclePhaseResult.phase, cycleDay: cyclePhaseResult.cycleDay }
       : null,
     coaching: toCoachingContext(coachingProfile),
+    nutrition: buildNutritionContext(nutritionTargets, recentFoodLogs, todayIso),
   }
 }

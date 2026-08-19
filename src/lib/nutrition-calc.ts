@@ -250,3 +250,127 @@ export function computeFoodLogTotals(input: {
     fatG: input.fatGPer100g === null ? null : roundToOneDecimal(input.fatGPer100g * factor),
   }
 }
+
+// Structural subsets of NutritionTargets/FoodLog (nutrition-targets-api.ts /
+// food-logs-api.ts) — accepting the raw fetched rows directly (extra fields
+// like id/created_at just get ignored) avoids a remapping layer at every
+// call site, same convention as buildUserProfileContext's
+// Pick<WeightEntry, 'weight_kg'>[] parameter in user-context.ts.
+export interface NutritionTargetsSnapshot {
+  activity_level: DailyActivityLevel | null
+  calories_target: number | null
+  protein_g_target: number | null
+  carbs_g_target: number | null
+  fat_g_target: number | null
+}
+
+export interface FoodLogEntrySnapshot {
+  logged_date: string
+  calories: number
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+}
+
+export interface NutritionContext {
+  targets: {
+    activityLevel: DailyActivityLevel | null
+    caloriesTarget: number
+    proteinGTarget: number
+    carbsGTarget: number
+    fatGTarget: number
+  } | null
+  today: {
+    caloriesConsumed: number
+    proteinGConsumed: number
+    carbsGConsumed: number
+    fatGConsumed: number
+  } | null
+  last7Days: {
+    daysLogged: number
+    avgCaloriesConsumed: number
+    avgProteinGConsumed: number
+    avgCarbsGConsumed: number
+    avgFatGConsumed: number
+  } | null
+}
+
+function sumEntries(entries: FoodLogEntrySnapshot[]) {
+  return entries.reduce(
+    (acc, entry) => ({
+      calories: acc.calories + entry.calories,
+      proteinG: acc.proteinG + (entry.protein_g ?? 0),
+      carbsG: acc.carbsG + (entry.carbs_g ?? 0),
+      fatG: acc.fatG + (entry.fat_g ?? 0),
+    }),
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+  )
+}
+
+// recentLogs is expected to cover the last 7 calendar days (including
+// today) — the caller fetches by a real date cutoff (fetchFoodLogsSince),
+// not just "however many rows happen to be recent", same lesson as the
+// sparse-array trend-window bug documented in project history. Averages
+// are computed over days actually logged, not a fixed /7 — a day with zero
+// entries means "not logged", not "ate zero calories", so diluting the
+// average with it would understate real intake.
+export function buildNutritionContext(
+  targets: NutritionTargetsSnapshot | null,
+  recentLogs: FoodLogEntrySnapshot[],
+  todayIsoDate: string,
+): NutritionContext {
+  const targetsResult =
+    targets && targets.calories_target !== null
+      ? {
+          activityLevel: targets.activity_level,
+          caloriesTarget: targets.calories_target,
+          proteinGTarget: targets.protein_g_target ?? 0,
+          carbsGTarget: targets.carbs_g_target ?? 0,
+          fatGTarget: targets.fat_g_target ?? 0,
+        }
+      : null
+
+  const byDate = new Map<string, FoodLogEntrySnapshot[]>()
+  for (const entry of recentLogs) {
+    const list = byDate.get(entry.logged_date)
+    if (list) list.push(entry)
+    else byDate.set(entry.logged_date, [entry])
+  }
+
+  const todayEntries = byDate.get(todayIsoDate)
+  const today = todayEntries
+    ? {
+        caloriesConsumed: sumEntries(todayEntries).calories,
+        proteinGConsumed: sumEntries(todayEntries).proteinG,
+        carbsGConsumed: sumEntries(todayEntries).carbsG,
+        fatGConsumed: sumEntries(todayEntries).fatG,
+      }
+    : null
+
+  const loggedDates = [...byDate.keys()]
+  let last7Days: NutritionContext['last7Days'] = null
+  if (loggedDates.length > 0) {
+    const totals = loggedDates.reduce(
+      (acc, date) => {
+        const dayTotal = sumEntries(byDate.get(date) ?? [])
+        return {
+          calories: acc.calories + dayTotal.calories,
+          proteinG: acc.proteinG + dayTotal.proteinG,
+          carbsG: acc.carbsG + dayTotal.carbsG,
+          fatG: acc.fatG + dayTotal.fatG,
+        }
+      },
+      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+    )
+    const daysLogged = loggedDates.length
+    last7Days = {
+      daysLogged,
+      avgCaloriesConsumed: Math.round(totals.calories / daysLogged),
+      avgProteinGConsumed: Math.round(totals.proteinG / daysLogged),
+      avgCarbsGConsumed: Math.round(totals.carbsG / daysLogged),
+      avgFatGConsumed: Math.round(totals.fatG / daysLogged),
+    }
+  }
+
+  return { targets: targetsResult, today, last7Days }
+}

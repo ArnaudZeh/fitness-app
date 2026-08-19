@@ -131,6 +131,8 @@ function fakeCoachingProfile(overrides: Partial<CoachingProfile> = {}): Coaching
   } as CoachingProfile
 }
 
+const emptyNutritionContext = { targets: null, today: null, last7Days: null }
+
 describe('buildUserProfileContext', () => {
   const now = new Date('2026-07-23T12:00:00Z')
 
@@ -147,6 +149,8 @@ describe('buildUserProfileContext', () => {
       [{ weight_kg: 78.5 }, { weight_kg: 78.2 }],
       [],
       null,
+      null,
+      [],
       now,
     )
     expect(context).toEqual({
@@ -158,11 +162,12 @@ describe('buildUserProfileContext', () => {
       currentWeightKg: 78.5,
       cyclePhase: null,
       coaching: null,
+      nutrition: emptyNutritionContext,
     })
   })
 
   it('leaves fields null when the profile has nothing filled in', () => {
-    const context = buildUserProfileContext(fakeProfile(), [], [], null, now)
+    const context = buildUserProfileContext(fakeProfile(), [], [], null, null, [], now)
     expect(context).toEqual({
       sex: null,
       ageYears: null,
@@ -172,6 +177,7 @@ describe('buildUserProfileContext', () => {
       currentWeightKg: null,
       cyclePhase: null,
       coaching: null,
+      nutrition: emptyNutritionContext,
     })
   })
 
@@ -182,6 +188,8 @@ describe('buildUserProfileContext', () => {
       [],
       [{ start_date: '2026-07-01' }],
       null,
+      null,
+      [],
       now, // 2026-07-23 → cycle day 23
     )
     expect(context.cyclePhase).toEqual({ phase: 'luteale', cycleDay: 23 })
@@ -194,6 +202,8 @@ describe('buildUserProfileContext', () => {
       [],
       [{ start_date: '2026-07-01' }],
       null,
+      null,
+      [],
       now,
     )
     expect(context.cyclePhase).toBeNull()
@@ -201,7 +211,7 @@ describe('buildUserProfileContext', () => {
 
   it('omits the cycle phase when the module is enabled but no entries exist', () => {
     const profile = fakeProfile({ cycle_module_enabled: true })
-    const context = buildUserProfileContext(profile, [], [], null, now)
+    const context = buildUserProfileContext(profile, [], [], null, null, [], now)
     expect(context.cyclePhase).toBeNull()
   })
 
@@ -210,7 +220,15 @@ describe('buildUserProfileContext', () => {
       current_injuries: 'Épaule droite sensible',
       diet_type: 'vegetarien',
     })
-    const context = buildUserProfileContext(fakeProfile(), [], [], coachingProfile, now)
+    const context = buildUserProfileContext(
+      fakeProfile(),
+      [],
+      [],
+      coachingProfile,
+      null,
+      [],
+      now,
+    )
     expect(context.coaching).not.toBeNull()
     expect(context.coaching?.current_injuries).toBe('Épaule droite sensible')
     expect(context.coaching?.diet_type).toBe('vegetarien')
@@ -220,7 +238,39 @@ describe('buildUserProfileContext', () => {
   })
 
   it('leaves the coaching context null when no coaching profile is passed', () => {
-    const context = buildUserProfileContext(fakeProfile(), [], [], null, now)
+    const context = buildUserProfileContext(fakeProfile(), [], [], null, null, [], now)
     expect(context.coaching).toBeNull()
+  })
+
+  it('includes the nutrition context (targets + today + last7Days)', () => {
+    const targets = {
+      activity_level: 'physique' as const,
+      calories_target: 2800,
+      protein_g_target: 190,
+      carbs_g_target: 300,
+      fat_g_target: 80,
+    }
+    const context = buildUserProfileContext(
+      fakeProfile(),
+      [],
+      [],
+      null,
+      targets,
+      [{ logged_date: '2026-07-23', calories: 500, protein_g: 40, carbs_g: 50, fat_g: 15 }],
+      now,
+    )
+    expect(context.nutrition.targets).toEqual({
+      activityLevel: 'physique',
+      caloriesTarget: 2800,
+      proteinGTarget: 190,
+      carbsGTarget: 300,
+      fatGTarget: 80,
+    })
+    expect(context.nutrition.today).toEqual({
+      caloriesConsumed: 500,
+      proteinGConsumed: 40,
+      carbsGConsumed: 50,
+      fatGConsumed: 15,
+    })
   })
 })

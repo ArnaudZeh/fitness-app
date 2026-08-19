@@ -19,6 +19,8 @@ import { useProfile } from '@/hooks/useProfile'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useCoachingProfile } from '@/hooks/useCoachingProfile'
+import { useNutritionTargets } from '@/hooks/useNutritionTargets'
+import { useRecentFoodLogs } from '@/hooks/useFoodLogs'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useApplyProgramProposal, useGenerateProgram } from '@/hooks/useProgramGeneration'
 import { ExerciseThumbnail } from '@/components/ExerciseThumbnail'
@@ -38,6 +40,8 @@ export function ProgramGeneratePage() {
     enabled: Boolean(profile?.cycle_module_enabled),
   })
   const { data: coachingProfile } = useCoachingProfile()
+  const { data: nutritionTargets } = useNutritionTargets()
+  const { data: recentFoodLogs } = useRecentFoodLogs(7)
   const { data: history } = useSetHistory()
   const { data: keyStatuses } = useAiProviderKeys()
 
@@ -120,6 +124,8 @@ export function ProgramGeneratePage() {
         weightEntries ?? [],
         cycleEntries ?? [],
         coachingProfile ?? null,
+        nutritionTargets ?? null,
+        recentFoodLogs ?? [],
       ),
       availableExercises,
       daysPerWeek,
@@ -219,6 +225,8 @@ export function ProgramGeneratePage() {
                       weightEntries ?? [],
                       cycleEntries ?? [],
                       coachingProfile ?? null,
+                      nutritionTargets ?? null,
+                      recentFoodLogs ?? [],
                     ),
                     availableExercises,
                     daysPerWeek,

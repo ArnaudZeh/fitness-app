@@ -11,9 +11,11 @@ import { applySessionAdaptation } from '@/lib/session-adaptation-api'
 import type { ProgramFocus } from '@/lib/programs-api'
 import { fetchSessionTemplateExercises } from '@/lib/sessions-api'
 import type { CurrentExercise } from '@/lib/session-adaptation-api'
+import type { NutritionAdjustmentProposal } from '@/lib/nutrition-adjustment-api'
+import { applyNutritionAdjustment } from '@/lib/nutrition-adjustment-api'
 
 export type AssistantRole = 'user' | 'assistant'
-export type AssistantToolName = 'generer_programme' | 'adapter_seance'
+export type AssistantToolName = 'generer_programme' | 'adapter_seance' | 'ajuster_objectifs_nutrition'
 
 export type AssistantProposal =
   | { type: 'generer_programme'; proposal: ProgramProposal }
@@ -23,6 +25,7 @@ export type AssistantProposal =
       focus: ProgramFocus
       proposal: SessionAdaptationProposal
     }
+  | { type: 'ajuster_objectifs_nutrition'; proposal: NutritionAdjustmentProposal }
 
 export interface AssistantMessage {
   id: string
@@ -216,6 +219,8 @@ export async function applyAssistantProposal(message: AssistantMessage): Promise
 
   if (proposal.type === 'generer_programme') {
     await applyProgramProposal(proposal.proposal)
+  } else if (proposal.type === 'ajuster_objectifs_nutrition') {
+    await applyNutritionAdjustment(proposal.proposal)
   } else {
     const existingSlots = await fetchSessionTemplateExercises(proposal.sessionTemplateId)
     await applySessionAdaptation(
