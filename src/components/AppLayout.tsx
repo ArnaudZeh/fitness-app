@@ -4,16 +4,29 @@ import { motion } from 'framer-motion'
 import { Bot, Dumbbell, Home, Trophy, Utensils } from 'lucide-react'
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar'
 import { NotificationsPromptDialog } from '@/components/NotificationsPromptDialog'
+import { ProfileCompletionPromptDialog } from '@/components/ProfileCompletionPromptDialog'
 import { useAuthStore } from '@/lib/auth-store'
 import { useFriendsData } from '@/hooks/useFriends'
 import { useUnreadMentionsCount } from '@/hooks/useMentions'
 import { useUnreadActivityNotificationsCount } from '@/hooks/useActivityNotifications'
+import { useProfile } from '@/hooks/useProfile'
 import { syncTimezone } from '@/lib/profile-api'
 import { cn } from '@/lib/utils'
 
 export function AppLayout() {
   const session = useAuthStore((state) => state.session)
   const userId = session?.user.id
+
+  // Data-driven, not a localStorage seen-flag (unlike NotificationsPromptDialog
+  // below): a profile stays "incomplete" across devices, so this should
+  // follow the profile row, not one device — and it re-offers on every app
+  // open (AppLayout remount) for as long as name+photo stay missing.
+  const { data: profile } = useProfile()
+  const [profilePromptDismissed, setProfilePromptDismissed] = useState(false)
+  const showProfilePrompt =
+    !profilePromptDismissed &&
+    !!profile &&
+    (!profile.display_name?.trim() || !profile.avatar_path)
   // No scroll on the dashboard, on any device — step 1 of resizing that
   // page's layout to actually fit without one (HomePage.tsx sizing comes
   // next). Every other route keeps normal scrolling.
@@ -78,7 +91,11 @@ export function AppLayout() {
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
-      <NotificationsPromptDialog />
+      {showProfilePrompt ? (
+        <ProfileCompletionPromptDialog onDismiss={() => setProfilePromptDismissed(true)} />
+      ) : (
+        <NotificationsPromptDialog />
+      )}
       <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3">
         <Link to="/" className="font-heading text-lg font-semibold">
           My Gym Bro
