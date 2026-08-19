@@ -119,6 +119,26 @@ export function applyLoadAdjustment(
   return Math.round(adjusted * 10) / 10
 }
 
+// Same signed percentage as applyLoadAdjustment (positive reduces, negative
+// increases), applied to target_rpe instead of target_weight_kg — a
+// duplicated cycle's effort level should scale down/up with its load the
+// same way, so this deliberately reuses the single adjustment percent the
+// user already picks in the dialog rather than adding a second knob.
+// Clamped to the RPE scale's real bounds (0-10, matching the column's own
+// CHECK constraint) since unlike weight, RPE has a hard ceiling — a large
+// negative (load-increasing) adjustment on an already-high source RPE must
+// not produce a nonsensical >10 value. A null source RPE (never set) stays
+// null — nothing to scale, and inventing one would misrepresent the
+// original program's intent.
+export function applyRpeAdjustment(
+  targetRpe: number | null,
+  adjustmentPercent: number,
+): number | null {
+  if (targetRpe === null || adjustmentPercent === 0) return targetRpe
+  const adjusted = targetRpe * (1 - adjustmentPercent / 100)
+  return Math.round(Math.min(10, Math.max(0, adjusted)) * 10) / 10
+}
+
 // Representative working-load zone (%1RM) per goal, from NSCA's load/rep/
 // goal programming table (Haff & Triplett, Essentials of Strength Training
 // and Conditioning, 4th ed.): strength >=85% 1RM at <=6 reps, hypertrophy
@@ -165,9 +185,20 @@ export function suggestFocusLoadAdjustmentPercent(
 
 export interface CopyProgramOptions {
   focus?: ProgramFocus
-  // Percentage adjustment applied to every exercise's target_weight_kg —
-  // see applyLoadAdjustment. 0 (default) copies weights unchanged.
+  // Percentage adjustment applied to every exercise's target_weight_kg and
+  // target_rpe — see applyLoadAdjustment/applyRpeAdjustment. 0 (default)
+  // copies both unchanged.
   loadAdjustmentPercent?: number
+  // Recent average actual weight per exercise (see
+  // computeRecentAverageWeightByExercise in analytics.ts), used to fill in
+  // target_weight_kg for a slot that doesn't already have one set. Real
+  // performance lives in logged sets, not in this optional planning field —
+  // most slots never have it set, so without this a duplicated program's
+  // weights stay blank even though real recent numbers exist. Only ever
+  // used as a fallback: an explicit target_weight_kg on the source slot
+  // always wins. Omitted/empty for copyProgramToMyAccount, which has no way
+  // to know the calling user's own history for a stranger's exercises.
+  recentAverageWeightByExercise?: Map<string, number>
 }
 
 // Shared by duplicateProgram() (same owner) and copyProgramToMyAccount()
@@ -183,6 +214,8 @@ async function copyProgramInternal(
   const userId = await requireUserId()
   const focus = options.focus ?? program.focus
   const loadAdjustmentPercent = options.loadAdjustmentPercent ?? 0
+  const recentAverageWeightByExercise =
+    options.recentAverageWeightByExercise ?? new Map<string, number>()
   const { data: newProgram, error: programError } = await supabase
     .from('programs')
     .insert({
@@ -235,22 +268,29 @@ async function copyProgramInternal(
       const { error: newSlotsError } = await supabase
         .from('session_template_exercises')
         .insert(
-          slots.map((slot) => ({
-            user_id: userId,
-            session_template_id: newTemplate.id,
-            exercise_id: slot.exercise_id,
-            order_index: slot.order_index,
-            target_sets: slot.target_sets,
-            target_reps_min: slot.target_reps_min,
-            target_reps_max: slot.target_reps_max,
-            target_rpe: slot.target_rpe,
-            target_rest_seconds: slot.target_rest_seconds,
-            target_weight_kg: applyLoadAdjustment(slot.target_weight_kg, loadAdjustmentPercent),
-            notes: slot.notes,
-            superset_group: slot.superset_group,
-            is_unilateral: slot.is_unilateral,
-            is_bodyweight: slot.is_bodyweight,
-          })),
+          slots.map((slot) => {
+            const fallbackWeightKg: number | null =
+              recentAverageWeightByExercise.get(slot.exercise_id) ?? null
+            return {
+              user_id: userId,
+              session_template_id: newTemplate.id,
+              exercise_id: slot.exercise_id,
+              order_index: slot.order_index,
+              target_sets: slot.target_sets,
+              target_reps_min: slot.target_reps_min,
+              target_reps_max: slot.target_reps_max,
+              target_rpe: applyRpeAdjustment(slot.target_rpe, loadAdjustmentPercent),
+              target_rest_seconds: slot.target_rest_seconds,
+              target_weight_kg: applyLoadAdjustment(
+                slot.target_weight_kg ?? fallbackWeightKg,
+                loadAdjustmentPercent,
+              ),
+              notes: slot.notes,
+              superset_group: slot.superset_group,
+              is_unilateral: slot.is_unilateral,
+              is_bodyweight: slot.is_bodyweight,
+            }
+          }),
         )
       if (newSlotsError) throw newSlotsError
     }

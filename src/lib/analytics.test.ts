@@ -3,6 +3,7 @@ import {
   buildTrendSummary,
   computeDailyVolume,
   computeOneRepMaxProgression,
+  computeRecentAverageWeightByExercise,
   computeWeeklyTonnage,
   computeWeeklyTonnageProgress,
   computeWeightGoalProgress,
@@ -43,6 +44,45 @@ describe('getLoggedExercises', () => {
 
   it('returns an empty list for no history', () => {
     expect(getLoggedExercises([])).toEqual([])
+  })
+})
+
+describe('computeRecentAverageWeightByExercise', () => {
+  it('averages sets across the last 3 distinct session dates only', () => {
+    const records = [
+      // 4 distinct dates for squat, oldest first — only the 3 most recent
+      // (07-27, 08-03, 08-10) should count, 07-20's 80kg is too old.
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-20', weightKg: 80 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-07-27', weightKg: 100 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-08-03', weightKg: 105 }),
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-08-10', weightKg: 110 }),
+    ]
+    // (100 + 105 + 110) / 3 = 105
+    expect(computeRecentAverageWeightByExercise(records).get('ex-squat')).toBe(105)
+  })
+
+  it('averages multiple sets logged the same day as one data point each', () => {
+    const records = [
+      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-08-10', weightKg: 80 }),
+      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-08-10', weightKg: 80 }),
+      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-08-10', weightKg: 70 }),
+    ]
+    // (80 + 80 + 70) / 3 = 76.666... -> 76.7
+    expect(computeRecentAverageWeightByExercise(records).get('ex-bench')).toBe(76.7)
+  })
+
+  it('keeps a separate average per exercise', () => {
+    const records = [
+      makeRecord({ exerciseId: 'ex-squat', loggedAt: '2026-08-10', weightKg: 100 }),
+      makeRecord({ exerciseId: 'ex-bench', loggedAt: '2026-08-10', weightKg: 60 }),
+    ]
+    const result = computeRecentAverageWeightByExercise(records)
+    expect(result.get('ex-squat')).toBe(100)
+    expect(result.get('ex-bench')).toBe(60)
+  })
+
+  it('returns an empty map for no history', () => {
+    expect(computeRecentAverageWeightByExercise([]).size).toBe(0)
   })
 })
 

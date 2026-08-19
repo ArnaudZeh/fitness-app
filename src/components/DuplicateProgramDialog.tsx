@@ -19,7 +19,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDuplicateProgram } from '@/hooks/usePrograms'
+import { useSetHistory } from '@/hooks/useAnalytics'
 import { parseLocaleNumber } from '@/lib/number-input'
+import { computeRecentAverageWeightByExercise } from '@/lib/analytics'
 import {
   DEFAULT_DELOAD_REDUCTION_PERCENT,
   DELOAD_REDUCTION_OPTIONS,
@@ -40,6 +42,7 @@ interface DuplicateProgramDialogProps {
 export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDialogProps) {
   const navigate = useNavigate()
   const duplicateProgram = useDuplicateProgram()
+  const { data: history } = useSetHistory()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(`${program.name} (copie)`)
   const [focus, setFocus] = useState<ProgramFocus>(program.focus)
@@ -95,7 +98,11 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
       const newProgram = await duplicateProgram.mutateAsync({
         program,
         newName: name.trim(),
-        options: { focus, loadAdjustmentPercent },
+        options: {
+          focus,
+          loadAdjustmentPercent,
+          recentAverageWeightByExercise: computeRecentAverageWeightByExercise(history ?? []),
+        },
       })
       setOpen(false)
       void navigate(`/programs/${newProgram.id}`)
@@ -144,8 +151,11 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              La copie garde exactement les mêmes exercices, c'est le point de départ pour
-              ajuster séries, répétitions, RPE et charges toi-même selon ce nouvel objectif.
+              La copie garde exactement les mêmes exercices, séries et répétitions. Si le focus
+              change, la charge cible et le RPE cible s'ajustent automatiquement (voir
+              l'ajustement ci-dessous), ajustable de nouveau si besoin. Pour un exercice sans
+              charge cible déjà renseignée, la moyenne de tes 3 dernières séances loguées sert de
+              point de départ.
             </p>
           </div>
           {focus !== program.focus && (
@@ -177,9 +187,9 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
               )}
               <p className="text-xs text-muted-foreground">
                 {focus === 'deload'
-                  ? 'Appliquée à la charge de référence de chaque exercice — une réduction de 30 à 50% est la fourchette modérée à prononcée courante pour une semaine de décharge en périodisation. Laissée inchangée pour les exercices sans charge de référence ou en assistance.'
+                  ? 'Appliquée à la charge et au RPE cible de chaque exercice : une réduction de 30 à 50% est la fourchette modérée à prononcée courante pour une semaine de décharge en périodisation (un RPE 9-10 redescend ainsi autour de 5-6, l\'effort typique d\'un deload). Laissée inchangée pour les exercices sans charge de référence ou en assistance.'
                   : program.focus !== 'deload'
-                    ? `Valeur suggérée à partir des zones de charge de travail par objectif (Force ≈${FOCUS_REFERENCE_1RM_PERCENT.force}% 1RM, Hypertrophie ≈${FOCUS_REFERENCE_1RM_PERCENT.hypertrophie}% 1RM, Endurance ≈${FOCUS_REFERENCE_1RM_PERCENT.endurance}% 1RM, d'après les repères NSCA). Une valeur négative augmente la charge, positive la réduit — ajustable si besoin.`
+                    ? `Valeur suggérée à partir des zones de charge de travail par objectif (Force ≈${FOCUS_REFERENCE_1RM_PERCENT.force}% 1RM, Hypertrophie ≈${FOCUS_REFERENCE_1RM_PERCENT.hypertrophie}% 1RM, Endurance ≈${FOCUS_REFERENCE_1RM_PERCENT.endurance}% 1RM, d'après les repères NSCA), appliquée à la fois à la charge et au RPE cible de chaque exercice. Une valeur négative augmente les deux, positive les réduit. Ajustable si besoin.`
                     : "Le deload n'a pas de zone de charge de référence propre (elle dépend de la réduction appliquée à la duplication précédente), donc aucune valeur n'est suggérée automatiquement ici. Ajuste si besoin."}
               </p>
             </div>

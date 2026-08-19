@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { applyLoadAdjustment, suggestFocusLoadAdjustmentPercent } from '@/lib/programs-api'
+import {
+  applyLoadAdjustment,
+  applyRpeAdjustment,
+  suggestFocusLoadAdjustmentPercent,
+} from '@/lib/programs-api'
 
 describe('applyLoadAdjustment', () => {
   it('reduces a positive target weight by the given percentage', () => {
@@ -34,6 +38,33 @@ describe('applyLoadAdjustment', () => {
 
   it('does not adjust zero (bodyweight-only, nothing to cut)', () => {
     expect(applyLoadAdjustment(0, 15)).toBe(0)
+  })
+})
+
+describe('applyRpeAdjustment', () => {
+  it('reduces target RPE by the same percentage as a deload load cut', () => {
+    // 10 * (1 - 40/100) = 6, 9 * 0.6 = 5.4 — both land in the well-established
+    // deload-week effort range (RPE 4-6).
+    expect(applyRpeAdjustment(10, 40)).toBe(6)
+    expect(applyRpeAdjustment(9, 40)).toBe(5.4)
+  })
+
+  it('increases target RPE when given a negative percentage', () => {
+    // 8 * (1 - -18/100) = 8 * 1.18 = 9.44
+    expect(applyRpeAdjustment(8, -18)).toBe(9.4)
+  })
+
+  it('clamps to the 0-10 scale instead of overshooting', () => {
+    expect(applyRpeAdjustment(9, -50)).toBe(10)
+    expect(applyRpeAdjustment(1, 200)).toBe(0)
+  })
+
+  it('returns null unchanged (never set, nothing to scale)', () => {
+    expect(applyRpeAdjustment(null, 40)).toBeNull()
+  })
+
+  it('leaves a zero adjustment percentage as a no-op', () => {
+    expect(applyRpeAdjustment(7, 0)).toBe(7)
   })
 })
 

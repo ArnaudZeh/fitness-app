@@ -24,6 +24,40 @@ export function getLoggedExercises(records: SetHistoryRecord[]): ExerciseOption[
   return [...byId.values()].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName))
 }
 
+// Recent average actual weight per exercise — used to prefill a duplicated
+// program's target_weight_kg when the source slot never had one explicitly
+// set (see copyProgramInternal in programs-api.ts). Averages the last 3
+// distinct session dates logged for that exercise, across every program
+// (not just one program's history) — matches the "moving average of recent
+// performance" the user asked for, and 3 sessions smooths out a single
+// unusually light/heavy day without dragging in numbers from months ago.
+const RECENT_SESSIONS_WINDOW = 3
+
+export function computeRecentAverageWeightByExercise(
+  records: SetHistoryRecord[],
+): Map<string, number> {
+  const byExercise = new Map<string, SetHistoryRecord[]>()
+  for (const record of records) {
+    const existing = byExercise.get(record.exerciseId)
+    if (existing) existing.push(record)
+    else byExercise.set(record.exerciseId, [record])
+  }
+
+  const result = new Map<string, number>()
+  for (const [exerciseId, exerciseRecords] of byExercise) {
+    const recentDates = [...new Set(exerciseRecords.map((r) => r.loggedAt))]
+      .sort()
+      .reverse()
+      .slice(0, RECENT_SESSIONS_WINDOW)
+    const recentDateSet = new Set(recentDates)
+    const recentSets = exerciseRecords.filter((r) => recentDateSet.has(r.loggedAt))
+    if (recentSets.length === 0) continue
+    const average = recentSets.reduce((sum, r) => sum + r.weightKg, 0) / recentSets.length
+    result.set(exerciseId, Math.round(average * 10) / 10)
+  }
+  return result
+}
+
 export interface DailyExerciseBest {
   date: string
   estimatedOneRepMaxKg: number | null
