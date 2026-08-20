@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react'
-import { type FoodSelection, OpenFoodFactsSearch } from '@/components/OpenFoodFactsSearch'
+import { FoodEntryTabs } from '@/components/FoodEntryTabs'
+import type { FoodSelection } from '@/components/OpenFoodFactsSearch'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -113,7 +114,7 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
           <DialogTitle>Ajouter un aliment</DialogTitle>
         </DialogHeader>
         <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
-          <OpenFoodFactsSearch onSelect={handleSelectFood} />
+          <FoodEntryTabs onSelect={handleSelectFood} />
 
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Ou saisis les valeurs toi-même

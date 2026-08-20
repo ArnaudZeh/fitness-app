@@ -8,6 +8,7 @@
 import type { FoodSearchResult } from '@/lib/food-search-result'
 
 const SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl'
+const PRODUCT_URL = 'https://world.openfoodfacts.org/api/v2/product'
 
 export interface OpenFoodFactsRawProduct {
   code?: string
@@ -57,6 +58,39 @@ export function mapOpenFoodFactsResponse(data: OpenFoodFactsRawResponse): FoodSe
     })
   }
   return results
+}
+
+export interface OpenFoodFactsProductResponse {
+  status?: number
+  product?: OpenFoodFactsRawProduct
+}
+
+// Maps a single product lookup the same way mapOpenFoodFactsResponse maps a
+// search hit — reuses the exact same field extraction/rounding rather than
+// duplicating it, just wrapped for a single product instead of a list.
+// Kept pure/separate from the fetch call, same testability reasoning as
+// mapOpenFoodFactsResponse.
+export function mapOpenFoodFactsProduct(
+  data: OpenFoodFactsProductResponse,
+): FoodSearchResult | null {
+  if (!data.product) return null
+  const [result] = mapOpenFoodFactsResponse({ products: [data.product] })
+  return result ?? null
+}
+
+// Barcode lookup (product endpoint) rather than a text search — used by the
+// barcode scanner. status:0 (verified live: real shape is
+// {code,status,status_verbose} with no "product" key) means genuinely not
+// referenced on OpenFoodFacts, not a network error, so this returns null
+// rather than throwing — the caller falls back to the other entry methods
+// (manual, or the photo-of-the-label option) instead of showing an error.
+export async function fetchProductByBarcode(barcode: string): Promise<FoodSearchResult | null> {
+  const response = await fetch(
+    `${PRODUCT_URL}/${encodeURIComponent(barcode)}.json?fields=code,product_name,brands,nutriments`,
+  )
+  if (!response.ok) throw new Error('Recherche OpenFoodFacts indisponible pour le moment.')
+  const data = (await response.json()) as OpenFoodFactsProductResponse
+  return mapOpenFoodFactsProduct(data)
 }
 
 export async function searchOpenFoodFacts(query: string): Promise<FoodSearchResult[]> {

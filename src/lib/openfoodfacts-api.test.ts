@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { mapOpenFoodFactsResponse, type OpenFoodFactsRawResponse } from '@/lib/openfoodfacts-api'
+import {
+  mapOpenFoodFactsProduct,
+  mapOpenFoodFactsResponse,
+  type OpenFoodFactsProductResponse,
+  type OpenFoodFactsRawResponse,
+} from '@/lib/openfoodfacts-api'
 
 describe('mapOpenFoodFactsResponse', () => {
   it('maps a well-formed product to a result', () => {
@@ -98,5 +103,46 @@ describe('mapOpenFoodFactsResponse', () => {
       carbsPer100g: 0.5,
       fatPer100g: 1.6,
     })
+  })
+})
+
+describe('mapOpenFoodFactsProduct', () => {
+  it('maps a found product to a result (real shape verified live: code/product/status/status_verbose)', () => {
+    const data: OpenFoodFactsProductResponse = {
+      status: 1,
+      product: {
+        code: '3017620422003',
+        product_name: 'Nutella',
+        brands: 'Nutella, Ferrero, Yum yum',
+        nutriments: {
+          'energy-kcal_100g': 539,
+          proteins_100g: 6.3,
+          carbohydrates_100g: 57.5,
+          fat_100g: 30.9,
+        },
+      },
+    }
+    expect(mapOpenFoodFactsProduct(data)).toEqual({
+      id: 'off:3017620422003',
+      name: 'Nutella',
+      brand: 'Nutella, Ferrero, Yum yum',
+      caloriesPer100g: 539,
+      proteinPer100g: 6.3,
+      carbsPer100g: 57.5,
+      fatPer100g: 30.9,
+    })
+  })
+
+  it('returns null when the barcode is not referenced (real shape verified live: no "product" key, status:0)', () => {
+    expect(mapOpenFoodFactsProduct({ status: 0 })).toBeNull()
+  })
+
+  it('returns null when the product is found but too incomplete to use (no calories)', () => {
+    expect(
+      mapOpenFoodFactsProduct({
+        status: 1,
+        product: { code: '999', product_name: 'Incomplet', nutriments: {} },
+      }),
+    ).toBeNull()
   })
 })
