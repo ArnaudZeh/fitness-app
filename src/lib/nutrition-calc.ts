@@ -251,6 +251,32 @@ export function computeFoodLogTotals(input: {
   }
 }
 
+export interface ConsumedTotals {
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+}
+
+// Sums a day's food_logs into the 4 totals every "cibles vs consommé" view
+// needs (NutritionPage, and the dashboard ring/card added later) — a food
+// log's own protein_g/carbs_g/fat_g are optional (a manually-typed entry
+// might skip macros), treated as 0 in the sum rather than making the whole
+// total null.
+export function computeConsumedTotals(
+  logs: { calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null }[],
+): ConsumedTotals {
+  return logs.reduce(
+    (totals, log) => ({
+      calories: totals.calories + log.calories,
+      proteinG: totals.proteinG + (log.protein_g ?? 0),
+      carbsG: totals.carbsG + (log.carbs_g ?? 0),
+      fatG: totals.fatG + (log.fat_g ?? 0),
+    }),
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+  )
+}
+
 // Structural subsets of NutritionTargets/FoodLog (nutrition-targets-api.ts /
 // food-logs-api.ts) — accepting the raw fetched rows directly (extra fields
 // like id/created_at just get ignored) avoids a remapping layer at every

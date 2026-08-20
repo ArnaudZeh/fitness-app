@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export type RingId = 'sessions' | 'tonnage' | 'weight'
+export type RingId = 'sessions' | 'tonnage' | 'weight' | 'nutrition'
 
 export interface RingDatum {
   id: RingId
@@ -12,7 +12,7 @@ export interface RingDatum {
 }
 
 interface ActivityRingsProps {
-  rings: [RingDatum, RingDatum, RingDatum] // outer to inner
+  rings: [RingDatum, RingDatum, RingDatum, RingDatum] // outer to inner
   centerValue: string
   centerLabel: string
   onSelectRing: (id: RingId) => void
@@ -23,11 +23,12 @@ const VIEWBOX = 200
 const CENTER = VIEWBOX / 2
 // Radius step between rings equals the stroke width exactly, so adjacent
 // bands sit flush against each other with no visible gap (outer edge of
-// ring N = inner edge of ring N-1). That step also opens up a wide center
-// hole (radius 49, ~49% of the full radius) for the value/label text — far
-// more room than a first pass that left it too tight.
+// ring N = inner edge of ring N-1). Center hole radius is whatever's left
+// inside the innermost ring (35 with 4 rings at STROKE_WIDTH 14 — down from
+// 49 with 3, still enough for the 2-line value/label text, checked visually
+// at 375px when the 4th ring was added).
 const STROKE_WIDTH = 14
-const RADII = [84, 70, 56] // outer to inner, each STROKE_WIDTH apart
+const RADII = [84, 70, 56, 42] // outer to inner, each STROKE_WIDTH apart
 // Matches STROKE_WIDTH exactly rather than padding past it: with rings this
 // tightly packed, a wider hit band would overlap into the neighboring
 // ring's own hit zone and steal its taps. This trades some touch-target

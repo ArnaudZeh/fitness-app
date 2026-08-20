@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { CheckCircle2, Dumbbell, Moon, Play, Plus, Sparkles } from 'lucide-react'
+import { CheckCircle2, Dumbbell, Moon, Play, Plus, Sparkles, Utensils } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { motion, MotionConfig, type Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { ActivityRings, type RingDatum, type RingId } from '@/components/ActivityRings'
 import { Avatar } from '@/components/Avatar'
+import { MacroProgressBar } from '@/components/MacroProgressBar'
 import { useProfile } from '@/hooks/useProfile'
 import { useAvatarUrl } from '@/hooks/useAvatar'
 import { usePrograms } from '@/hooks/usePrograms'
@@ -31,7 +32,7 @@ import { useWeightEntries } from '@/hooks/useWeightEntries'
 import { useCycleEntries } from '@/hooks/useCycleEntries'
 import { useCoachingProfile } from '@/hooks/useCoachingProfile'
 import { useNutritionTargets } from '@/hooks/useNutritionTargets'
-import { useRecentFoodLogs } from '@/hooks/useFoodLogs'
+import { useFoodLogs, useRecentFoodLogs } from '@/hooks/useFoodLogs'
 import { useSetHistory } from '@/hooks/useAnalytics'
 import { useAiProviderKeys } from '@/hooks/useAiProviderKeys'
 import { useAnalyzeTrends } from '@/hooks/useAiAnalysis'
@@ -42,6 +43,7 @@ import {
   countCompletedSessionsThisWeek,
   getCompletedSessionDates,
 } from '@/lib/analytics'
+import { computeConsumedTotals } from '@/lib/nutrition-calc'
 import { toLocalDateString } from '@/lib/dates'
 import type { SessionLog } from '@/lib/session-logs-api'
 import { AI_PROVIDER_LABELS, type AiProvider } from '@/lib/ai-keys-api'
@@ -110,6 +112,8 @@ export function HomePage() {
 
         <TodayCard program={activeProgram} />
 
+        <NutritionTodayCard />
+
         {profile && (
           <AiTrendAnalysisCard
             history={history ?? []}
@@ -172,10 +176,20 @@ function RingLegendItem({ color, label }: { color: string; label: string }) {
 // normal-vision ΔE 18.3 (floor ≥15), all three ≥3:1 contrast on the
 // background. Not themed as --chart-3 since it's specific to this
 // three-ring read, not the general chart palette.
+//
+// nutrition (blue, #5b9dff) added 2026-08-19 as the 4th ring: picked by hue
+// separation from the other three on the color wheel (teal ~168°, orange
+// ~24°, magenta ~340° — blue sits at ~220°, roughly centered in the largest
+// remaining gap, between teal and magenta) and checked visually at 375px
+// against the dark background. The dataviz skill's automated validator
+// script wasn't reachable in this session's sandbox to run the numeric ΔE
+// check the other three got — worth re-running it here if the tool becomes
+// available in a future session.
 const RING_COLORS: Record<RingId, string> = {
   sessions: 'var(--chart-1)',
   tonnage: 'var(--chart-2)',
   weight: '#d55181',
+  nutrition: '#5b9dff',
 }
 
 // The dashboard's hero element: three Apple-Watch-style concentric rings —
@@ -201,6 +215,10 @@ function WeeklyRingsSection({
   const { data: templates } = useSessionTemplates(program?.id ?? '')
   const [selectedRing, setSelectedRing] = useState<RingId | null>(null)
 
+  const todayDateStr = toLocalDateString(new Date().toISOString())
+  const { data: nutritionTargets } = useNutritionTargets()
+  const { data: todayFoodLogs } = useFoodLogs(todayDateStr)
+
   const sessionsThisWeek = countCompletedSessionsThisWeek(allLogs)
   const weeklyTarget = (templates ?? []).filter((t) => t.day_type === 'training').length
   const sessionsRatio =
@@ -216,7 +234,14 @@ function WeeklyRingsSection({
       ? latestWeight.weight_kg - previousWeight.weight_kg
       : null
 
-  const rings: [RingDatum, RingDatum, RingDatum] = [
+  const caloriesTarget = nutritionTargets?.calories_target ?? null
+  const consumedToday = computeConsumedTotals(todayFoodLogs ?? [])
+  const nutritionRatio =
+    caloriesTarget && caloriesTarget > 0
+      ? Math.min(1, consumedToday.calories / caloriesTarget)
+      : null
+
+  const rings: [RingDatum, RingDatum, RingDatum, RingDatum] = [
     {
       id: 'sessions',
       ratio: sessionsRatio,
@@ -234,6 +259,12 @@ function WeeklyRingsSection({
       ratio: weightGoal.ratio,
       color: RING_COLORS.weight,
       label: 'Progression vers ton objectif de poids',
+    },
+    {
+      id: 'nutrition',
+      ratio: nutritionRatio,
+      color: RING_COLORS.nutrition,
+      label: 'Calories consommées aujourd\'hui par rapport à ta cible',
     },
   ]
 
@@ -257,10 +288,11 @@ function WeeklyRingsSection({
           onSelectRing={setSelectedRing}
           className="aspect-square h-full min-h-[160px] w-auto max-w-full flex-1"
         />
-        <div className="flex shrink-0 items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <RingLegendItem color={RING_COLORS.sessions} label="Séances" />
           <RingLegendItem color={RING_COLORS.tonnage} label="Tonnage" />
           <RingLegendItem color={RING_COLORS.weight} label="Poids" />
+          <RingLegendItem color={RING_COLORS.nutrition} label="Nutrition" />
         </div>
         <Link to="/analytics" className="shrink-0 text-sm text-primary hover:underline">
           Voir les stats complètes →
@@ -369,6 +401,43 @@ function WeeklyRingsSection({
                   )}
                   <Link to="/profile" className="text-sm text-primary hover:underline">
                     Voir l'historique →
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+
+          {selectedRing === 'nutrition' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{ background: RING_COLORS.nutrition }}
+                  />
+                  Nutrition aujourd'hui
+                </DialogTitle>
+              </DialogHeader>
+              {caloriesTarget === null ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Cibles nutritionnelles pas encore définies.
+                  </p>
+                  <Button asChild size="sm" className="self-start">
+                    <Link to="/nutrition">Configurer mes cibles</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="font-mono text-3xl font-semibold tabular-nums">
+                    {Math.round(consumedToday.calories)}/{caloriesTarget} kcal
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Protéines {Math.round(consumedToday.proteinG)}g · Glucides{' '}
+                    {Math.round(consumedToday.carbsG)}g · Lipides {Math.round(consumedToday.fatG)}g
+                  </p>
+                  <Link to="/nutrition" className="text-sm text-primary hover:underline">
+                    Voir le détail →
                   </Link>
                 </>
               )}
@@ -507,6 +576,78 @@ function TodayCard({ program }: { program: Program | undefined }) {
           </CardContent>
         </Card>
       </button>
+    </DashboardCard>
+  )
+}
+
+// Persistent glanceable summary, unlike the nutrition ring above (which
+// needs a tap to see anything beyond the fill level) — calories as the
+// headline number, matching the ring's own metric, plus the 3 macros as
+// compact bars so the card is actually useful without leaving the
+// dashboard. Whole card links to /nutrition, same tap-through pattern as
+// the other dashboard cards.
+function NutritionTodayCard() {
+  const todayDateStr = toLocalDateString(new Date().toISOString())
+  const { data: targets } = useNutritionTargets()
+  const { data: todayFoodLogs } = useFoodLogs(todayDateStr)
+
+  const caloriesTarget = targets?.calories_target ?? null
+  const consumed = computeConsumedTotals(todayFoodLogs ?? [])
+
+  if (caloriesTarget === null) {
+    return (
+      <DashboardCard>
+        <Link to="/nutrition">
+          <Card className="transition-colors active:bg-muted/50">
+            <CardContent className="flex items-center gap-3">
+              <RowIcon>
+                <Utensils className="size-5" />
+              </RowIcon>
+              <RowText title="Nutrition" subtitle="Configure tes cibles nutritionnelles →" />
+            </CardContent>
+          </Card>
+        </Link>
+      </DashboardCard>
+    )
+  }
+
+  return (
+    <DashboardCard>
+      <Link to="/nutrition">
+        <Card className="transition-colors active:bg-muted/50">
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <RowIcon>
+                <Utensils className="size-5 text-primary" />
+              </RowIcon>
+              <RowText
+                title="Nutrition aujourd'hui"
+                subtitle={`${Math.round(consumed.calories)}/${caloriesTarget} kcal`}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <MacroProgressBar
+                label="Protéines"
+                consumed={consumed.proteinG}
+                target={targets?.protein_g_target ?? null}
+                unit="g"
+              />
+              <MacroProgressBar
+                label="Glucides"
+                consumed={consumed.carbsG}
+                target={targets?.carbs_g_target ?? null}
+                unit="g"
+              />
+              <MacroProgressBar
+                label="Lipides"
+                consumed={consumed.fatG}
+                target={targets?.fat_g_target ?? null}
+                unit="g"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </DashboardCard>
   )
 }

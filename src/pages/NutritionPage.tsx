@@ -9,6 +9,7 @@ import { useNutritionTargets } from '@/hooks/useNutritionTargets'
 import { useProfile } from '@/hooks/useProfile'
 import { useAverageWeeklyTrainingMinutes } from '@/hooks/useTrainingFrequency'
 import { useWeightEntries } from '@/hooks/useWeightEntries'
+import { computeConsumedTotals } from '@/lib/nutrition-calc'
 
 function todayLocalDate(): string {
   const now = new Date()
@@ -36,15 +37,7 @@ export function NutritionPage() {
 
   const latestWeightKg = weightEntries?.[0]?.weight_kg ?? null
 
-  const consumed = foodLogs.reduce(
-    (totals, log) => ({
-      calories: totals.calories + log.calories,
-      proteinG: totals.proteinG + (log.protein_g ?? 0),
-      carbsG: totals.carbsG + (log.carbs_g ?? 0),
-      fatG: totals.fatG + (log.fat_g ?? 0),
-    }),
-    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 },
-  )
+  const consumed = computeConsumedTotals(foodLogs)
 
   return (
     <div className="flex flex-col gap-4">

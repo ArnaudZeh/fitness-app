@@ -5,6 +5,7 @@ import {
   computeAge,
   computeAverageWeeklyTrainingMinutes,
   computeBMR,
+  computeConsumedTotals,
   computeFoodLogTotals,
   computeNutritionTargets,
   dailyActivityMultiplierFromSteps,
@@ -237,6 +238,32 @@ describe('computeFoodLogTotals', () => {
       fatGPer100g: null,
     })
     expect(result).toEqual({ calories: 150, proteinG: null, carbsG: null, fatG: null })
+  })
+})
+
+describe('computeConsumedTotals', () => {
+  it('sums calories and macros across multiple logs', () => {
+    const result = computeConsumedTotals([
+      { calories: 300, protein_g: 30, carbs_g: 20, fat_g: 10 },
+      { calories: 200, protein_g: 10, carbs_g: 15, fat_g: 5 },
+    ])
+    expect(result).toEqual({ calories: 500, proteinG: 40, carbsG: 35, fatG: 15 })
+  })
+
+  it('treats missing optional macros as 0 rather than making the total null', () => {
+    const result = computeConsumedTotals([
+      { calories: 150, protein_g: null, carbs_g: null, fat_g: null },
+    ])
+    expect(result).toEqual({ calories: 150, proteinG: 0, carbsG: 0, fatG: 0 })
+  })
+
+  it('returns all zeros for no logs', () => {
+    expect(computeConsumedTotals([])).toEqual({
+      calories: 0,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+    })
   })
 })
 
