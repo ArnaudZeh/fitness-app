@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dialog'
 import { ActivityRings, type RingDatum, type RingId } from '@/components/ActivityRings'
 import { Avatar } from '@/components/Avatar'
-import { MacroProgressBar } from '@/components/MacroProgressBar'
 import { useProfile } from '@/hooks/useProfile'
 import { useAvatarUrl } from '@/hooks/useAvatar'
 import { usePrograms } from '@/hooks/usePrograms'
@@ -581,11 +580,14 @@ function TodayCard({ program }: { program: Program | undefined }) {
 }
 
 // Persistent glanceable summary, unlike the nutrition ring above (which
-// needs a tap to see anything beyond the fill level) — calories as the
-// headline number, matching the ring's own metric, plus the 3 macros as
-// compact bars so the card is actually useful without leaving the
-// dashboard. Whole card links to /nutrition, same tap-through pattern as
-// the other dashboard cards.
+// needs a tap to see anything beyond the fill level) — calories only, same
+// compact single-row shape as every other dashboard card below the rings.
+// Macro breakdown stays a tap away (the ring's own dialog, and /nutrition
+// itself) rather than living here: three extra progress bars pushed this
+// card's height up enough to visibly shrink the ring above it, since the
+// ring's flex-1 section only gets whatever vertical space the fixed-height
+// cards below it leave behind (see WeeklyRingsSection). Whole card links to
+// /nutrition, same tap-through pattern as the other dashboard cards.
 function NutritionTodayCard() {
   const todayDateStr = toLocalDateString(new Date().toISOString())
   const { data: targets } = useNutritionTargets()
@@ -594,57 +596,22 @@ function NutritionTodayCard() {
   const caloriesTarget = targets?.calories_target ?? null
   const consumed = computeConsumedTotals(todayFoodLogs ?? [])
 
-  if (caloriesTarget === null) {
-    return (
-      <DashboardCard>
-        <Link to="/nutrition">
-          <Card className="transition-colors active:bg-muted/50">
-            <CardContent className="flex items-center gap-3">
-              <RowIcon>
-                <Utensils className="size-5" />
-              </RowIcon>
-              <RowText title="Nutrition" subtitle="Configure tes cibles nutritionnelles →" />
-            </CardContent>
-          </Card>
-        </Link>
-      </DashboardCard>
-    )
-  }
-
   return (
     <DashboardCard>
       <Link to="/nutrition">
         <Card className="transition-colors active:bg-muted/50">
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <RowIcon>
-                <Utensils className="size-5 text-primary" />
-              </RowIcon>
-              <RowText
-                title="Nutrition aujourd'hui"
-                subtitle={`${Math.round(consumed.calories)}/${caloriesTarget} kcal`}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <MacroProgressBar
-                label="Protéines"
-                consumed={consumed.proteinG}
-                target={targets?.protein_g_target ?? null}
-                unit="g"
-              />
-              <MacroProgressBar
-                label="Glucides"
-                consumed={consumed.carbsG}
-                target={targets?.carbs_g_target ?? null}
-                unit="g"
-              />
-              <MacroProgressBar
-                label="Lipides"
-                consumed={consumed.fatG}
-                target={targets?.fat_g_target ?? null}
-                unit="g"
-              />
-            </div>
+          <CardContent className="flex items-center gap-3">
+            <RowIcon>
+              <Utensils className={caloriesTarget !== null ? 'size-5 text-primary' : 'size-5'} />
+            </RowIcon>
+            <RowText
+              title="Nutrition aujourd'hui"
+              subtitle={
+                caloriesTarget !== null
+                  ? `${Math.round(consumed.calories)}/${caloriesTarget} kcal`
+                  : 'Configure tes cibles nutritionnelles →'
+              }
+            />
           </CardContent>
         </Card>
       </Link>
