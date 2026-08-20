@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
+import { DEFAULT_REST_SECONDS_BY_FOCUS } from '@/lib/sessions-api'
 
 export type ProgramStatus = 'draft' | 'active' | 'archived'
 export type ProgramFocus = 'force' | 'hypertrophie' | 'endurance' | 'deload'
@@ -280,7 +281,21 @@ async function copyProgramInternal(
               target_reps_min: slot.target_reps_min,
               target_reps_max: slot.target_reps_max,
               target_rpe: applyRpeAdjustment(slot.target_rpe, loadAdjustmentPercent),
-              target_rest_seconds: slot.target_rest_seconds,
+              // Frozen from the *destination* focus's own scientific default
+              // (DEFAULT_REST_SECONDS_BY_FOCUS, sessions-api.ts) rather than
+              // carried from the source slot. Rest isn't a percentage of the
+              // source value like weight/RPE — it's a property of the
+              // training type itself (ATP-PCr recovery needs for force vs.
+              // metabolic-stress targets for endurance, etc.), so the same
+              // focus-driven default already used by AI program generation/
+              // adaptation applies here too. This also fixes a real bug: a
+              // source slot with no explicit rest used to resolve (at
+              // display time) against the *source* focus's default, then
+              // silently resolve against a different number once copied
+              // under a new focus — e.g. a force program's unset rest
+              // (falls back to 180s) duplicated to deload used to display
+              // 60s with nothing ever actually written to the column.
+              target_rest_seconds: DEFAULT_REST_SECONDS_BY_FOCUS[focus],
               target_weight_kg: applyLoadAdjustment(
                 slot.target_weight_kg ?? fallbackWeightKg,
                 loadAdjustmentPercent,
