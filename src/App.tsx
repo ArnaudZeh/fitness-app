@@ -3,9 +3,11 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppLayout } from '@/components/AppLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { UpdatePrompt } from '@/components/UpdatePrompt'
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
+import { UpdatePasswordPage } from '@/pages/UpdatePasswordPage'
 
 // Only the pages reachable on first paint (unauthenticated login/signup, and
 // the authenticated landing page) are eager — every other route is
@@ -78,6 +80,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/update-password" element={<UpdatePasswordPage />} />
             <Route
               element={
                 <ProtectedRoute>

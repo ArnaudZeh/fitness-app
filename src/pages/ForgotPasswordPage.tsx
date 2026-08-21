@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react'
-import { Link, Navigate, useLocation } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,17 +13,15 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/auth-store'
 
-export function LoginPage() {
+export function ForgotPasswordPage() {
   const status = useAuthStore((state) => state.status)
-  const location = useLocation()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [linkSent, setLinkSent] = useState(false)
 
   if (status === 'authenticated') {
-    const from = (location.state as { from?: string } | null)?.from ?? '/'
-    return <Navigate to={from} replace />
+    return <Navigate to="/" replace />
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -31,19 +29,41 @@ export function LoginPage() {
     setError(null)
     setIsSubmitting(true)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}update-password`,
     })
 
     setIsSubmitting(false)
-    if (signInError) {
-      setError(
-        signInError.message === 'Invalid login credentials'
-          ? 'Email ou mot de passe incorrect.'
-          : signInError.message,
-      )
+    if (resetError) {
+      setError(resetError.message)
+      return
     }
+    setLinkSent(true)
+  }
+
+  if (linkSent) {
+    return (
+      <main className="flex min-h-full flex-col items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle as="h1" className="text-2xl">
+              Vérifie ta boîte mail
+            </CardTitle>
+            <CardDescription>
+              Si un compte existe avec l'adresse {email}, un lien de réinitialisation vient
+              d'être envoyé. Clique dessus pour choisir un nouveau mot de passe.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/login">
+              <Button variant="outline" className="w-full">
+                Retour à la connexion
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </main>
+    )
   }
 
   return (
@@ -51,9 +71,11 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle as="h1" className="text-2xl">
-            Connexion
+            Mot de passe oublié
           </CardTitle>
-          <CardDescription>Accède à ton suivi d'entraînement</CardDescription>
+          <CardDescription>
+            Indique ton email, on t'envoie un lien pour choisir un nouveau mot de passe.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -72,41 +94,21 @@ export function LoginPage() {
                 onChange={(event) => setEmail(event.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <Link
-                to="/forgot-password"
-                className="self-end text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-              >
-                Mot de passe oublié ?
-              </Link>
-            </div>
             {error && (
               <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             )}
             <Button type="submit" disabled={isSubmitting} className="mt-2">
-              {isSubmitting ? 'Connexion…' : 'Se connecter'}
+              {isSubmitting ? 'Envoi…' : 'Envoyer le lien'}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Pas encore de compte ?{' '}
             <Link
-              to="/signup"
+              to="/login"
               className="text-primary underline underline-offset-4 hover:text-primary/80"
             >
-              Créer un compte
+              Retour à la connexion
             </Link>
           </p>
         </CardContent>
