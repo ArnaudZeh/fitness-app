@@ -76,6 +76,70 @@ export async function deleteFoodLog(id: string): Promise<void> {
   if (error) throw error
 }
 
+// Most recent date strictly before `beforeDate` that has at least one entry
+// — scoped to a single meal slot when `mealSlotId` is given, across all
+// meals otherwise. Skips gaps (a day with nothing logged) rather than
+// stopping at the immediately preceding calendar date, same lesson as the
+// session-log "last time" prefill bug (a single empty day shouldn't hide
+// real earlier history).
+export async function fetchMostRecentLoggedDate(
+  beforeDate: string,
+  mealSlotId?: string,
+): Promise<string | null> {
+  const userId = await requireUserId()
+  let query = supabase
+    .from('food_logs')
+    .select('logged_date')
+    .eq('user_id', userId)
+    .lt('logged_date', beforeDate)
+    .order('logged_date', { ascending: false })
+    .limit(1)
+  if (mealSlotId) query = query.eq('meal_slot_id', mealSlotId)
+  const { data, error } = await query
+  if (error) throw error
+  return data[0]?.logged_date ?? null
+}
+
+// Copies every food_log entry for one meal slot on `fromDate` onto
+// `toDate` — new rows/ids, everything else (per-100g reference, computed
+// totals) carried over as-is. Returns 0 without erroring when the source
+// day had nothing logged for this slot (e.g. a whole-day duplicate hitting
+// a slot that was skipped that day).
+export async function duplicateFoodLogsForMealSlot(
+  mealSlotId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<number> {
+  const userId = await requireUserId()
+  const { data: sourceLogs, error: fetchError } = await supabase
+    .from('food_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('meal_slot_id', mealSlotId)
+    .eq('logged_date', fromDate)
+  if (fetchError) throw fetchError
+  if (sourceLogs.length === 0) return 0
+
+  const inserts = sourceLogs.map((log) => ({
+    user_id: userId,
+    meal_slot_id: log.meal_slot_id,
+    logged_date: toDate,
+    name: log.name,
+    calories: log.calories,
+    protein_g: log.protein_g,
+    carbs_g: log.carbs_g,
+    fat_g: log.fat_g,
+    quantity_g: log.quantity_g,
+    calories_per_100g: log.calories_per_100g,
+    protein_g_per_100g: log.protein_g_per_100g,
+    carbs_g_per_100g: log.carbs_g_per_100g,
+    fat_g_per_100g: log.fat_g_per_100g,
+  }))
+  const { error: insertError } = await supabase.from('food_logs').insert(inserts)
+  if (insertError) throw insertError
+  return inserts.length
+}
+
 export interface RecentFoodLog {
   name: string
   caloriesPer100g: number

@@ -1,11 +1,19 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { Copy, Plus, Trash2 } from 'lucide-react'
 import { AddFoodLogDialog } from '@/components/AddFoodLogDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useDeleteFoodLog } from '@/hooks/useFoodLogs'
+import { useDeleteFoodLog, useDuplicateMealSlot, useMostRecentLoggedDate } from '@/hooks/useFoodLogs'
 import type { FoodLog } from '@/lib/food-logs-api'
 import type { MealSlot } from '@/lib/meal-slots-api'
+
+function formatShortDate(isoDate: string): string {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  })
+}
 
 interface MealSlotSectionProps {
   slot: MealSlot
@@ -15,6 +23,13 @@ interface MealSlotSectionProps {
 
 export function MealSlotSection({ slot, logs, loggedDate }: MealSlotSectionProps) {
   const deleteFoodLog = useDeleteFoodLog()
+  const duplicateMealSlot = useDuplicateMealSlot()
+  // Only offered on an empty meal — duplicating on top of something already
+  // logged today was scoped out explicitly (skip already-filled meals
+  // rather than append or overwrite), so a filled slot has nothing to gain
+  // from this button. Querying unconditionally (rather than gating on
+  // logs.length) is harmless — react-query caches it per slot/date anyway.
+  const { data: sourceDate } = useMostRecentLoggedDate(loggedDate, slot.id)
   const totalCalories = logs.reduce((sum, log) => sum + log.calories, 0)
 
   return (
@@ -61,15 +76,38 @@ export function MealSlotSection({ slot, logs, loggedDate }: MealSlotSectionProps
             />
           </div>
         ))}
-        <AddFoodLogDialog
-          mealSlotId={slot.id}
-          loggedDate={loggedDate}
-          trigger={
-            <Button type="button" variant="outline" size="sm" className="self-start">
-              <Plus /> Ajouter un aliment
+        <div className="flex flex-wrap gap-2">
+          <AddFoodLogDialog
+            mealSlotId={slot.id}
+            loggedDate={loggedDate}
+            trigger={
+              <Button type="button" variant="outline" size="sm" className="self-start">
+                <Plus /> Ajouter un aliment
+              </Button>
+            }
+          />
+          {logs.length === 0 && sourceDate != null && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              disabled={duplicateMealSlot.isPending}
+              onClick={() =>
+                void duplicateMealSlot.mutateAsync({
+                  mealSlotId: slot.id,
+                  fromDate: sourceDate,
+                  toDate: loggedDate,
+                })
+              }
+            >
+              <Copy />
+              {duplicateMealSlot.isPending
+                ? 'Duplication…'
+                : `Dupliquer (${formatShortDate(sourceDate)})`}
             </Button>
-          }
-        />
+          )}
+        </div>
       </CardContent>
     </Card>
   )

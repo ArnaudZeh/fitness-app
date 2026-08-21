@@ -1,3 +1,4 @@
+import { DuplicateDayButton } from '@/components/DuplicateDayButton'
 import { ManageMealSlots } from '@/components/ManageMealSlots'
 import { MealSlotOnboarding } from '@/components/MealSlotOnboarding'
 import { MealSlotSection } from '@/components/MealSlotSection'
@@ -55,6 +56,7 @@ export function NutritionPage() {
             avgDailySteps={coachingProfile?.avg_daily_steps ?? null}
             consumed={consumed}
           />
+          <DuplicateDayButton mealSlots={mealSlots} foodLogs={foodLogs} today={today} />
           {mealSlots.map((slot) => (
             <MealSlotSection
               key={slot.id}

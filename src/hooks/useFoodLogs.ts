@@ -7,10 +7,11 @@ function foodLogsKey(loggedDate: string) {
 
 const recentFoodLogNamesKey = ['recent-food-log-names'] as const
 
-export function useFoodLogs(loggedDate: string) {
+export function useFoodLogs(loggedDate: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: foodLogsKey(loggedDate),
     queryFn: () => api.fetchFoodLogsForDate(loggedDate),
+    enabled: options.enabled ?? true,
   })
 }
 
@@ -60,5 +61,49 @@ export function useDeleteFoodLog() {
     mutationFn: ({ id }: { id: string; loggedDate: string }) => api.deleteFoodLog(id),
     onSuccess: (_data, variables) =>
       void queryClient.invalidateQueries({ queryKey: foodLogsKey(variables.loggedDate) }),
+  })
+}
+
+// Drives both the per-meal and whole-day "Dupliquer" buttons: which day to
+// offer duplicating from, and whether to offer it at all (null = nothing to
+// duplicate). `mealSlotId` omitted scopes the search across every meal.
+export function useMostRecentLoggedDate(beforeDate: string, mealSlotId?: string) {
+  return useQuery({
+    queryKey: ['food-logs', 'most-recent-date', beforeDate, mealSlotId ?? 'any'],
+    queryFn: () => api.fetchMostRecentLoggedDate(beforeDate, mealSlotId),
+  })
+}
+
+export function useDuplicateMealSlot() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { mealSlotId: string; fromDate: string; toDate: string }) =>
+      api.duplicateFoodLogsForMealSlot(input.mealSlotId, input.fromDate, input.toDate),
+    onSuccess: (_count, variables) => {
+      void queryClient.invalidateQueries({ queryKey: foodLogsKey(variables.toDate) })
+      void queryClient.invalidateQueries({ queryKey: recentFoodLogNamesKey })
+    },
+  })
+}
+
+// Whole-day duplicate: one call per still-empty meal slot rather than a
+// bespoke bulk endpoint — data volumes here are a handful of slots with a
+// handful of items each, not worth a dedicated RPC. Slots that had nothing
+// logged on `fromDate` either just contribute 0 and are silently skipped
+// (duplicateFoodLogsForMealSlot's existing behavior).
+export function useDuplicateDay() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { mealSlotIds: string[]; fromDate: string; toDate: string }) => {
+      let total = 0
+      for (const mealSlotId of input.mealSlotIds) {
+        total += await api.duplicateFoodLogsForMealSlot(mealSlotId, input.fromDate, input.toDate)
+      }
+      return total
+    },
+    onSuccess: (_count, variables) => {
+      void queryClient.invalidateQueries({ queryKey: foodLogsKey(variables.toDate) })
+      void queryClient.invalidateQueries({ queryKey: recentFoodLogNamesKey })
+    },
   })
 }
