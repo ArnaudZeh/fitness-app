@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCreateFoodLog } from '@/hooks/useFoodLogs'
+import type { CommonDish } from '@/lib/common-dishes'
 import { computeFoodLogTotals } from '@/lib/nutrition-calc'
 import { parseLocaleNumber } from '@/lib/number-input'
 
@@ -41,6 +42,25 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
     setCarbsPer100g('')
     setFatPer100g('')
     setError(null)
+  }
+
+  // Quick-add path (P4, common dishes): logs the fixed total directly and
+  // closes the dialog, unlike handleSelectFood below which only prefills
+  // the per-100g/quantity form for the user to review and submit. Errors
+  // are left to propagate — CommonDishPicker catches and displays them
+  // next to the dish list itself, closer to the action that failed.
+  async function handleQuickAdd(dish: CommonDish) {
+    await createFoodLog.mutateAsync({
+      meal_slot_id: mealSlotId,
+      logged_date: loggedDate,
+      name: dish.name,
+      calories: dish.calories,
+      protein_g: dish.proteinG,
+      carbs_g: dish.carbsG,
+      fat_g: dish.fatG,
+    })
+    setOpen(false)
+    reset()
   }
 
   function handleSelectFood(selection: FoodSelection) {
@@ -114,7 +134,7 @@ export function AddFoodLogDialog({ trigger, mealSlotId, loggedDate }: AddFoodLog
           <DialogTitle>Ajouter un aliment</DialogTitle>
         </DialogHeader>
         <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
-          <FoodEntryTabs onSelect={handleSelectFood} />
+          <FoodEntryTabs onSelect={handleSelectFood} onQuickAdd={handleQuickAdd} />
 
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Ou saisis les valeurs toi-même

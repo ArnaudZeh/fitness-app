@@ -7,11 +7,14 @@ export interface FoodLogInput {
   meal_slot_id: string
   logged_date: string
   name: string
-  quantity_g: number
-  calories_per_100g: number
-  protein_g_per_100g: number | null
-  carbs_g_per_100g: number | null
-  fat_g_per_100g: number | null
+  // Per-100g reference + the quantity eaten, matching a nutrition label —
+  // omitted for a quick-add composed dish (P4) that only has a total, no
+  // per-100g breakdown to store (columns are nullable for exactly this).
+  quantity_g?: number
+  calories_per_100g?: number
+  protein_g_per_100g?: number | null
+  carbs_g_per_100g?: number | null
+  fat_g_per_100g?: number | null
   // Computed totals for the logged quantity (per_100g * quantity_g / 100),
   // stored alongside the per-100g reference rather than derived at read
   // time — every other part of the app (progress bars, daily totals) just

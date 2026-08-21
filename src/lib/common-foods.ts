@@ -1,4 +1,5 @@
 import type { FoodSearchResult } from '@/lib/food-search-result'
+import { normalizeSearchText } from '@/lib/text-normalize'
 
 interface CommonFood {
   name: string
@@ -87,16 +88,11 @@ const COMMON_FOODS: CommonFood[] = [
   { name: 'Beurre de cacahuète', caloriesPer100g: 588, proteinPer100g: 25, carbsPer100g: 20, fatPer100g: 50 },
 ]
 
-function normalize(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-}
-
 export function searchCommonFoods(query: string): FoodSearchResult[] {
-  const normalizedQuery = normalize(query)
-  return COMMON_FOODS.filter((food) => normalize(food.name).includes(normalizedQuery)).map(
+  const normalizedQuery = normalizeSearchText(query)
+  return COMMON_FOODS.filter((food) =>
+    normalizeSearchText(food.name).includes(normalizedQuery),
+  ).map(
     (food) => ({
       id: `common:${food.name}`,
       name: food.name,
