@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { AiSettingsSection } from '@/components/AiSettingsSection'
 import { Avatar } from '@/components/Avatar'
+import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DataOwnershipSection } from '@/components/DataOwnershipSection'
 import { NotificationsCard } from '@/components/NotificationsCard'
@@ -78,6 +79,7 @@ export function ProfilePage() {
           <LogOut /> Se déconnecter
         </Button>
       </div>
+      <ChangePasswordDialog />
       <AvatarSection profile={profile} />
       <CoachingProfileLinkCard />
       <ProfileForm profile={profile} />
