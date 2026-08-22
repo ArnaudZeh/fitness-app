@@ -1,10 +1,11 @@
 import { Link, useParams } from 'react-router'
-import { Copy, Eye } from 'lucide-react'
+import { Copy, Eye, UserCheck, UserPlus } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useFriendProfile } from '@/hooks/useFriendProfile'
+import { useFollowUser, useIsFollowing, useUnfollowUser } from '@/hooks/useFollows'
 import { useCopyProgramToMyAccount } from '@/hooks/usePrograms'
 import { ProfileNotVisibleError, type FriendProfile } from '@/lib/friend-profile-api'
 import { GOAL_LABELS } from '@/lib/profile-api'
@@ -68,18 +69,21 @@ export function FriendProfilePage() {
       {profile && (
         <>
           <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <Avatar
-                url={profile.avatarUrl}
-                displayName={profile.displayName}
-                size="lg"
-              />
-              <div>
-                <h1 className="text-xl font-semibold">{profile.displayName}</h1>
-                {profile.age !== null && (
-                  <p className="text-sm text-muted-foreground">{profile.age} ans</p>
-                )}
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+              <div className="flex items-center gap-4">
+                <Avatar
+                  url={profile.avatarUrl}
+                  displayName={profile.displayName}
+                  size="lg"
+                />
+                <div>
+                  <h1 className="text-xl font-semibold">{profile.displayName}</h1>
+                  {profile.age !== null && (
+                    <p className="text-sm text-muted-foreground">{profile.age} ans</p>
+                  )}
+                </div>
               </div>
+              {profile.isPublic && <FollowButton userId={profile.id} />}
             </CardContent>
           </Card>
 
@@ -168,6 +172,40 @@ export function FriendProfilePage() {
         </>
       )}
     </div>
+  )
+}
+
+// P1 du follow asymétrique — réservé aux profils publics (le parent ne
+// rend ce bouton que si profile.isPublic), un suivi ne fait que remonter
+// dans le feed un contenu déjà consultable par n'importe qui via cette
+// page. Pas de compteurs/listes de followers pour l'instant (P2).
+function FollowButton({ userId }: { userId: string }) {
+  const { data: isFollowing, isLoading } = useIsFollowing(userId)
+  const followUser = useFollowUser()
+  const unfollowUser = useUnfollowUser()
+  const isPending = followUser.isPending || unfollowUser.isPending
+
+  if (isLoading) return null
+
+  return isFollowing ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={isPending}
+      onClick={() => unfollowUser.mutate(userId)}
+    >
+      <UserCheck /> {unfollowUser.isPending ? 'Retrait…' : 'Suivi'}
+    </Button>
+  ) : (
+    <Button
+      type="button"
+      size="sm"
+      disabled={isPending}
+      onClick={() => followUser.mutate(userId)}
+    >
+      <UserPlus /> {followUser.isPending ? 'Suivi…' : 'Suivre'}
+    </Button>
   )
 }
 

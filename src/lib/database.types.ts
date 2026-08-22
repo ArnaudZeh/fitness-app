@@ -647,6 +647,27 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          created_at: string
+          followed_id: string
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          followed_id: string
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          followed_id?: string
+          follower_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       food_logs: {
         Row: {
           calories: number
@@ -1446,6 +1467,10 @@ export type Database = {
       }
       invoke_send_rest_timer_notifications: { Args: never; Returns: undefined }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
+      is_followed_and_public: {
+        Args: { p_follower: string; p_target: string }
+        Returns: boolean
+      }
       is_profile_public: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
