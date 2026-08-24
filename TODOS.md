@@ -922,3 +922,16 @@ Suite de P1. Scopé via AskUserQuestion sur le seul vrai point ouvert : compteur
 - **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 240/240.
 
 **Reste sur ce chantier** : P3 (suggestions de comptes publics à découvrir), P4 (classement du feed au-delà du chronologique).
+
+## Social — follow asymétrique, P3 suggestions (2026-08-24)
+
+Suite de P2. Décisions prises sans re-solliciter le user (implémentation, pas de nouvelle ambiguïté produit) : classement par nombre d'abonnés (signal simple de "compte public actif", pas de recommandation par affinité pour ce premier tour), exclusion des comptes déjà suivis et déjà amis (suivre un ami n'apporte rien, son contenu est déjà visible), carte masquée entièrement si aucune suggestion.
+
+- **Vrai bug préexistant trouvé en concevant P3, corrigé au passage** : la policy select du bucket Storage `avatars` n'a jamais eu de branche "profil simplement public" — seulement soi-même/ami/suivi+public. Or parcourir le profil public de quelqu'un (fonctionnalité de juillet) affiche déjà son programme et ses pesées à n'importe qui d'authentifié sans exiger d'être ami ni de le suivre ; son avatar aurait dû suivre la même règle depuis le début. Devenait visible avec P3 puisqu'une suggestion est par construction un compte public pas encore suivi — donc systématiquement dans le cas resté cassé jusqu'ici. Ajout d'une branche `is_profile_public()` à la policy.
+- **`get_follow_suggestions(p_limit)`** (security definer) : profils publics, pas soi-même, pas déjà suivi, pas déjà ami, triés par `count(follows où followed_id = p.id)` desc.
+- **UI** : card "Comptes à découvrir" sur `FriendsPage`, entre les compteurs personnels et la recherche — nom + nombre d'abonnés + bouton Suivre direct (retire l'entrée de la liste dès le suivi confirmé, cache invalidation dédiée).
+- **`database.types.ts` régénéré** (nouvelle fonction RPC).
+- **Vérifié en direct** (pas juste en lisant le code) : suggestion visible pour un compte public non suivi, disparaît après un suivi réel (confirmé par re-visite du profil, pas juste une disparition optimiste côté UI), réapparaît disponible après un `delete` direct en base. Testé aussi contre les vrais comptes publics existants en prod (5 suggestions réelles vues, aucune mutation sur leurs données). Capture 375px, aucun débordement.
+- **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 240/240.
+
+**Reste sur ce chantier** : P4 (classement du feed au-delà du chronologique) — dernière phase du plan initial.

@@ -59,3 +59,22 @@ export async function unfollowUser(followedId: string): Promise<void> {
     .eq('followed_id', followedId)
   if (error) throw error
 }
+
+export interface FollowSuggestion {
+  id: string
+  displayName: string
+  followerCount: number
+}
+
+// P3 — profils publics pas déjà suivis ni déjà amis, classés par nombre
+// d'abonnés (signal simple de "compte public actif", pas de
+// recommandation par affinité pour ce premier tour).
+export async function fetchFollowSuggestions(limit = 10): Promise<FollowSuggestion[]> {
+  const { data, error } = await supabase.rpc('get_follow_suggestions', { p_limit: limit })
+  if (error) throw error
+  return data.map((row) => ({
+    id: row.id,
+    displayName: row.display_name ?? 'Utilisateur',
+    followerCount: row.follower_count,
+  }))
+}

@@ -6,6 +6,14 @@ const feedKey = ['social-feed'] as const
 const isFollowingKey = (followedId: string) => ['is-following', followedId] as const
 const followerCountKey = (userId: string) => ['follower-count', userId] as const
 const followingCountKey = (userId: string) => ['following-count', userId] as const
+const suggestionsKey = ['follow-suggestions'] as const
+
+export function useFollowSuggestions() {
+  return useQuery({
+    queryKey: suggestionsKey,
+    queryFn: () => api.fetchFollowSuggestions(),
+  })
+}
 
 export function useIsFollowing(followedId: string) {
   return useQuery({
@@ -41,6 +49,7 @@ export function useFollowUser() {
       void queryClient.invalidateQueries({ queryKey: feedKey })
       void queryClient.invalidateQueries({ queryKey: followerCountKey(followedId) })
       if (myUserId) void queryClient.invalidateQueries({ queryKey: followingCountKey(myUserId) })
+      void queryClient.invalidateQueries({ queryKey: suggestionsKey })
     },
   })
 }
@@ -55,6 +64,7 @@ export function useUnfollowUser() {
       void queryClient.invalidateQueries({ queryKey: feedKey })
       void queryClient.invalidateQueries({ queryKey: followerCountKey(followedId) })
       if (myUserId) void queryClient.invalidateQueries({ queryKey: followingCountKey(myUserId) })
+      void queryClient.invalidateQueries({ queryKey: suggestionsKey })
     },
   })
 }

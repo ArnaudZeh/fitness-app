@@ -1467,6 +1467,14 @@ export type Database = {
         Args: { p_content_id: string; p_content_type: string }
         Returns: string
       }
+      get_follow_suggestions: {
+        Args: { p_limit?: number }
+        Returns: {
+          display_name: string
+          follower_count: number
+          id: string
+        }[]
+      }
       invoke_send_rest_timer_notifications: { Args: never; Returns: undefined }
       invoke_send_wellness_reminders: { Args: never; Returns: undefined }
       is_followed_and_public: {

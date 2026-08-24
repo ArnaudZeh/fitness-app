@@ -7,7 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/Avatar'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useAuthStore } from '@/lib/auth-store'
-import { useFollowerCount, useFollowingCount } from '@/hooks/useFollows'
+import {
+  useFollowerCount,
+  useFollowingCount,
+  useFollowSuggestions,
+  useFollowUser,
+} from '@/hooks/useFollows'
 import {
   useAcceptFriendRequest,
   useFriendsData,
@@ -40,6 +45,8 @@ export function FriendsPage() {
       <h1 className="text-xl font-semibold">Amis</h1>
 
       <MyFollowCountsCard />
+
+      <DiscoverCard />
 
       <SearchCard friends={friends} />
 
@@ -84,6 +91,54 @@ function MyFollowCountsCard() {
           <p className="text-xl font-semibold">{followingCount ?? 0}</p>
           <p className="text-sm text-muted-foreground">Abonnements</p>
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// P3 — comptes publics pas déjà suivis ni déjà amis, classés par nombre
+// d'abonnés côté DB (get_follow_suggestions). Liste vide = carte masquée
+// entièrement plutôt qu'un état vide vide de sens ("aucune suggestion").
+function DiscoverCard() {
+  const { data: suggestions, isLoading } = useFollowSuggestions()
+  const followUser = useFollowUser()
+
+  if (isLoading) return null
+  if (!suggestions || suggestions.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle as="h2">Comptes à découvrir</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-2">
+          {suggestions.map((suggestion) => (
+            <li
+              key={suggestion.id}
+              className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
+            >
+              <Link
+                to={`/friends/${suggestion.id}`}
+                className="flex flex-col text-sm font-medium hover:underline"
+              >
+                {suggestion.displayName}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {suggestion.followerCount} abonné{suggestion.followerCount !== 1 ? 's' : ''}
+                </span>
+              </Link>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={followUser.isPending}
+                onClick={() => followUser.mutate(suggestion.id)}
+              >
+                <UserPlus /> Suivre
+              </Button>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )
