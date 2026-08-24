@@ -935,3 +935,14 @@ Suite de P2. Décisions prises sans re-solliciter le user (implémentation, pas 
 - **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 240/240.
 
 **Reste sur ce chantier** : P4 (classement du feed au-delà du chronologique) — dernière phase du plan initial.
+
+## Social — follow asymétrique, P4 classement du feed (2026-08-24)
+
+Dernière phase du plan initial (P1→P4). Scopé via AskUserQuestion sur les deux vrais points ouverts : bascule "Récent/Populaire" plutôt qu'un remplacement imposé de l'ordre par défaut (cohérent avec `feedback_prefer_display_only_over_behavior_change` — personne ne voit son feed changer sans le demander), et un score pondéré par la fraîcheur plutôt qu'un total brut de likes+commentaires (évite qu'un vieux post très aimé reste coincé en tête indéfiniment).
+
+- **`computePopularityScore`/`sortFeedByPopularity`** (`social-display.ts`, fonctions pures testées) : `score = (likes + commentaires) / (âge en heures + 2)`. Le `+2` évite une division par ~0 pour un post vieux de quelques secondes qui dominerait sinon n'importe quel post avec ne serait-ce qu'un like — même précédent que `MIN_SESSION_MINUTES`-style garde-fous ailleurs dans le projet.
+- **`FeedPage.tsx`** : bascule pill "Récent/Populaire" (même patron visuel que le sélecteur de méthode dans `FoodEntryTabs`/le sélecteur de provider IA), état local non persisté, "Récent" par défaut à chaque visite. `useSocialFeed()` reste inchangé (toujours trié chronologiquement) — "Populaire" retrie côté client uniquement, jamais un changement de requête serveur.
+- **Vérifié en direct** (pas juste en lisant le code) : 2 posts réels insérés sur le compte fixture (un récent sans engagement, un vieux de 3 jours avec 2 likes) — "Récent" affiche bien le plus récent en premier, "Populaire" bascule l'ordre pour mettre le post ancien-mais-aimé en tête, et le retour à "Récent" restaure l'ordre chronologique sans plantage. Capture 375px dans les deux états, aucun débordement. Données de test nettoyées après coup.
+- **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 245/245 (5 nouveaux tests sur le calcul de score et le tri).
+
+**Plan follow asymétrique (P1→P4) désormais entièrement clos.**

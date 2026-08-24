@@ -82,3 +82,24 @@ export function mergeFeedEntries(
     b.occurredAt.localeCompare(a.occurredAt),
   )
 }
+
+// P4 du follow asymétrique — classement "Populaire", scopé via
+// AskUserQuestion comme une bascule à côté du chronologique par défaut
+// (jamais imposé), pondéré par la fraîcheur pour éviter qu'un vieux post
+// très aimé reste coincé en tête indéfiniment. `+2` au dénominateur évite
+// une division par ~0 pour un post vieux de quelques secondes (qui
+// dominerait sinon n'importe quel post avec ne serait-ce qu'un like).
+const POPULARITY_SCORE_HOURS_OFFSET = 2
+
+export function computePopularityScore(
+  entry: Pick<FeedEntry, 'likeCount' | 'commentCount' | 'occurredAt'>,
+  now: Date = new Date(),
+): number {
+  const ageHours = (now.getTime() - new Date(entry.occurredAt).getTime()) / (1000 * 60 * 60)
+  const engagement = entry.likeCount + entry.commentCount
+  return engagement / (Math.max(ageHours, 0) + POPULARITY_SCORE_HOURS_OFFSET)
+}
+
+export function sortFeedByPopularity(entries: FeedEntry[], now: Date = new Date()): FeedEntry[] {
+  return [...entries].sort((a, b) => computePopularityScore(b, now) - computePopularityScore(a, now))
+}

@@ -21,7 +21,12 @@ import {
   useSocialFeed,
   useToggleLike,
 } from '@/hooks/useSocialFeed'
-import { formatLikedBy, formatMilestoneValue, MILESTONE_TYPE_LABELS } from '@/lib/social-display'
+import {
+  formatLikedBy,
+  formatMilestoneValue,
+  MILESTONE_TYPE_LABELS,
+  sortFeedByPopularity,
+} from '@/lib/social-display'
 import type { FeedEntry, FeedTargetType, LikerSummary } from '@/lib/social-display'
 import { extractMentions } from '@/lib/mentions'
 import type { MentionCandidate } from '@/lib/mentions'
@@ -57,8 +62,11 @@ function MentionedText({ text, mentions }: { text: string; mentions: MentionCand
   return <>{parts}</>
 }
 
+type SortMode = 'recent' | 'popular'
+
 export function FeedPage() {
   const { data: feed, isLoading, isError } = useSocialFeed()
+  const [sortMode, setSortMode] = useState<SortMode>('recent')
   const currentUserId = useAuthStore((state) => state.session?.user.id)
   const deleteMilestone = useDeleteMilestone()
   const deletePost = useDeletePost()
@@ -75,9 +83,16 @@ export function FeedPage() {
     markActivityNotificationsRead()
   }, [markMentionsRead, markActivityNotificationsRead])
 
+  // Recent (chronologique) reste l'ordre par défaut — Populaire est une
+  // bascule locale à la page, jamais persistée, jamais imposée par
+  // défaut (scopé via AskUserQuestion). useSocialFeed() renvoie déjà le
+  // feed trié par occurredAt, donc "Recent" n'a besoin d'aucun retri ici.
+  const sortedFeed =
+    feed && sortMode === 'popular' ? sortFeedByPopularity(feed) : feed
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Feed</h1>
         <Link to="/friends" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
           Gérer mes amis →
@@ -89,6 +104,25 @@ export function FeedPage() {
         </Link>
       </div>
 
+      <div className="flex items-center gap-1 self-start rounded-lg border border-border p-0.5">
+        {(
+          [
+            { id: 'recent', label: 'Récent' },
+            { id: 'popular', label: 'Populaire' },
+          ] as const
+        ).map(({ id, label }) => (
+          <Button
+            key={id}
+            type="button"
+            size="sm"
+            variant={sortMode === id ? 'default' : 'ghost'}
+            onClick={() => setSortMode(id)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
       <CreatePostCard />
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
@@ -98,7 +132,7 @@ export function FeedPage() {
         </p>
       )}
 
-      {feed && feed.length === 0 && (
+      {sortedFeed && sortedFeed.length === 0 && (
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
@@ -109,9 +143,9 @@ export function FeedPage() {
         </Card>
       )}
 
-      {feed && feed.length > 0 && (
+      {sortedFeed && sortedFeed.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {feed.map((entry) => (
+          {sortedFeed.map((entry) => (
             <li key={`${entry.kind}-${entry.id}`}>
               {entry.kind === 'milestone' ? (
                 <MilestoneCard
