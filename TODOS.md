@@ -910,3 +910,15 @@ Reprise du chantier explicitement différé depuis juillet ("un modèle de follo
 - **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 240/240 (pas de nouveaux tests unitaires — logique entièrement RLS/requêtes Supabase).
 
 **Prochaine étape si le sujet revient** : P2 (compteurs + listes followers/following visibles sur les profils), P3 (suggestions de comptes publics à découvrir), P4 (classement du feed au-delà du chronologique) — dans cet ordre, gate explicite à chaque étape.
+
+## Social — follow asymétrique, P2 compteurs (2026-08-24)
+
+Suite de P1. Scopé via AskUserQuestion sur le seul vrai point ouvert : compteurs seulement pour ce tour (pas de liste nominative) — une vraie liste demanderait de gérer l'anonymisation des abonnés privés qui suivent un profil public, un chantier à part.
+
+- **2 fonctions security definer** (`count_followers`/`count_following`) plutôt qu'un élargissement de la policy select de `follows` : un compteur agrégé ne réexpose aucune ligne individuelle, donc aucun besoin de toucher à la visibilité ligne par ligne posée en P1. Visible pour un tiers uniquement si le profil ciblé est public, toujours visible pour soi-même (même profil privé) — `auth.uid() = p_user_id or is_profile_public(p_user_id)`, sinon `null` (pas `0`, pour ne jamais laisser croire que le compte a réellement 0 abonné alors que l'info est juste masquée).
+- **UI** : compteurs sous le nom sur `FriendProfilePage` (affiché seulement si `profile.isPublic`, cohérent avec le reste de la page) ; nouvelle card "Abonnés/Abonnements" sur `FriendsPage` pour ses propres compteurs (toujours visibles à soi-même).
+- **`database.types.ts` régénéré** (2 nouvelles fonctions RPC).
+- **Vérifié en direct avec 2 vrais comptes fixture** : RPC renvoie bien `null` (pas `0`) pour un profil privé consulté par un tiers, aucune section compteurs affichée côté UI dans ce cas ; sur un profil public, les compteurs démarrent à 0/0, passent à "1 abonné" après un suivi côté profil visité et "1 abonnement" côté `/friends` du follower, et chaque compte voit correctement ses propres chiffres. Compte fixture 2 remis en privé après coup, follow de test supprimé.
+- **Qualité** : `tsc -b`/ESLint (0 erreur) propres, Vitest 240/240.
+
+**Reste sur ce chantier** : P3 (suggestions de comptes publics à découvrir), P4 (classement du feed au-delà du chronologique).

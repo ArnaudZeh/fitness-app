@@ -1461,6 +1461,8 @@ export type Database = {
         Args: { p_session_template_id: string }
         Returns: boolean
       }
+      count_followers: { Args: { p_user_id: string }; Returns: number }
+      count_following: { Args: { p_user_id: string }; Returns: number }
       feed_target_owner: {
         Args: { p_content_id: string; p_content_type: string }
         Returns: string

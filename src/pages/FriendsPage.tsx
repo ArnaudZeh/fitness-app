@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/Avatar'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useAuthStore } from '@/lib/auth-store'
+import { useFollowerCount, useFollowingCount } from '@/hooks/useFollows'
 import {
   useAcceptFriendRequest,
   useFriendsData,
@@ -37,6 +39,8 @@ export function FriendsPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Amis</h1>
 
+      <MyFollowCountsCard />
+
       <SearchCard friends={friends} />
 
       {isLoading && <p className="text-muted-foreground">Chargement…</p>}
@@ -56,6 +60,32 @@ export function FriendsPage() {
 
       {friends && <FriendsListCard entries={friends.friends} />}
     </div>
+  )
+}
+
+// Toujours visibles pour soi-même, même profil privé (contrairement à
+// FriendProfilePage où les compteurs d'un tiers ne s'affichent que si son
+// profil est public) — voir count_followers/count_following côté DB.
+function MyFollowCountsCard() {
+  const myUserId = useAuthStore((state) => state.session?.user.id)
+  const { data: followerCount } = useFollowerCount(myUserId ?? '')
+  const { data: followingCount } = useFollowingCount(myUserId ?? '')
+
+  if (!myUserId) return null
+
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-around py-4 text-center">
+        <div>
+          <p className="text-xl font-semibold">{followerCount ?? 0}</p>
+          <p className="text-sm text-muted-foreground">Abonnés</p>
+        </div>
+        <div>
+          <p className="text-xl font-semibold">{followingCount ?? 0}</p>
+          <p className="text-sm text-muted-foreground">Abonnements</p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

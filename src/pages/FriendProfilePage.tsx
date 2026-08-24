@@ -5,7 +5,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useFriendProfile } from '@/hooks/useFriendProfile'
-import { useFollowUser, useIsFollowing, useUnfollowUser } from '@/hooks/useFollows'
+import {
+  useFollowerCount,
+  useFollowingCount,
+  useFollowUser,
+  useIsFollowing,
+  useUnfollowUser,
+} from '@/hooks/useFollows'
 import { useCopyProgramToMyAccount } from '@/hooks/usePrograms'
 import { ProfileNotVisibleError, type FriendProfile } from '@/lib/friend-profile-api'
 import { GOAL_LABELS } from '@/lib/profile-api'
@@ -81,6 +87,7 @@ export function FriendProfilePage() {
                   {profile.age !== null && (
                     <p className="text-sm text-muted-foreground">{profile.age} ans</p>
                   )}
+                  {profile.isPublic && <FollowCounts userId={profile.id} />}
                 </div>
               </div>
               {profile.isPublic && <FollowButton userId={profile.id} />}
@@ -175,10 +182,29 @@ export function FriendProfilePage() {
   )
 }
 
+// P2 — compteurs seulement (pas de liste nominative, voir TODOS.md). null
+// (profil ni public ni soi-même) ne devrait jamais arriver ici puisque le
+// parent ne rend ce composant que pour un profil public, mais reste géré
+// proprement plutôt que d'afficher un faux "0".
+function FollowCounts({ userId }: { userId: string }) {
+  const { data: followerCount } = useFollowerCount(userId)
+  const { data: followingCount } = useFollowingCount(userId)
+
+  if (followerCount === null || followerCount === undefined) return null
+  if (followingCount === null || followingCount === undefined) return null
+
+  return (
+    <p className="text-sm text-muted-foreground">
+      {followerCount} abonné{followerCount !== 1 ? 's' : ''} · {followingCount} abonnement
+      {followingCount !== 1 ? 's' : ''}
+    </p>
+  )
+}
+
 // P1 du follow asymétrique — réservé aux profils publics (le parent ne
 // rend ce bouton que si profile.isPublic), un suivi ne fait que remonter
 // dans le feed un contenu déjà consultable par n'importe qui via cette
-// page. Pas de compteurs/listes de followers pour l'instant (P2).
+// page.
 function FollowButton({ userId }: { userId: string }) {
   const { data: isFollowing, isLoading } = useIsFollowing(userId)
   const followUser = useFollowUser()

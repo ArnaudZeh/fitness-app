@@ -8,9 +8,26 @@ async function requireUserId(): Promise<string> {
   return user.id
 }
 
-// P1 du follow asymétrique — le suivi n'est jamais exposé publiquement
-// pour l'instant (voir TODOS.md, P2 s'en chargera), donc pas de récupération
-// de "qui suit qui" au-delà de sa propre relation avec un profil donné.
+// P2 — compteurs seulement (pas de liste nominative, voir TODOS.md). Les
+// deux RPC renvoient null quand la cible n'est ni publique ni soi-même :
+// traité comme "pas affiché" côté UI plutôt que 0, pour ne pas laisser
+// croire que le compte a réellement 0 abonné alors que l'info est juste
+// masquée.
+export async function fetchFollowerCount(userId: string): Promise<number | null> {
+  const { data, error } = await supabase.rpc('count_followers', { p_user_id: userId })
+  if (error) throw error
+  return data
+}
+
+export async function fetchFollowingCount(userId: string): Promise<number | null> {
+  const { data, error } = await supabase.rpc('count_following', { p_user_id: userId })
+  if (error) throw error
+  return data
+}
+
+// P2 expose des compteurs agrégés (ci-dessus), jamais les lignes
+// individuelles de follows — la policy select reste donc limitée à sa
+// propre relation avec un profil donné (qui suit-on soi-même).
 export async function fetchIsFollowing(followedId: string): Promise<boolean> {
   const userId = await requireUserId()
   const { data, error } = await supabase
