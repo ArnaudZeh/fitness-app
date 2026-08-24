@@ -25,9 +25,11 @@ import { computeRecentAverageWeightByExercise } from '@/lib/analytics'
 import {
   DEFAULT_DELOAD_REDUCTION_PERCENT,
   DELOAD_REDUCTION_OPTIONS,
-  FOCUS_REFERENCE_1RM_PERCENT,
+  FOCUS_LOAD_REDUCTION_RANGE,
+  FOCUS_REP_RANGE,
   PROGRAM_FOCUS_LABELS,
   suggestFocusLoadAdjustmentPercent,
+  suggestRpeAdjustmentPoints,
   type Program,
   type ProgramFocus,
 } from '@/lib/programs-api'
@@ -47,17 +49,28 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
   const [name, setName] = useState(`${program.name} (copie)`)
   const [focus, setFocus] = useState<ProgramFocus>(program.focus)
   const [adjustmentPercent, setAdjustmentPercent] = useState('0')
+  const [rpeAdjustmentPoints, setRpeAdjustmentPoints] = useState('0')
   const [error, setError] = useState<string | null>(null)
+
+  // A real training-zone change — deload involved on either end keeps its
+  // own dedicated mechanism (DELOAD_REDUCTION_OPTIONS + RPE tied to that
+  // same percent), never the new reps-by-focus table or the RPE points
+  // field below.
+  const isRealFocusChange = focus !== program.focus && focus !== 'deload' && program.focus !== 'deload'
+  const destLoadRange = focus !== 'deload' ? FOCUS_LOAD_REDUCTION_RANGE[focus] : null
+  const destRepRange = focus !== 'deload' ? FOCUS_REP_RANGE[focus] : null
 
   function reset() {
     setName(`${program.name} (copie)`)
     setFocus(program.focus)
     setAdjustmentPercent('0')
+    setRpeAdjustmentPoints('0')
     setError(null)
   }
 
   function handleFocusChange(nextFocus: ProgramFocus) {
     setFocus(nextFocus)
+    setRpeAdjustmentPoints(String(suggestRpeAdjustmentPoints(program.focus, nextFocus)))
     if (nextFocus === program.focus) {
       setAdjustmentPercent('0')
     } else if (nextFocus === 'deload') {
@@ -75,6 +88,7 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
       return
     }
     let loadAdjustmentPercent = 0
+    let rpePoints = 0
     if (focus !== program.focus) {
       const parsedAdjustment = parseLocaleNumber(adjustmentPercent)
       if (Number.isNaN(parsedAdjustment)) {
@@ -93,6 +107,15 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
         return
       }
       loadAdjustmentPercent = parsedAdjustment
+
+      if (isRealFocusChange) {
+        const parsedRpePoints = parseLocaleNumber(rpeAdjustmentPoints)
+        if (Number.isNaN(parsedRpePoints)) {
+          setError('Merci d’indiquer un ajustement RPE valide.')
+          return
+        }
+        rpePoints = parsedRpePoints
+      }
     }
     try {
       const newProgram = await duplicateProgram.mutateAsync({
@@ -101,6 +124,7 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
         options: {
           focus,
           loadAdjustmentPercent,
+          rpeAdjustmentPoints: rpePoints,
           recentAverageWeightByExercise: computeRecentAverageWeightByExercise(history ?? []),
         },
       })
@@ -151,11 +175,12 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              La copie garde exactement les mêmes exercices, séries et répétitions. Si le focus
-              change, la charge cible et le RPE cible s'ajustent automatiquement (voir
-              l'ajustement ci-dessous), ajustable de nouveau si besoin. Pour un exercice sans
-              charge cible déjà renseignée, la moyenne de tes 3 dernières séances loguées sert de
-              point de départ.
+              La copie garde les mêmes exercices et le même nombre de séries. Si le focus change
+              vraiment (hors deload), les répétitions cibles s'ajustent aussi à la nouvelle zone
+              d'entraînement — plus basses sur les exercices polyarticulaires que sur l'isolation
+              — en plus de la charge et du RPE cibles ci-dessous. Pour un exercice sans charge
+              cible déjà renseignée, la moyenne de tes 3 dernières séances loguées sert de point
+              de départ.
             </p>
           </div>
           {focus !== program.focus && (
@@ -188,9 +213,26 @@ export function DuplicateProgramDialog({ trigger, program }: DuplicateProgramDia
               <p className="text-xs text-muted-foreground">
                 {focus === 'deload'
                   ? 'Appliquée à la charge et au RPE cible de chaque exercice : une réduction de 30 à 50% est la fourchette modérée à prononcée courante pour une semaine de décharge en périodisation (un RPE 9-10 redescend ainsi autour de 5-6, l\'effort typique d\'un deload). Laissée inchangée pour les exercices sans charge de référence ou en assistance.'
-                  : program.focus !== 'deload'
-                    ? `Valeur suggérée à partir des zones de charge de travail par objectif (Force ≈${FOCUS_REFERENCE_1RM_PERCENT.force}% 1RM, Hypertrophie ≈${FOCUS_REFERENCE_1RM_PERCENT.hypertrophie}% 1RM, Endurance ≈${FOCUS_REFERENCE_1RM_PERCENT.endurance}% 1RM, d'après les repères NSCA), appliquée à la fois à la charge et au RPE cible de chaque exercice. Une valeur négative augmente les deux, positive les réduit. Ajustable si besoin.`
+                  : isRealFocusChange && destLoadRange && destRepRange
+                    ? `Appliquée à la charge cible de chaque exercice (polyarticulaire et isolation). Repère pour ${PROGRAM_FOCUS_LABELS[focus]} : ${destLoadRange.min}-${destLoadRange.max}% de réduction, répétitions ${destRepRange.compound.min}-${destRepRange.compound.max} sur le polyarticulaire et ${destRepRange.isolation.min}-${destRepRange.isolation.max} sur l'isolation. Ajustable si besoin.`
                     : "Le deload n'a pas de zone de charge de référence propre (elle dépend de la réduction appliquée à la duplication précédente), donc aucune valeur n'est suggérée automatiquement ici. Ajuste si besoin."}
+              </p>
+            </div>
+          )}
+          {isRealFocusChange && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="duplicate-rpe-adjustment">Ajustement RPE (points)</Label>
+              <Input
+                id="duplicate-rpe-adjustment"
+                type="text"
+                inputMode="decimal"
+                value={rpeAdjustmentPoints}
+                onChange={(event) => setRpeAdjustmentPoints(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Ajouté directement au RPE cible de chaque exercice (une valeur négative le
+                baisse) — indépendant de l'ajustement de charge ci-dessus. Pré-rempli à -1 : à
+                ajuster si tes RPE enregistrés ne sont pas surestimés chez toi.
               </p>
             </div>
           )}

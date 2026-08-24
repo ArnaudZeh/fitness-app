@@ -511,6 +511,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          is_compound: boolean
           muscle_group: string | null
           name: string
           user_id: string | null
@@ -519,6 +520,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_compound?: boolean
           muscle_group?: string | null
           name: string
           user_id?: string | null
@@ -527,6 +529,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_compound?: boolean
           muscle_group?: string | null
           name?: string
           user_id?: string | null

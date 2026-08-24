@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   applyLoadAdjustment,
   applyRpeAdjustment,
+  applyRpeOffset,
   suggestFocusLoadAdjustmentPercent,
+  suggestRpeAdjustmentPoints,
 } from '@/lib/programs-api'
 
 describe('applyLoadAdjustment', () => {
@@ -69,27 +71,61 @@ describe('applyRpeAdjustment', () => {
 })
 
 describe('suggestFocusLoadAdjustmentPercent', () => {
-  it('suggests a load increase going from hypertrophie to force', () => {
-    // 1 - 90/76 = -0.1842... -> -18
-    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'force')).toBe(-18)
+  it('suggests the destination focus own fixed default, regardless of source', () => {
+    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'force')).toBe(0)
+    expect(suggestFocusLoadAdjustmentPercent('endurance', 'force')).toBe(0)
   })
 
-  it('suggests a load cut going from force to hypertrophie', () => {
-    // 1 - 76/90 = 0.1556... -> 16
-    expect(suggestFocusLoadAdjustmentPercent('force', 'hypertrophie')).toBe(16)
+  it('suggests the hypertrophie default going from force', () => {
+    expect(suggestFocusLoadAdjustmentPercent('force', 'hypertrophie')).toBe(20)
   })
 
-  it('suggests a load cut going from hypertrophie to endurance', () => {
-    // 1 - 55/76 = 0.2763... -> 28
-    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'endurance')).toBe(28)
+  it('suggests the endurance default going from hypertrophie', () => {
+    expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'endurance')).toBe(38)
   })
 
   it('returns 0 when the focus does not change', () => {
     expect(suggestFocusLoadAdjustmentPercent('hypertrophie', 'hypertrophie')).toBe(0)
   })
 
-  it('returns 0 when either side is deload (no absolute reference zone)', () => {
+  it('returns 0 when either side is deload (its own dedicated mechanism)', () => {
     expect(suggestFocusLoadAdjustmentPercent('deload', 'hypertrophie')).toBe(0)
     expect(suggestFocusLoadAdjustmentPercent('force', 'deload')).toBe(0)
+  })
+})
+
+describe('applyRpeOffset', () => {
+  it('adds a signed point offset to the target RPE', () => {
+    expect(applyRpeOffset(9, -1)).toBe(8)
+    expect(applyRpeOffset(7, 1)).toBe(8)
+  })
+
+  it('clamps to the 0-10 scale', () => {
+    expect(applyRpeOffset(9.5, 2)).toBe(10)
+    expect(applyRpeOffset(0.5, -2)).toBe(0)
+  })
+
+  it('returns null unchanged (never set, nothing to offset)', () => {
+    expect(applyRpeOffset(null, -1)).toBeNull()
+  })
+
+  it('leaves a zero offset as a no-op', () => {
+    expect(applyRpeOffset(7, 0)).toBe(7)
+  })
+})
+
+describe('suggestRpeAdjustmentPoints', () => {
+  it('suggests -1 for a real focus-to-focus change', () => {
+    expect(suggestRpeAdjustmentPoints('force', 'hypertrophie')).toBe(-1)
+    expect(suggestRpeAdjustmentPoints('hypertrophie', 'endurance')).toBe(-1)
+  })
+
+  it('returns 0 when the focus does not change', () => {
+    expect(suggestRpeAdjustmentPoints('hypertrophie', 'hypertrophie')).toBe(0)
+  })
+
+  it('returns 0 when either side is deload (keeps applyRpeAdjustment instead)', () => {
+    expect(suggestRpeAdjustmentPoints('deload', 'hypertrophie')).toBe(0)
+    expect(suggestRpeAdjustmentPoints('force', 'deload')).toBe(0)
   })
 })

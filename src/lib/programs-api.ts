@@ -140,21 +140,48 @@ export function applyRpeAdjustment(
   return Math.round(Math.min(10, Math.max(0, adjusted)) * 10) / 10
 }
 
-// Representative working-load zone (%1RM) per goal, from NSCA's load/rep/
-// goal programming table (Haff & Triplett, Essentials of Strength Training
-// and Conditioning, 4th ed.): strength >=85% 1RM at <=6 reps, hypertrophy
-// 67-85% 1RM at 6-12 reps, muscular endurance <=67% 1RM at >=12 reps —
-// values below are representative midpoints of each zone. Deload has no
-// absolute zone of its own (it's defined relative to the duplicated
-// session, see DELOAD_REDUCTION_OPTIONS below), so it's deliberately absent
-// from this table.
-export const FOCUS_REFERENCE_1RM_PERCENT: Record<
+// Point-based RPE nudge for a real focus-to-focus transition (force/
+// hypertrophie/endurance between each other) — decoupled from
+// applyRpeAdjustment's percentage, at the user's explicit request: their
+// own calibration ("mes RPE enregistrés sont un peu surestimés"), not a
+// universal correction. Deload keeps applyRpeAdjustment (percentage tied
+// to its own load cut) — its RPE target is already tuned separately and a
+// flat point offset would badly undershoot the intended effort drop.
+export function applyRpeOffset(targetRpe: number | null, offsetPoints: number): number | null {
+  if (targetRpe === null || offsetPoints === 0) return targetRpe
+  return Math.round(Math.min(10, Math.max(0, targetRpe + offsetPoints)) * 10) / 10
+}
+
+// Charge et reps cibles par focus de DESTINATION — une propriété fixe de
+// la zone d'entraînement visée, pas un ratio dérivé de la source (Force
+// vise toujours la charge maximale disponible peu importe d'où on vient,
+// Hypertrophie/Endurance visent toujours la même fourchette). Chiffres
+// donnés directement par le user pour son usage réel de périodisation,
+// pas dérivés d'une formule théorique de %1RM (l'ancienne
+// FOCUS_REFERENCE_1RM_PERCENT/le ratio source→dest ont été remplacés par
+// ces valeurs explicites). Reps différenciées par type d'exercice
+// (exercises.is_compound) — un exercice d'isolation vise plus de
+// répétitions à charge égale de fourchette. Deload n'a d'entrée dans
+// aucune des deux tables : il garde le schéma de reps du programme
+// dupliqué tel quel et son propre mécanisme de charge dédié
+// (DELOAD_REDUCTION_OPTIONS) — une décharge n'est pas une nouvelle zone
+// d'entraînement, juste une réduction temporaire du bloc en cours.
+export const FOCUS_LOAD_REDUCTION_RANGE: Record<
   Exclude<ProgramFocus, 'deload'>,
-  number
+  { min: number; max: number; default: number }
 > = {
-  force: 90,
-  hypertrophie: 76,
-  endurance: 55,
+  force: { min: 0, max: 0, default: 0 },
+  hypertrophie: { min: 15, max: 25, default: 20 },
+  endurance: { min: 30, max: 45, default: 38 },
+}
+
+export const FOCUS_REP_RANGE: Record<
+  Exclude<ProgramFocus, 'deload'>,
+  Record<'compound' | 'isolation', { min: number; max: number }>
+> = {
+  force: { compound: { min: 3, max: 6 }, isolation: { min: 6, max: 10 } },
+  hypertrophie: { compound: { min: 8, max: 12 }, isolation: { min: 10, max: 15 } },
+  endurance: { compound: { min: 12, max: 20 }, isolation: { min: 15, max: 20 } },
 }
 
 // Preset choices for a deload duplication's load cut — a 30-50% reduction
@@ -165,31 +192,42 @@ export const FOCUS_REFERENCE_1RM_PERCENT: Record<
 export const DELOAD_REDUCTION_OPTIONS = [30, 35, 40, 45, 50] as const
 export const DEFAULT_DELOAD_REDUCTION_PERCENT = 40
 
-// Suggests a load adjustment (same signed shape as applyLoadAdjustment:
-// positive reduces, negative increases) when duplicating from one focus to
-// another, derived from the ratio between their FOCUS_REFERENCE_1RM_PERCENT
-// zones — e.g. hypertrophie (76%) -> force (90%) suggests roughly -18%
-// (an 18% load increase), force -> hypertrophie suggests roughly +16% (a
-// 16% cut). Returns 0 when the focus doesn't actually change, or when
-// either side is 'deload' (no absolute zone to compare against — deload
-// duplications use DELOAD_REDUCTION_OPTIONS instead).
+// -1 as long as a real (non-deload) focus change happens, 0 otherwise —
+// see applyRpeOffset.
+export const DEFAULT_RPE_ADJUSTMENT_POINTS = -1
+
+export function suggestRpeAdjustmentPoints(
+  sourceFocus: ProgramFocus,
+  destFocus: ProgramFocus,
+): number {
+  if (sourceFocus === destFocus) return 0
+  if (sourceFocus === 'deload' || destFocus === 'deload') return 0
+  return DEFAULT_RPE_ADJUSTMENT_POINTS
+}
+
+// Returns 0 when the focus doesn't actually change, or when either side is
+// 'deload' (deload duplications use DELOAD_REDUCTION_OPTIONS instead) —
+// otherwise the destination focus's own fixed default, see
+// FOCUS_LOAD_REDUCTION_RANGE.
 export function suggestFocusLoadAdjustmentPercent(
   sourceFocus: ProgramFocus,
   destFocus: ProgramFocus,
 ): number {
   if (sourceFocus === destFocus) return 0
   if (sourceFocus === 'deload' || destFocus === 'deload') return 0
-  const sourcePercent = FOCUS_REFERENCE_1RM_PERCENT[sourceFocus]
-  const destPercent = FOCUS_REFERENCE_1RM_PERCENT[destFocus]
-  return Math.round((1 - destPercent / sourcePercent) * 100)
+  return FOCUS_LOAD_REDUCTION_RANGE[destFocus].default
 }
 
 export interface CopyProgramOptions {
   focus?: ProgramFocus
-  // Percentage adjustment applied to every exercise's target_weight_kg and
-  // target_rpe — see applyLoadAdjustment/applyRpeAdjustment. 0 (default)
-  // copies both unchanged.
+  // Percentage adjustment applied to every exercise's target_weight_kg,
+  // and (deload only) target_rpe — see applyLoadAdjustment/
+  // applyRpeAdjustment. 0 (default) copies both unchanged.
   loadAdjustmentPercent?: number
+  // Point-based RPE nudge for a real (non-deload) focus change — see
+  // applyRpeOffset. Ignored when either focus is 'deload', which keeps
+  // using loadAdjustmentPercent via applyRpeAdjustment instead.
+  rpeAdjustmentPoints?: number
   // Recent average actual weight per exercise (see
   // computeRecentAverageWeightByExercise in analytics.ts), used to fill in
   // target_weight_kg for a slot that doesn't already have one set. Real
@@ -215,8 +253,25 @@ async function copyProgramInternal(
   const userId = await requireUserId()
   const focus = options.focus ?? program.focus
   const loadAdjustmentPercent = options.loadAdjustmentPercent ?? 0
+  const rpeAdjustmentPoints = options.rpeAdjustmentPoints ?? 0
   const recentAverageWeightByExercise =
     options.recentAverageWeightByExercise ?? new Map<string, number>()
+  // A real training-zone change (force/hypertrophie/endurance between each
+  // other) resets reps and switches the RPE mechanism to a flat point
+  // offset — a deload-involving transition on either end keeps today's
+  // behavior untouched (verbatim reps, percentage-linked RPE via
+  // applyRpeAdjustment), since a deload isn't a new training zone, just a
+  // temporary reduction of whichever block it's duplicated from.
+  const isRealFocusChange =
+    focus !== program.focus && focus !== 'deload' && program.focus !== 'deload'
+  let compoundByExerciseId = new Map<string, boolean>()
+  if (isRealFocusChange) {
+    const { data: exerciseRows, error: exercisesError } = await supabase
+      .from('exercises')
+      .select('id, is_compound')
+    if (exercisesError) throw exercisesError
+    compoundByExerciseId = new Map(exerciseRows.map((row) => [row.id, row.is_compound]))
+  }
   const { data: newProgram, error: programError } = await supabase
     .from('programs')
     .insert({
@@ -272,15 +327,28 @@ async function copyProgramInternal(
           slots.map((slot) => {
             const fallbackWeightKg: number | null =
               recentAverageWeightByExercise.get(slot.exercise_id) ?? null
+            // Reps are a property of the destination training zone, not a
+            // value scaled from the source (same reasoning as rest time
+            // below) — isolation exercises target a higher rep band than
+            // compound ones within the same focus. Falls back to compound
+            // when an exercise's classification is missing (safer default
+            // than isolation, see the migration's own comment).
+            const repRange = isRealFocusChange
+              ? FOCUS_REP_RANGE[focus][
+                  (compoundByExerciseId.get(slot.exercise_id) ?? true) ? 'compound' : 'isolation'
+                ]
+              : null
             return {
               user_id: userId,
               session_template_id: newTemplate.id,
               exercise_id: slot.exercise_id,
               order_index: slot.order_index,
               target_sets: slot.target_sets,
-              target_reps_min: slot.target_reps_min,
-              target_reps_max: slot.target_reps_max,
-              target_rpe: applyRpeAdjustment(slot.target_rpe, loadAdjustmentPercent),
+              target_reps_min: repRange ? repRange.min : slot.target_reps_min,
+              target_reps_max: repRange ? repRange.max : slot.target_reps_max,
+              target_rpe: isRealFocusChange
+                ? applyRpeOffset(slot.target_rpe, rpeAdjustmentPoints)
+                : applyRpeAdjustment(slot.target_rpe, loadAdjustmentPercent),
               // Frozen from the *destination* focus's own scientific default
               // (DEFAULT_REST_SECONDS_BY_FOCUS, sessions-api.ts) rather than
               // carried from the source slot. Rest isn't a percentage of the
