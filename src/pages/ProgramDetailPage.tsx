@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DuplicateProgramDialog } from '@/components/DuplicateProgramDialog'
+import { ProgramPhaseBanner } from '@/components/ProgramPhaseBanner'
 import { SessionTemplateCard } from '@/components/SessionTemplateCard'
 import { useAuthStore } from '@/lib/auth-store'
 import {
@@ -18,6 +19,7 @@ import {
 } from '@/hooks/usePrograms'
 import { useSessionTemplates } from '@/hooks/useSessionTemplates'
 import { useDeleteSessionLog, useSessionLogs } from '@/hooks/useSessionLogs'
+import { useProgramPhase } from '@/hooks/useProgramPhase'
 import {
   PROGRAM_FOCUS_LABELS,
   PROGRAM_STATUS_LABELS,
@@ -41,6 +43,11 @@ export function ProgramDetailPage() {
   const { data: program, isLoading, isError } = useProgram(id)
   const { data: templates } = useSessionTemplates(id)
   const logs = useSessionLogs(id)
+  // Called unconditionally (before the loading/error early returns below)
+  // per the rules of hooks — the fallback focus is only ever used for the
+  // brief window before `program` resolves, and phaseInfo is never read
+  // until after the !program early return anyway.
+  const phaseInfo = useProgramPhase(id, program?.focus ?? 'hypertrophie')
   const deleteProgram = useDeleteProgram()
   const deleteLog = useDeleteSessionLog()
   const updateProgram = useUpdateProgram(id)
@@ -230,6 +237,8 @@ export function ProgramDetailPage() {
           )}
         </div>
       </div>
+
+      {phaseInfo && <ProgramPhaseBanner focus={program.focus} info={phaseInfo} />}
 
       <div className="flex flex-col gap-3">
         <h2 className="font-heading text-lg font-medium">Semaine type</h2>

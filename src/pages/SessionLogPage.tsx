@@ -34,6 +34,8 @@ import {
   useSessionPlan,
 } from '@/hooks/useSessionLogs'
 import { useSubstituteSessionTemplateExercise } from '@/hooks/useSessionTemplates'
+import { useProgramPhase } from '@/hooks/useProgramPhase'
+import { ProgramPhaseBanner } from '@/components/ProgramPhaseBanner'
 import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
 import { computeBlocks } from '@/lib/ordering'
 import type { Exercise } from '@/lib/exercises-api'
@@ -110,6 +112,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
   // Falls back to the hypertrophie default if the plan hasn't been cached
   // on this device yet and there's no network to fetch it right now.
   const focus: ProgramFocus = plan?.focus ?? 'hypertrophie'
+  const phaseInfo = useProgramPhase(log.program_id, focus)
   const exerciseById = useMemo(
     () => new Map((exercises ?? []).map((exercise) => [exercise.id, exercise])),
     [exercises],
@@ -150,6 +153,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
           {isInProgress ? 'En cours' : 'Terminée'}
         </Badge>
       </div>
+      {phaseInfo && <ProgramPhaseBanner focus={focus} info={phaseInfo} />}
       <div className="flex flex-wrap gap-2">
         <Link to="/bien-etre">
           <Button variant="outline" size="sm">
