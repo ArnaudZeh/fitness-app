@@ -36,6 +36,7 @@ import {
 import { useSubstituteSessionTemplateExercise } from '@/hooks/useSessionTemplates'
 import { useProgramPhase } from '@/hooks/useProgramPhase'
 import { ProgramPhaseBanner } from '@/components/ProgramPhaseBanner'
+import type { ProgramPhase } from '@/lib/program-phase'
 import { useVoiceSetInput } from '@/hooks/useVoiceSetInput'
 import { computeBlocks } from '@/lib/ordering'
 import type { Exercise } from '@/lib/exercises-api'
@@ -206,6 +207,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                       previousSets={previousSets}
                       sessionLogId={log.id}
                       focus={focus}
+                      phase={phaseInfo?.phase ?? null}
                       disabled={!isInProgress}
                       exercises={exercises ?? []}
                       exerciseById={exerciseById}
@@ -235,6 +237,7 @@ function SessionLogDetail({ log }: { log: SessionLog }) {
                 previousSets={previousSets}
                 sessionLogId={log.id}
                 focus={focus}
+                phase={phaseInfo?.phase ?? null}
                 disabled={!isInProgress}
                 exercises={exercises ?? []}
                 exerciseById={exerciseById}
@@ -316,6 +319,7 @@ function SessionLogExerciseCard({
   previousSets,
   sessionLogId,
   focus,
+  phase,
   disabled,
   exercises,
   exerciseById,
@@ -332,6 +336,7 @@ function SessionLogExerciseCard({
   previousSets: SessionLogSet[]
   sessionLogId: string
   focus: ProgramFocus
+  phase: ProgramPhase | null
   disabled: boolean
   exercises: Exercise[]
   exerciseById: Map<string, Exercise>
@@ -541,7 +546,11 @@ function SessionLogExerciseCard({
         )}
         <p className="text-sm text-muted-foreground">
           Cible : {slot.target_sets} x {slot.target_reps_min}-{slot.target_reps_max}
-          {slot.target_rpe !== null ? ` @ RPE ${slot.target_rpe}` : ''}
+          {phase
+            ? ` @ RPE ${phase.rpeMin}-${phase.rpeMax}`
+            : slot.target_rpe !== null
+              ? ` @ RPE ${slot.target_rpe}`
+              : ''}
           {slot.is_bodyweight && !substituteExerciseId
             ? ` · ${formatBodyweightLoad(slot.target_weight_kg)}`
             : !substituteExerciseId && slot.target_weight_kg !== null
